@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='帳戶儲值', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <div class="container section">
+            <h2 class="section-title">帳戶儲值</h2>
+
+            <div class="form-card" style="max-width: 600px;">
+                <div th:if="${success}" class="alert alert-success text-center" th:text="${success}">儲值成功</div>
+
+                <div class="text-center" style="margin-bottom: 30px;">
+                    <p>目前餘額</p>
+                    <h2 style="color: var(--accent-color); font-size: 2.5rem;"
+                        th:text="'$' + ${member.platformWalletBalance}">$1000.00</h2>
+                </div>
+
+                <form th:action="@{/topup}" method="post">
+                    <div class="form-group">
+                        <label>選擇儲值金額</label>
+                        <div class="grid"
+                            style="grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">
+                            <label class="btn btn-outline text-center" style="cursor: pointer;">
+                                <input type="radio" name="amount" value="100" checked style="display:none;"
+                                    onchange="selectAmount(this)">
+                                $100
+                            </label>
+                            <label class="btn btn-outline text-center" style="cursor: pointer;">
+                                <input type="radio" name="amount" value="500" style="display:none;"
+                                    onchange="selectAmount(this)">
+                                $500
+                            </label>
+                            <label class="btn btn-outline text-center" style="cursor: pointer;">
+                                <input type="radio" name="amount" value="1000" style="display:none;"
+                                    onchange="selectAmount(this)">
+                                $1000
+                            </label>
+                            <label class="btn btn-outline text-center" style="cursor: pointer;">
+                                <input type="radio" name="amount" value="3000" style="display:none;"
+                                    onchange="selectAmount(this)">
+                                $3000
+                            </label>
+                            <label class="btn btn-outline text-center" style="cursor: pointer;">
+                                <input type="radio" name="amount" value="5000" style="display:none;"
+                                    onchange="selectAmount(this)">
+                                $5000
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>選擇支付方式</label>
+                        <select name="paymentMethod" class="form-control">
+                            <option value="LINE PAY">LINE PAY</option>
+                            <option value="JKO">街口支付</option>
+                            <option value="PI">Pi 錢包</option>
+                        </select>
+                    </div>
+
+                    <div class="text-center" style="margin-top: 30px;">
+                        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">確認儲值</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            function selectAmount(radio) {
+                document.querySelectorAll('input[name="amount"]').forEach(el => {
+                    el.parentElement.style.backgroundColor = 'transparent';
+                    el.parentElement.style.color = '#333';
+                });
+                if (radio.checked) {
+                    radio.parentElement.style.backgroundColor = 'var(--accent-color)';
+                    radio.parentElement.style.color = '#000';
+                }
+            }
+            // Init
+            document.querySelector('input[name="amount"]:checked').parentElement.style.backgroundColor = 'var(--accent-color)';
+        </script>
+    </div>
+</body>
+
+</html>

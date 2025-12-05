@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='商品列表', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <div class="container section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h2 class="section-title" style="margin-bottom: 0;">精選系列</h2>
+                <form th:action="@{/products}" method="get" style="display: flex; gap: 10px;">
+                    <input type="text" name="keyword" th:value="${keyword}" placeholder="搜尋玩具..." class="form-control"
+                        style="width: 200px;">
+                    <button type="submit" class="btn btn-primary">搜尋</button>
+                </form>
+            </div>
+
+            <div style="display: flex; gap: 30px; align-items: flex-start;">
+                <!-- Sidebar -->
+                <div
+                    style="width: 250px; flex-shrink: 0; background: #fff; padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <h3
+                        style="margin-bottom: 15px; border-bottom: 2px solid var(--accent-color); padding-bottom: 10px;">
+                        商品分類</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="margin-bottom: 10px;">
+                            <a th:href="@{/products}" style="font-weight: bold; display: block; padding: 5px;"
+                                th:styleappend="${currentCategory == null} ? 'color: var(--accent-color);' : ''">全部商品</a>
+                        </li>
+                        <li th:each="cat : ${categories}" style="margin-bottom: 15px;">
+                            <a th:href="@{/products(category=${cat.key})}"
+                                style="font-weight: bold; display: block; padding: 5px;" th:text="${cat.key}"
+                                th:styleappend="${currentCategory == cat.key} ? 'color: var(--accent-color);' : ''">Category</a>
+                            <ul style="padding-left: 15px; margin-top: 5px;">
+                                <li th:each="sub : ${cat.value}" style="margin-bottom: 5px;">
+                                    <a th:href="@{/products(category=${cat.key}, subCategory=${sub})}" th:text="${sub}"
+                                        style="font-size: 0.9rem; color: var(--text-secondary);"
+                                        th:styleappend="${currentSubCategory == sub} ? 'color: var(--accent-color); font-weight: bold;' : ''">Sub</a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Product Grid -->
+                <div style="flex-grow: 1;">
+                    <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
+                        <div th:each="product : ${products}" class="card">
+                            <div class="img-placeholder" style="position: relative; height: 200px;">
+                                <!-- Imagine Image Here -->
+                                <span th:if="${product.stock == 0}"
+                                    style="position: absolute; top: 10px; right: 10px; background: var(--error-color); color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">缺貨中</span>
+                                <span th:if="${product.stock > 0}" th:text="'剩餘: ' + ${product.stock}"
+                                    style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">Stock</span>
+                            </div>
+                            <div style="padding: 15px;">
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 5px;"
+                                    th:text="${product.subCategory != null ? product.subCategory : product.category}">
+                                    Category</div>
+                                <h3 th:text="${product.name}" style="font-size: 1.1rem; margin-bottom: 10px;">Product
+                                    Valid
+                                </h3>
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                    <span style="font-weight: bold; color: var(--accent-color); font-size: 1.2rem;"
+                                        th:text="'$' + ${product.price}">$100</span>
+                                </div>
+
+                                <form th:if="${product.stock > 0}" onsubmit="addToCartAjax(event, this)"
+                                    style="display: flex; gap: 5px;">
+                                    <input type="hidden" name="productId" th:value="${product.id}" />
+                                    <input type="number" name="quantity" value="1" min="1" th:max="${product.stock}"
+                                        class="form-control" style="width: 70px; padding: 5px;" />
+                                    <button type="submit" class="btn btn-primary btn-sm"
+                                        style="flex-grow: 1;">加入購物車</button>
+                                </form>
+                                <button th:if="${product.stock == 0}" class="btn btn-sm"
+                                    style="width: 100%; background: #ccc; cursor: not-allowed;" disabled>缺貨中</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4" style="margin-top: 40px;">
+                        <span th:if="${products.hasPrevious()}"><a class="btn btn-outline btn-sm"
+                                th:href="@{/products(page=${products.number - 1}, keyword=${keyword}, category=${currentCategory}, subCategory=${currentSubCategory})}">上一頁</a></span>
+                        <span th:text="'第 ' + ${products.number + 1} + ' 頁 / 共 ' + ${products.totalPages} + ' 頁'"
+                            style="margin: 0 15px;">Page 1</span>
+                        <span th:if="${products.hasNext()}"><a class="btn btn-outline btn-sm"
+                                th:href="@{/products(page=${products.number + 1}, keyword=${keyword}, category=${currentCategory}, subCategory=${currentSubCategory})}">下一頁</a></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+</body>
+
+</html>

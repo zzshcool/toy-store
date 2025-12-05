@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <div th:fragment="cart-items">
+        <div th:if="${cart == null || cart.items.isEmpty()}" class="text-center" style="padding: 20px;">
+            <p>購物車是空的</p>
+        </div>
+        <div th:if="${cart != null && !cart.items.isEmpty()}">
+            <div th:each="item : ${cart.items}"
+                style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee;">
+                <div>
+                    <div th:text="${item.product.name}" style="font-weight: bold;">Product Name</div>
+                    <div style="font-size: 0.9rem; color: #666;">
+                        $<span th:text="${item.product.price}">100</span> x <span th:text="${item.quantity}">1</span>
+                    </div>
+                </div>
+                <div
+                    style="font-weight: bold; color: var(--accent-color); display: flex; flex-direction: column; align-items: flex-end;">
+                    <span>$<span th:text="${item.product.price.multiply(item.quantity)}">100</span></span>
+                    <form onsubmit="removeFromCartAjax(event, this)" style="margin-top: 5px;">
+                        <input type="hidden" name="itemId" th:value="${item.id}">
+                        <button type="submit" class="btn btn-sm"
+                            style="background: #ff4d4d; color: white; padding: 2px 6px; font-size: 0.8rem;">移除</button>
+                    </form>
+                </div>
+            </div>
+            <div
+                style="padding: 15px; border-top: 2px solid #eee; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <strong>總計:</strong>
+                <span style="font-size: 1.2rem; color: var(--accent-color); font-weight: bold;">$<span
+                        th:text="${totalPrice}">1000</span></span>
+            </div>
+            <div style="padding: 10px;">
+                <a th:href="@{/cart}" class="btn btn-primary"
+                    style="width: 100%; display: block; text-align: center;">確認付款</a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

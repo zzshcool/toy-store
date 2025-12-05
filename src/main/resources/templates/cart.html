@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='購物車', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <div class="container section">
+            <h2 class="section-title">您的購物車</h2>
+
+            <div th:if="${cart == null || cart.items.isEmpty()}" class="text-center">
+                <p style="margin-bottom: 20px;">您的購物車是空的。</p>
+                <a th:href="@{/products}" class="btn btn-primary">開始購物</a>
+            </div>
+
+            <div th:if="${cart != null && !cart.items.isEmpty()}">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>商品</th>
+                            <th>單價</th>
+                            <th>數量</th>
+                            <th>小計</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="item : ${cart.items}">
+                            <td>
+                                <h4 th:text="${item.product.name}" style="margin: 0; color: var(--text-primary);">商品名稱
+                                </h4>
+                            </td>
+                            <td th:text="'$' + ${item.product.price}">$99.00</td>
+                            <td>
+                                <form th:action="@{/cart/update}" method="post"
+                                    style="display: flex; gap: 5px; align-items: center;">
+                                    <input type="hidden" name="itemId" th:value="${item.id}">
+                                    <input type="hidden" name="quantity" th:value="${item.quantity - 1}">
+                                    <button type="submit" class="btn btn-sm"
+                                        style="background: #eee; color: #333;">-</button>
+                                </form>
+                                <span th:text="${item.quantity}" style="margin: 0 10px;">1</span>
+                                <form th:action="@{/cart/update}" method="post"
+                                    style="display: flex; gap: 5px; align-items: center;">
+                                    <input type="hidden" name="itemId" th:value="${item.id}">
+                                    <input type="hidden" name="quantity" th:value="${item.quantity + 1}">
+                                    <button type="submit" class="btn btn-sm" style="background: #eee; color: #333;"
+                                        th:if="${item.quantity < item.product.stock}">+</button>
+                                </form>
+                                <form th:action="@{/cart/remove}" method="post" style="margin-left: 10px;">
+                                    <input type="hidden" name="itemId" th:value="${item.id}">
+                                    <button type="submit" class="btn btn-sm"
+                                        style="background: #ff4d4d; color: white;">&times;</button>
+                                </form>
+                            </td>
+                            <td th:text="'$' + ${item.product.price * item.quantity}">$99.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="text-right" style="margin-top: 30px;">
+                    <h3 style="margin-bottom: 20px;">總金額: <span th:text="'$' + ${totalPrice}"
+                            style="color: var(--accent-color)">$198.00</span></h3>
+                    <form th:action="@{/orders/checkout}" method="post">
+                        <button type="submit" class="btn btn-primary btn-lg">前往結帳</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

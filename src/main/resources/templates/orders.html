@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='我的訂單', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <div class="container section">
+            <h2 class="section-title">我的訂單</h2>
+
+            <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+            <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}"></div>
+            <table style="width: 100%; margin-top: 20px;">
+                <thead>
+                    <tr>
+                        <th>訂單編號</th>
+                        <th>圖示</th>
+                        <th>商品</th>
+                        <th>總價</th>
+                        <th>狀態</th>
+                        <th>時間</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="order : ${orders}">
+                        <td>#<span th:text="${order.id}"></span></td>
+                        <td>
+                            <div th:each="item : ${order.items}">
+                                <span style="font-size: 1.5rem;">📦</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div th:each="item : ${order.items}">
+                                <span th:if="${item.product != null}" th:text="${item.product.name}">Product Name</span>
+                                <span th:if="${item.product == null}" th:text="${item.productName}">Prize Name</span>
+                                <span style="color: #999; font-size: 0.9em;" th:text="'x' + ${item.quantity}">x1</span>
+                            </div>
+                        </td>
+                        <td>$<span th:text="${order.totalPrice}">100</span></td>
+                        <td>
+                            <span th:text="${order.status}" class="badge"
+                                th:classappend="${order.status.name() == 'COMPLETED' ? 'badge-success' : 'badge-warning'}">
+                                PENDING
+                            </span>
+                        </td>
+                        <td th:text="${#temporals.format(order.createTime, 'yyyy-MM-dd HH:mm')}">Time</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </div>
+</body>
+
+</html>

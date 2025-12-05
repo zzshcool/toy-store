@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='盲盒抽獎', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <div class="container section">
+            <h2 class="section-title">神秘盲盒</h2>
+
+            <div th:if="${wonItem != null}" class="text-center"
+                style="margin-bottom: 30px; padding: 20px; background: #fff8e1; border: 2px solid var(--accent-color); border-radius: 8px;">
+                <h3 style="color: var(--success-color)">🎉 恭喜中獎！ 🎉</h3>
+                <h4 th:text="${wonItem.name}" style="margin: 20px 0; font-size: 1.5rem;">稀有物品</h4>
+                <p>重量: <span th:text="${wonItem.weight}">10</span> | 價值: $<span
+                        th:text="${wonItem.estimatedValue}">100</span></p>
+                <a th:href="@{/mystery-box}" class="btn btn-primary" style="margin-top: 20px;">再抽一次</a>
+            </div>
+
+            <div th:if="${error}" class="alert alert-error text-center" th:text="${error}">
+                錯誤
+            </div>
+
+            <div class="grid">
+                <div th:each="theme : ${themes}" class="card text-center" style="padding: 20px;">
+                    <div class="img-placeholder" style="margin-bottom: 20px;">
+                        (主題圖片)
+                    </div>
+                    <h3 th:text="${theme.name}">主題名稱</h3>
+                    <p th:text="${theme.description}" style="color: var(--text-secondary); margin: 10px 0;">描述</p>
+                    <p style="font-size: 1.2rem; margin-bottom: 20px;">價格: <strong style="color: var(--accent-color)"
+                            th:text="'$' + ${theme.price}">$10.00</strong> / 次</p>
+
+                    <form th:action="@{/mystery-box/draw}" method="post" class="draw-form"
+                        onsubmit="playAnimation(event, this)">
+                        <input type="hidden" name="themeId" th:value="${theme.id}">
+                        <button type="submit" class="btn btn-primary">立即抽獎</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Animation Overlay -->
+        <div id="animationOverlay" class="animation-overlay">
+            <div class="mystery-box-gift box-shaking">🎁</div>
+            <h2 style="color: white; margin-top: 20px;">正在開啟盲盒...</h2>
+        </div>
+
+        <script>
+            function playAnimation(event, form) {
+                event.preventDefault(); // Stop form submission
+                const overlay = document.getElementById('animationOverlay');
+                overlay.style.display = 'flex';
+
+                // Wait for 2 seconds then submit
+                setTimeout(() => {
+                    form.submit();
+                }, 2000);
+            }
+        </script>
+    </div>
+</body>
+
+</html>

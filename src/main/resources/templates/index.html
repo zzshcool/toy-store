@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='首頁', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+
+        <header class="hero">
+            <div>
+                <h1>釋放你的 <span style="color: var(--accent-color)">童心靈魂</span></h1>
+                <p>探索稀有收藏品、限定公仔與神秘盲盒。</p>
+                <div>
+                    <a th:href="@{/products}" class="btn btn-primary">立即選購</a>
+                    <a th:href="@{/mystery-box}" class="btn btn-outline" style="margin-left: 10px;">試試手氣</a>
+                </div>
+            </div>
+        </header>
+
+        <div class="container">
+            <h2 class="section-title">最新活動</h2>
+            <div class="grid">
+                <div th:each="activity : ${activities}" class="card">
+                    <div class="img-placeholder">
+                        (活動圖片)
+                    </div>
+                    <div style="padding: 20px;">
+                        <span th:text="${activity.type}" class="btn btn-sm"
+                            style="background: #eee; color: #333;">TYPE</span>
+                        <h3 th:text="${activity.title}" style="margin: 10px 0;">標題</h3>
+                        <p th:text="${activity.description}">描述</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin_layout :: html(title='管理後台', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <!-- Tabs -->
+        <div
+            style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+            <button onclick="openTab('members')" class="btn btn-outline btn-sm">會員管理</button>
+            <button onclick="openTab('products')" class="btn btn-outline btn-sm">商品管理</button>
+            <button onclick="openTab('categories')" class="btn btn-outline btn-sm">分類管理</button>
+            <button onclick="openTab('mystery')" class="btn btn-outline btn-sm">盲盒管理</button>
+            <button onclick="openTab('transactions')" class="btn btn-outline btn-sm">交易管理</button>
+            <button onclick="openTab('activities')" class="btn btn-outline btn-sm">活動管理</button>
+            <button onclick="openTab('logs')" class="btn btn-outline btn-sm">操作日誌</button>
+        </div>
+
+        <!-- Member Management -->
+        <div id="members" class="tab-content">
+            <h3>會員列表</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>使用者名稱</th>
+                        <th>餘額</th>
+                        <th>最後登入</th>
+                        <th>註冊日期</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="member : ${members}">
+                        <td th:text="${member.id}">1</td>
+                        <td th:text="${member.username}">User</td>
+                        <td th:text="${member.platformWalletBalance}">1000</td>
+                        <td
+                            th:text="${member.lastLoginTime != null ? #temporals.format(member.lastLoginTime, 'yyyy-MM-dd HH:mm') : '未登入'}">
+                            2023-01-01</td>
+                        <td
+                            th:text="${member.registrationDate != null ? #temporals.format(member.registrationDate, 'yyyy-MM-dd HH:mm') : '-'}">
+                            2023-01-01</td>
+                        <td>
+                            <span th:class="${member.enabled ? 'badge badge-success' : 'badge badge-danger'}"
+                                th:text="${member.enabled ? '正常' : '已封鎖'}">正常</span>
+                        </td>
+                        <td style="display: flex; gap: 5px;">
+                            <form th:action="@{/admin/members/{id}/toggle-status(id=${member.id})}" method="post"
+                                style="margin:0;">
+                                <button type="submit" class="btn btn-sm"
+                                    th:classappend="${member.enabled ? 'btn-danger' : 'btn-success'}"
+                                    th:text="${member.enabled ? '封鎖' : '啟用'}">封鎖</button>
+                            </form>
+                            <button class="btn btn-sm btn-info"
+                                th:onclick="'showHistory(' + ${member.id} + ')'">歷史紀錄</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Product Management -->
+        <div id="products" class="tab-content" style="display:none;">
+            <h3>商品管理</h3>
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>新增商品</h4>
+                <form th:action="@{/admin/products}" method="post" th:object="${newProduct}">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <input type="text" name="name" placeholder="名稱" class="form-control" required />
+                        <input type="number" step="0.01" name="price" placeholder="價格" class="form-control" required />
+                        <input type="number" name="stock" placeholder="庫存" class="form-control" required />
+                        <select id="prodCategory" name="category" class="form-control"
+                            onchange="loadSubCats(this.value)" required>
+                            <option value="">選擇大分類</option>
+                            <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.name}"></option>
+                        </select>
+                        <select id="prodSubCategory" name="subCategory" class="form-control" required>
+                            <option value="">選擇子分類</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 10px;">新增</button>
+                </form>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>名稱</th>
+                        <th>分類</th>
+                        <th>子分類</th>
+                        <th>價格</th>
+                        <th>庫存</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="product : ${products}">
+                        <td th:text="${product.id}">1</td>
+                        <td th:text="${product.name}">Toy</td>
+                        <td th:text="${product.category != null ? product.category.name : '-'}">Cat</td>
+                        <td th:text="${product.subCategory != null ? product.subCategory.name : '-'}">Sub</td>
+                        <td th:text="${product.price}">100</td>
+                        <td th:text="${product.stock}">10</td>
+                        <td style="font-size: 1.2em;">
+                            <a href="#" title="修改名稱">✏️</a>
+                            <a href="#" title="調整價格">💲</a>
+                            <a href="#" title="調整庫存">📦</a>
+                            <form th:action="@{/admin/products/delete/{id}(id=${product.id})}" method="post"
+                                style="display:inline;" onsubmit="return confirm('確定刪除？');">
+                                <button type="submit" style="background:none;border:none;cursor:pointer;"
+                                    title="刪除">🗑️</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Category Management -->
+        <div id="categories" class="tab-content" style="display:none;">
+            <h3>分類管理</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="card">
+                    <h4>大分類</h4>
+                    <form th:action="@{/admin/categories}" method="post">
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" name="name" placeholder="分類名稱" class="form-control" required>
+                            <button type="submit" class="btn btn-primary">新增</button>
+                        </div>
+                    </form>
+                    <ul style="margin-top: 10px; padding-left: 20px;">
+                        <li th:each="cat : ${categories}">
+                            <span th:text="${cat.name}">Category</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>子分類</h4>
+                    <form th:action="@{/admin/subcategories}" method="post">
+                        <div style="display: flex; gap: 5px;">
+                            <select name="categoryId" class="form-control" required>
+                                <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.name}">
+                                </option>
+                            </select>
+                            <input type="text" name="name" placeholder="子分類名稱" class="form-control" required>
+                            <button type="submit" class="btn btn-primary">新增</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mystery Box Management -->
+        <div id="mystery" class="tab-content" style="display:none;">
+            <h3>盲盒管理</h3>
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>新增主題</h4>
+                <!-- Theme Form -->
+                <form th:action="@{/admin/mystery-box/themes}" method="post">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" name="name" placeholder="主題名稱" class="form-control" required />
+                        <input type="number" step="0.01" name="price" placeholder="價格" class="form-control" required />
+                        <button type="submit" class="btn btn-primary">新增主題</button>
+                    </div>
+                </form>
+            </div>
+
+            <div th:each="theme : ${mysteryBoxThemes}" class="card" style="margin-bottom: 20px;">
+                <h4 th:text="${theme.name} + ' ($' + ${theme.price} + ')'">Gundam ($100)</h4>
+
+                <!-- Add Item to Theme -->
+                <form th:action="@{/admin/mystery-box/items}" method="post"
+                    style="margin-bottom: 10px; background: #f9f9f9; padding: 10px;">
+                    <input type="hidden" name="themeId" th:value="${theme.id}">
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" name="name" placeholder="獎品名稱" class="form-control" required>
+                        <input type="number" name="estimatedValue" placeholder="價值" class="form-control" required>
+                        <input type="number" name="weight" placeholder="權重(%)" class="form-control" required>
+                        <button type="submit" class="btn btn-sm btn-secondary">新增獎品</button>
+                    </div>
+                </form>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>獎品名稱</th>
+                            <th>價值</th>
+                            <th>權重</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="item : ${theme.items}">
+                            <td th:text="${item.name}">Item</td>
+                            <td th:text="${item.estimatedValue}">50</td>
+                            <td th:text="${item.weight}">20</td>
+                            <td>
+                                <a href="#">✏️</a>
+                                <a href="#">🗑️</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Transaction Management -->
+        <div id="transactions" class="tab-content" style="display:none;">
+            <h3>交易紀錄</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>會員</th>
+                        <th>類型</th>
+                        <th>金額</th>
+                        <th>描述</th>
+                        <th>時間</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="tx : ${transactions}">
+                        <td th:text="${tx.id}">1</td>
+                        <td th:text="${tx.member.username}">User</td>
+                        <td th:text="${tx.type}">PURCHASE</td>
+                        <td th:text="${tx.amount}" th:style="${tx.amount > 0 ? 'color:green' : 'color:red'}">100</td>
+                        <td th:text="${tx.description}">Desc</td>
+                        <td th:text="${#temporals.format(tx.timestamp, 'yyyy-MM-dd HH:mm')}">Time</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Activity Management -->
+        <div id="activities" class="tab-content" style="display:none;">
+            <h3>活動管理</h3>
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>新增活動</h4>
+                <form th:action="@{/admin/activities}" method="post" th:object="${newActivity}">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <input type="text" name="title" placeholder="標題" class="form-control" required />
+                        <input type="text" name="type" placeholder="類型 (例如: SALE)" class="form-control" required />
+                        <input type="datetime-local" name="expiryDate" class="form-control" />
+                        <input type="text" name="imageUrl" placeholder="圖片 URL" class="form-control" />
+                        <textarea name="description" placeholder="內容" class="form-control"
+                            style="grid-column: span 2"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 10px;">新增</button>
+                </form>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>標題</th>
+                        <th>類型</th>
+                        <th>過期時間</th>
+                        <th>狀態</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="act : ${activities}">
+                        <td th:text="${act.title}">Title</td>
+                        <td th:text="${act.type}">SALE</td>
+                        <td th:text="${act.expiryDate}">2023-01-01</td>
+                        <td th:text="${act.active ? '啟用' : '停用'}">Active</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Logs -->
+        <div id="logs" class="tab-content" style="display:none;">
+            <h3>操作日誌</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>會員</th>
+                        <th>動作</th>
+                        <th>詳情</th>
+                        <th>時間</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="log : ${logs}">
+                        <td th:text="${log.id}">1</td>
+                        <td th:text="${log.username}">User</td>
+                        <td th:text="${log.action}">LOGIN</td>
+                        <td th:text="${log.details}">Success</td>
+                        <td
+                            th:text="${log.timestamp != null ? #temporals.format(log.timestamp, 'yyyy-MM-dd HH:mm') : ''}">
+                            Time</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <script>
+            function openTab(tabName) {
+                var i;
+                var x = document.getElementsByClassName("tab-content");
+                for (i = 0; i < x.length; i++) {
+                    x[i].style.display = "none";
+                }
+                document.getElementById(tabName).style.display = "block";
+
+                // Update URL without reloading
+                const url = new URL(window.location);
+                url.searchParams.set('tab', tabName);
+                window.history.pushState({}, '', url);
+            }
+
+            function loadSubCats(catId) {
+                if (!catId) return;
+                fetch('/admin/api/subcategories/' + catId)
+                    .then(response => response.json())
+                    .then(data => {
+                        let select = document.getElementById('prodSubCategory');
+                        select.innerHTML = '<option value="">選擇子分類</option>';
+                        data.forEach(sub => {
+                            let option = document.createElement('option');
+                            option.value = sub.name; // Storing Name as Product entity uses string
+                            option.text = sub.name;
+                            select.appendChild(option);
+                        });
+                    });
+            }
+
+            function showHistory(memberId) {
+                alert("History Modal feature coming soon for Member ID: " + memberId);
+                // Implementation for Modal fetch would go here
+            }
+
+            // On Load: Check for 'tab' param
+            document.addEventListener('DOMContentLoaded', (event) => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const tab = urlParams.get('tab');
+                if (tab) {
+                    openTab(tab);
+                }
+            });
+        </script>
+    </div>
+</body>
+
+</html>
