@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html th:fragment="html(title, content)" xmlns:repo="http://www.thymeleaf.org"
-    xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html th:fragment="html(title, content)" xmlns:repo="http://www.thymeleaf.org">
 
 <head>
     <meta charset="UTF-8">
@@ -122,7 +121,7 @@
                 <li><a th:href="@{/admin}">儀表板</a></li>
                 <li><a th:href="@{/}" target="_blank">前往前台</a></li>
                 <li>
-                    <form th:action="@{/logout}" method="post">
+                    <form th:action="@{/admin/logout}" method="post">
                         <button type="submit"
                             style="background:none; border:none; color:#e74c3c; cursor:pointer; padding:10px; font-size:1.1rem; width:100%; text-align:left;">登出</button>
                     </form>
@@ -135,97 +134,7 @@
             <div class="admin-header">
                 <h1 th:text="${title}">Dashboard</h1>
                 <div>
-                    歡迎, <span sec:authentication="name">Admin</span>
-                </div>
-            </div>
-
-            <div th:replace="${content}"></div>
-        </div>
-    </div>
-</body>
-
-</html>
-
-.admin-sidebar {
-width: 250px;
-background: #2c3e50;
-color: #ecf0f1;
-padding: 20px;
-flex-shrink: 0;
-}
-
-.admin-sidebar h2 {
-font-size: 1.5rem;
-margin-bottom: 30px;
-color: var(--accent-color);
-text-align: center;
-}
-
-.admin-menu {
-list-style: none;
-padding: 0;
-}
-
-.admin-menu li {
-margin-bottom: 15px;
-}
-
-.admin-menu a {
-color: #bdc3c7;
-text-decoration: none;
-font-size: 1.1rem;
-display: block;
-padding: 10px;
-border-radius: 4px;
-transition: all 0.3s;
-}
-
-.admin-menu a:hover,
-.admin-menu a.active {
-background: #34495e;
-color: #fff;
-}
-
-.admin-content {
-flex-grow: 1;
-padding: 40px;
-background: #f4f6f9;
-}
-
-.admin-header {
-display: flex;
-justify-content: space-between;
-align-items: center;
-margin-bottom: 30px;
-padding-bottom: 20px;
-border-bottom: 1px solid #ddd;
-}
-</style>
-</head>
-
-<body>
-    <div class="admin-container">
-        <!-- Sidebar -->
-        <div class="admin-sidebar">
-            <h2>TOY SOUL Admin</h2>
-            <ul class="admin-menu">
-                <li><a th:href="@{/admin}">儀表板</a></li>
-                <li><a th:href="@{/}" target="_blank">前往前台</a></li>
-                <li>
-                    <form th:action="@{/logout}" method="post">
-                        <button type="submit"
-                            style="background:none; border:none; color:#e74c3c; cursor:pointer; padding:10px; font-size:1.1rem; width:100%; text-align:left;">登出</button>
-                    </form>
-                </li>
-            </ul>
-        </div>
-
-        <!-- Main Content -->
-        <div class="admin-content">
-            <div class="admin-header">
-                <h1 th:text="${title}">Dashboard</h1>
-                <div>
-                    歡迎, <span sec:authentication="name">Admin</span>
+                    歡迎, <span th:text="${adminName}">Admin</span>
                 </div>
             </div>
 

@@ -3,33 +3,79 @@ package com.toy.store.controller;
 import com.toy.store.dto.SignupRequest;
 import com.toy.store.model.Member;
 import com.toy.store.repository.MemberRepository;
-import com.toy.store.security.services.UserDetailsImpl;
+import com.toy.store.service.TokenService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-
-import java.math.BigDecimal;
+import org.springframework.web.bind.annotation.*;
 
 @Controller
 public class MemberController {
 
     @Autowired
-    MemberRepository memberRepository;
+    private MemberRepository memberRepository;
 
     @Autowired
-    PasswordEncoder encoder;
+    private PasswordEncoder encoder;
+
+    @Autowired
+    private TokenService tokenService;
 
     @GetMapping("/login")
     public String loginPage() {
         return "login";
+    }
+
+    @PostMapping("/login")
+    public String loginSubmit(@RequestParam String username, @RequestParam String password,
+            HttpServletResponse response, Model model) {
+
+        java.util.Optional<Member> memberOpt = memberRepository.findByUsername(username);
+        if (memberOpt.isPresent()) {
+            Member member = memberOpt.get();
+            if (encoder.matches(password, member.getPassword())) {
+                // Success
+                String token = tokenService.createToken(member.getUsername(), TokenService.ROLE_USER);
+
+                Cookie cookie = new Cookie("AUTH_TOKEN", token);
+                cookie.setHttpOnly(true);
+                cookie.setPath("/");
+                cookie.setMaxAge(3600 * 24 * 7); // 7 days (Logic handled in TokenService)
+                response.addCookie(cookie);
+
+                // Update Last Login
+                member.setLastLoginTime(java.time.LocalDateTime.now());
+                memberRepository.save(member);
+
+                return "redirect:/";
+            }
+        }
+
+        return "redirect:/login?error";
+    }
+
+    @RequestMapping(value = "/logout", method = { RequestMethod.GET, RequestMethod.POST })
+    public String logout(HttpServletRequest request, HttpServletResponse response) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("AUTH_TOKEN".equals(cookie.getName())) {
+                    tokenService.invalidateToken(cookie.getValue());
+                    cookie.setMaxAge(0);
+                    cookie.setPath("/");
+                    cookie.setValue(null);
+                    response.addCookie(cookie);
+                    break;
+                }
+            }
+        }
+        return "redirect:/";
     }
 
     @GetMapping("/register")
@@ -46,12 +92,12 @@ public class MemberController {
         }
 
         if (memberRepository.existsByUsername(signUpRequest.getUsername())) {
-            model.addAttribute("error", "錯誤: 用戶名已存在！");
+            model.addAttribute("error", "錯誤: 此帳號已被註冊！");
             return "register";
         }
 
         if (memberRepository.existsByEmail(signUpRequest.getEmail())) {
-            model.addAttribute("error", "錯誤: Email 已被使用！");
+            model.addAttribute("error", "錯誤: 此 Email 已被使用！");
             return "register";
         }
 
@@ -72,10 +118,12 @@ public class MemberController {
     }
 
     @GetMapping("/profile")
-    public String profilePage(@AuthenticationPrincipal UserDetailsImpl userDetails, Model model) {
-        if (userDetails == null)
+    public String profilePage(HttpServletRequest request, Model model) {
+        TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
+        if (user == null)
             return "redirect:/login";
-        Member member = memberRepository.findById(userDetails.getId()).orElse(null);
+
+        Member member = memberRepository.findByUsername(user.getUsername()).orElse(null);
         if (member == null)
             return "redirect:/login";
 
@@ -84,12 +132,16 @@ public class MemberController {
     }
 
     @PostMapping("/profile/update")
-    public String updateProfile(@AuthenticationPrincipal UserDetailsImpl userDetails,
+    public String updateProfile(HttpServletRequest request,
             @RequestParam String nickname,
             @RequestParam String email,
             @RequestParam String phone,
             Model model) {
-        Member member = memberRepository.findById(userDetails.getId()).orElse(null);
+        TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
+        if (user == null)
+            return "redirect:/login";
+
+        Member member = memberRepository.findByUsername(user.getUsername()).orElse(null);
         if (member != null) {
             member.setNickname(nickname);
             member.setEmail(email);
@@ -102,18 +154,26 @@ public class MemberController {
     }
 
     @GetMapping("/topup")
-    public String topupPage(@AuthenticationPrincipal UserDetailsImpl userDetails, Model model) {
-        Member member = memberRepository.findById(userDetails.getId()).orElse(null);
+    public String topupPage(HttpServletRequest request, Model model) {
+        TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
+        if (user == null)
+            return "redirect:/login";
+
+        Member member = memberRepository.findByUsername(user.getUsername()).orElse(null);
         model.addAttribute("member", member);
         return "topup";
     }
 
     @PostMapping("/topup")
-    public String processTopup(@AuthenticationPrincipal UserDetailsImpl userDetails,
+    public String processTopup(HttpServletRequest request,
             @RequestParam java.math.BigDecimal amount,
             @RequestParam String paymentMethod,
             Model model) {
-        Member member = memberRepository.findById(userDetails.getId()).orElse(null);
+        TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
+        if (user == null)
+            return "redirect:/login";
+
+        Member member = memberRepository.findByUsername(user.getUsername()).orElse(null);
         if (member != null) {
             member.setPlatformWalletBalance(member.getPlatformWalletBalance().add(amount));
             memberRepository.save(member);

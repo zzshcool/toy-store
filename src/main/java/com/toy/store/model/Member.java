@@ -47,6 +47,12 @@ public class Member {
 
     private LocalDateTime registrationDate = LocalDateTime.now();
 
+    @Enumerated(EnumType.STRING)
+    private MemberLevel level = MemberLevel.COMMON;
+
+    @Column(nullable = false)
+    private BigDecimal monthlyRecharge = BigDecimal.ZERO;
+
     public enum Role {
         USER, ADMIN
     }

@@ -4,6 +4,10 @@
 <body>
     <div th:fragment="content">
         <!-- Tabs -->
+        <div th:if="${errorMessage}" class="alert alert-danger"
+            style="color: red; padding: 10px; border: 1px solid red; margin-bottom: 10px;">
+            <b th:text="${errorMessage}">Error</b>
+        </div>
         <div
             style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
             <button onclick="openTab('members')" class="btn btn-outline btn-sm">會員管理</button>
@@ -98,8 +102,8 @@
                     <tr th:each="product : ${products}">
                         <td th:text="${product.id}">1</td>
                         <td th:text="${product.name}">Toy</td>
-                        <td th:text="${product.category != null ? product.category.name : '-'}">Cat</td>
-                        <td th:text="${product.subCategory != null ? product.subCategory.name : '-'}">Sub</td>
+                        <td th:text="${product.category != null ? product.category : '-'}">Cat</td>
+                        <td th:text="${product.subCategory != null ? product.subCategory : '-'}">Sub</td>
                         <td th:text="${product.price}">100</td>
                         <td th:text="${product.stock}">10</td>
                         <td style="font-size: 1.2em;">
@@ -122,29 +126,96 @@
             <h3>分類管理</h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div class="card">
-                    <h4>大分類</h4>
-                    <form th:action="@{/admin/categories}" method="post">
-                        <div style="display: flex; gap: 5px;">
-                            <input type="text" name="name" placeholder="分類名稱" class="form-control" required>
-                            <button type="submit" class="btn btn-primary">新增</button>
-                        </div>
-                    </form>
-                    <ul style="margin-top: 10px; padding-left: 20px;">
-                        <li th:each="cat : ${categories}">
-                            <span th:text="${cat.name}">Category</span>
+                    <h4>分類列表</h4>
+                    <ul style="list-style-type: none; padding-left: 0;">
+                        <li th:each="cat : ${categories}"
+                            style="margin-bottom: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; background: #f0f0f0; padding: 5px;">
+                                <strong th:text="${cat.name}">Category</strong>
+                                <div>
+                                    <button class="btn btn-sm btn-info"
+                                        th:onclick="editCategory([[${cat.id}]], '[[${cat.name}]]')">✏️</button>
+                                    <form th:action="@{/admin/categories/delete/{id}(id=${cat.id})}" method="post"
+                                        style="display:inline;" onsubmit="return confirm('刪除主分類將連同子分類一起刪除，確定？');">
+                                        <button type="submit" style="background:none;border:none;cursor:pointer;"
+                                            title="刪除">🗑️</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <ul style="margin-top: 5px; padding-left: 20px;">
+                                <li th:each="sub : ${cat.subCategories}"
+                                    style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee;">
+                                    <span th:text="${sub.name}">Sub</span>
+                                    <div>
+                                        <button class="btn btn-sm" style="font-size:0.8em;"
+                                            th:onclick="editSubCategory([[${sub.id}]], '[[${sub.name}]]')">✏️</button>
+                                        <form th:action="@{/admin/subcategories/delete/{id}(id=${sub.id})}"
+                                            method="post" style="display:inline;"
+                                            onsubmit="return confirm('確定刪除子分類？');">
+                                            <button type="submit"
+                                                style="font-size:0.8em;background:none;border:none;cursor:pointer;"
+                                                title="刪除">🗑️</button>
+                                        </form>
+                                    </div>
+                                </li>
+                            </ul>
                         </li>
                     </ul>
                 </div>
                 <div class="card">
-                    <h4>子分類</h4>
+                    <h4>新增分類</h4>
+                    <form th:action="@{/admin/categories}" method="post" style="margin-bottom: 20px;">
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" name="name" placeholder="大分類名稱" class="form-control" required>
+                            <button type="submit" class="btn btn-primary">新增大分類</button>
+                        </div>
+                    </form>
+
+                    <h4>新增子分類</h4>
                     <form th:action="@{/admin/subcategories}" method="post">
                         <div style="display: flex; gap: 5px;">
                             <select name="categoryId" class="form-control" required>
+                                <option value="">選擇所屬大分類</option>
                                 <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.name}">
                                 </option>
                             </select>
                             <input type="text" name="name" placeholder="子分類名稱" class="form-control" required>
                             <button type="submit" class="btn btn-primary">新增</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Category Edit Modal -->
+            <div id="editCategoryModal" class="modal"
+                style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+                <div class="card" style="margin: 15% auto; width: 30%; padding: 20px;">
+                    <h4>編輯分類</h4>
+                    <form th:action="@{/admin/categories/update}" method="post">
+                        <input type="hidden" id="editCatId" name="id">
+                        <input type="text" id="editCatName" name="name" class="form-control" required>
+                        <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                            <button type="button" class="btn btn-secondary"
+                                onclick="document.getElementById('editCategoryModal').style.display='none'">取消</button>
+                            <button type="submit" class="btn btn-primary">儲存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- SubCategory Edit Modal -->
+            <div id="editSubCategoryModal" class="modal"
+                style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+                <div class="card" style="margin: 15% auto; width: 30%; padding: 20px;">
+                    <h4>編輯子分類</h4>
+                    <form th:action="@{/admin/subcategories/update}" method="post">
+                        <input type="hidden" id="editSubCatId" name="id">
+                        <input type="text" id="editSubCatName" name="name" class="form-control" required>
+                        <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                            <button type="button" class="btn btn-secondary"
+                                onclick="document.getElementById('editSubCategoryModal').style.display='none'">取消</button>
+                            <button type="submit" class="btn btn-primary">儲存</button>
                         </div>
                     </form>
                 </div>
@@ -167,7 +238,11 @@
             </div>
 
             <div th:each="theme : ${mysteryBoxThemes}" class="card" style="margin-bottom: 20px;">
-                <h4 th:text="${theme.name} + ' ($' + ${theme.price} + ')'">Gundam ($100)</h4>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h4 th:text="${theme.name} + ' ($' + ${theme.price} + ')'">Gundam ($100)</h4>
+                    <button class="btn btn-sm btn-info"
+                        th:onclick="editTheme([[${theme.id}]], '[[${theme.name}]]', [[${theme.price}]])">編輯主題</button>
+                </div>
 
                 <!-- Add Item to Theme -->
                 <form th:action="@{/admin/mystery-box/items}" method="post"
@@ -222,7 +297,7 @@
                 <tbody>
                     <tr th:each="tx : ${transactions}">
                         <td th:text="${tx.id}">1</td>
-                        <td th:text="${tx.member.username}">User</td>
+                        <td th:text="${tx.member != null ? tx.member.username : 'Unknown'}">User</td>
                         <td th:text="${tx.type}">PURCHASE</td>
                         <td th:text="${tx.amount}" th:style="${tx.amount > 0 ? 'color:green' : 'color:red'}">100</td>
                         <td th:text="${tx.description}">Desc</td>
@@ -241,7 +316,8 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <input type="text" name="title" placeholder="標題" class="form-control" required />
                         <input type="text" name="type" placeholder="類型 (例如: SALE)" class="form-control" required />
-                        <input type="datetime-local" name="expiryDate" class="form-control" />
+                        <input type="datetime-local" name="startDate" class="form-control" placeholder="開始時間" />
+                        <input type="datetime-local" name="expiryDate" class="form-control" placeholder="結束時間" />
                         <input type="text" name="imageUrl" placeholder="圖片 URL" class="form-control" />
                         <textarea name="description" placeholder="內容" class="form-control"
                             style="grid-column: span 2"></textarea>
@@ -254,19 +330,71 @@
                     <tr>
                         <th>標題</th>
                         <th>類型</th>
-                        <th>過期時間</th>
+                        <th>開始時間</th>
+                        <th>結束時間</th>
                         <th>狀態</th>
+                        <th>操作</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr th:each="act : ${activities}">
                         <td th:text="${act.title}">Title</td>
                         <td th:text="${act.type}">SALE</td>
-                        <td th:text="${act.expiryDate}">2023-01-01</td>
-                        <td th:text="${act.active ? '啟用' : '停用'}">Active</td>
+                        <td
+                            th:text="${act.startDate != null ? #temporals.format(act.startDate, 'yyyy-MM-dd HH:mm') : '-'}">
+                            Start</td>
+                        <td
+                            th:text="${act.expiryDate != null ? #temporals.format(act.expiryDate, 'yyyy-MM-dd HH:mm') : '-'}">
+                            End</td>
+                        <td>
+                            <form th:action="@{/admin/activities/toggle/{id}(id=${act.id})}" method="post"
+                                style="margin:0;"
+                                onsubmit="if(![[${act.active}]]) return true; return confirm('確定要關閉活動嗎？');">
+                                <button type="submit" class="btn btn-sm"
+                                    th:classappend="${act.active ? 'btn-success' : 'btn-secondary'}"
+                                    th:text="${act.active ? '啟用' : '停用'}">Active</button>
+                            </form>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info"
+                                th:onclick="editActivity([[${act.id}]], '[[${act.title}]]', '[[${act.description}]]', '[[${act.type}]]', '[[${act.startDate}]]', '[[${act.expiryDate}]]')">✏️</button>
+                            <form th:action="@{/admin/activities/delete/{id}(id=${act.id})}" method="post"
+                                style="display:inline;" onsubmit="return confirm('確定刪除？');">
+                                <button type="submit" style="background:none;border:none;cursor:pointer;"
+                                    title="刪除">🗑️</button>
+                            </form>
+                        </td>
                     </tr>
                 </tbody>
             </table>
+
+            <!-- Edit Activity Modal -->
+            <div id="editActivityModal" class="modal"
+                style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+                <div class="card" style="margin: 10% auto; width: 50%; padding: 20px;">
+                    <h4>編輯活動</h4>
+                    <form th:action="@{/admin/activities/update}" method="post">
+                        <input type="hidden" id="editActId" name="id">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <input type="text" id="editActTitle" name="title" placeholder="標題" class="form-control"
+                                required />
+                            <input type="text" id="editActType" name="type" placeholder="類型" class="form-control"
+                                required />
+                            <input type="datetime-local" id="editActStart" name="startDate" class="form-control"
+                                placeholder="開始時間" />
+                            <input type="datetime-local" id="editActEnd" name="expiryDate" class="form-control"
+                                placeholder="結束時間" />
+                            <textarea id="editActDesc" name="description" placeholder="內容" class="form-control"
+                                style="grid-column: span 2"></textarea>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                            <button type="button" class="btn btn-secondary"
+                                onclick="document.getElementById('editActivityModal').style.display='none'">取消</button>
+                            <button type="submit" class="btn btn-primary">儲存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
 
         <!-- Logs -->
@@ -340,6 +468,34 @@
                     openTab(tab);
                 }
             });
+            function editTheme(id, name, price) {
+                document.getElementById('editThemeId').value = id;
+                document.getElementById('editThemeName').value = name;
+                document.getElementById('editThemePrice').value = price;
+                document.getElementById('editThemeModal').style.display = 'block';
+            }
+
+            function editActivity(id, title, desc, type, start, end) {
+                document.getElementById('editActId').value = id;
+                document.getElementById('editActTitle').value = title;
+                document.getElementById('editActDesc').value = desc;
+                document.getElementById('editActType').value = type;
+                document.getElementById('editActStart').value = start ? start : '';
+                document.getElementById('editActEnd').value = end ? end : '';
+                document.getElementById('editActivityModal').style.display = 'block';
+            }
+
+            function editCategory(id, name) {
+                document.getElementById('editCatId').value = id;
+                document.getElementById('editCatName').value = name;
+                document.getElementById('editCategoryModal').style.display = 'block';
+            }
+
+            function editSubCategory(id, name) {
+                document.getElementById('editSubCatId').value = id;
+                document.getElementById('editSubCatName').value = name;
+                document.getElementById('editSubCategoryModal').style.display = 'block';
+            }
         </script>
     </div>
 </body>

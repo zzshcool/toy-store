@@ -1,13 +1,11 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
-    th:fragment="html(title, content)">
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="html(title, content)">
 
 <head>
     <meta charset="UTF-8">
     <title th:text="${title} + ' - ToySoul'">玩具靈魂 Toy Store</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
-    <meta name="_csrf" th:content="${_csrf.token}" />
-    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 
 <body>
@@ -19,20 +17,21 @@
                 <li><a th:href="@{/products}" class="nav-link">商品列表</a></li>
                 <li><a th:href="@{/mystery-box}" class="nav-link">盲盒抽獎</a></li>
 
-                <li sec:authorize="isAuthenticated()" style="display: flex; align-items: center; gap: 15px;">
+                <li th:if="${currentUser != null}" style="display: flex; align-items: center; gap: 15px;">
                     <span th:if="${currentUser != null}" style="color: var(--accent-color); font-weight: bold;">
                         $<span th:text="${currentUser.platformWalletBalance}">1000</span>
                     </span>
                     <a th:href="@{/cart}" class="nav-link">購物車</a>
                     <a th:href="@{/orders}" class="nav-link">訂單</a>
-                    <a th:href="@{/profile}" class="nav-link" sec:authentication="name">User</a>
+                    <a th:href="@{/profile}" class="nav-link"
+                        th:text="${currentUser.nickname != null ? currentUser.nickname : currentUser.username}">User</a>
                     <form th:action="@{/logout}" method="post" style="display:inline;">
                         <button type="submit" class="nav-link"
                             style="background:none; border:none; padding:0; cursor: pointer; font-size: 0.95rem;">登出</button>
                     </form>
                 </li>
 
-                <li sec:authorize="!isAuthenticated()">
+                <li th:if="${currentUser == null}">
                     <a th:href="@{/login}" class="nav-link btn-outline btn-sm">登入</a>
                     <a th:href="@{/register}" class="btn btn-primary btn-sm" style="margin-left: 10px;">註冊</a>
                 </li>
@@ -113,14 +112,9 @@
         function addToCartAjax(event, form) {
             event.preventDefault();
             const formData = new FormData(form);
-            const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
-            const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
 
             fetch('/cart/api/add', {
                 method: 'POST',
-                headers: {
-                    [csrfHeader]: csrfToken
-                },
                 body: formData
             })
                 .then(response => {
@@ -155,14 +149,9 @@
         function removeFromCartAjax(event, form) {
             event.preventDefault();
             const formData = new FormData(form);
-            const csrfToken = document.querySelector("meta[name='_csrf']").getAttribute("content");
-            const csrfHeader = document.querySelector("meta[name='_csrf_header']").getAttribute("content");
 
             fetch('/cart/api/remove', {
                 method: 'POST',
-                headers: {
-                    [csrfHeader]: csrfToken
-                },
                 body: formData
             })
                 .then(response => {

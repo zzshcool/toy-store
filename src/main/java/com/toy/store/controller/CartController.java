@@ -1,10 +1,12 @@
 package com.toy.store.controller;
 
 import com.toy.store.model.Cart;
-import com.toy.store.security.services.UserDetailsImpl;
+import com.toy.store.model.Member;
+import com.toy.store.repository.MemberRepository;
 import com.toy.store.service.CartService;
+import com.toy.store.service.TokenService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -16,9 +18,23 @@ public class CartController {
     @Autowired
     private CartService cartService;
 
+    @Autowired
+    private MemberRepository memberRepository;
+
+    private Member getMemberFromRequest(HttpServletRequest request) {
+        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
+        if (info == null)
+            return null;
+        return memberRepository.findByUsername(info.getUsername()).orElse(null);
+    }
+
     @GetMapping
-    public String getCart(@AuthenticationPrincipal UserDetailsImpl user, Model model) {
-        Cart cart = cartService.getCartByMemberId(user.getId());
+    public String getCart(HttpServletRequest request, Model model) {
+        Member member = getMemberFromRequest(request);
+        if (member == null)
+            return "redirect:/login";
+
+        Cart cart = cartService.getCartByMemberId(member.getId());
         model.addAttribute("cart", cart);
         model.addAttribute("totalPrice", cart.getItems().stream()
                 .map(item -> item.getProduct().getPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())))
@@ -27,42 +43,55 @@ public class CartController {
     }
 
     @PostMapping("/add")
-    public String addToCart(@AuthenticationPrincipal UserDetailsImpl user,
+    public String addToCart(HttpServletRequest request,
             @RequestParam Long productId,
             @RequestParam Integer quantity) {
-        cartService.addToCart(user.getId(), productId, quantity);
+        Member member = getMemberFromRequest(request);
+        if (member == null)
+            return "redirect:/login";
+
+        cartService.addToCart(member.getId(), productId, quantity);
         return "redirect:/cart";
     }
 
     @PostMapping("/update")
-    public String updateQuantity(@AuthenticationPrincipal UserDetailsImpl user,
+    public String updateQuantity(HttpServletRequest request,
             @RequestParam Long itemId,
             @RequestParam Integer quantity) {
-        cartService.updateQuantity(user.getId(), itemId, quantity);
+        Member member = getMemberFromRequest(request);
+        if (member == null)
+            return "redirect:/login";
+
+        cartService.updateQuantity(member.getId(), itemId, quantity);
         return "redirect:/cart";
     }
 
     @PostMapping("/remove")
-    public String removeFromCart(@AuthenticationPrincipal UserDetailsImpl user,
+    public String removeFromCart(HttpServletRequest request,
             @RequestParam Long itemId) {
+        Member member = getMemberFromRequest(request);
+        if (member == null)
+            return "redirect:/login";
+
         // Quantity 0 triggers removal in service
-        cartService.updateQuantity(user.getId(), itemId, 0);
+        cartService.updateQuantity(member.getId(), itemId, 0);
         return "redirect:/cart";
     }
 
     // AJAX Endpoints
     @PostMapping("/api/remove")
     @ResponseBody
-    public org.springframework.http.ResponseEntity<?> removeFromCartAjax(@AuthenticationPrincipal UserDetailsImpl user,
+    public org.springframework.http.ResponseEntity<?> removeFromCartAjax(HttpServletRequest request,
             @RequestParam Long itemId) {
-        if (user == null) {
+        Member member = getMemberFromRequest(request);
+        if (member == null) {
             return org.springframework.http.ResponseEntity.status(401)
                     .body(java.util.Map.of("success", false, "message", "請先登入"));
         }
         try {
             // Quantity 0 triggers removal
-            cartService.updateQuantity(user.getId(), itemId, 0);
-            Cart cart = cartService.getCartByMemberId(user.getId());
+            cartService.updateQuantity(member.getId(), itemId, 0);
+            Cart cart = cartService.getCartByMemberId(member.getId());
             int totalItems = cart.getItems().stream().mapToInt(item -> item.getQuantity()).sum();
             return org.springframework.http.ResponseEntity
                     .ok(java.util.Map.of("success", true, "totalItems", totalItems));
@@ -74,16 +103,17 @@ public class CartController {
 
     @PostMapping("/api/add")
     @ResponseBody
-    public org.springframework.http.ResponseEntity<?> addToCartAjax(@AuthenticationPrincipal UserDetailsImpl user,
+    public org.springframework.http.ResponseEntity<?> addToCartAjax(HttpServletRequest request,
             @RequestParam Long productId,
             @RequestParam Integer quantity) {
-        if (user == null) {
+        Member member = getMemberFromRequest(request);
+        if (member == null) {
             return org.springframework.http.ResponseEntity.status(401)
                     .body(java.util.Map.of("success", false, "message", "請先登入"));
         }
         try {
-            cartService.addToCart(user.getId(), productId, quantity);
-            Cart cart = cartService.getCartByMemberId(user.getId());
+            cartService.addToCart(member.getId(), productId, quantity);
+            Cart cart = cartService.getCartByMemberId(member.getId());
             int totalItems = cart.getItems().stream().mapToInt(item -> item.getQuantity()).sum();
             return org.springframework.http.ResponseEntity
                     .ok(java.util.Map.of("success", true, "totalItems", totalItems));
@@ -94,10 +124,11 @@ public class CartController {
     }
 
     @GetMapping("/api/items")
-    public String getCartItemsFragment(@AuthenticationPrincipal UserDetailsImpl user, Model model) {
-        if (user == null)
+    public String getCartItemsFragment(HttpServletRequest request, Model model) {
+        Member member = getMemberFromRequest(request);
+        if (member == null)
             return "";
-        Cart cart = cartService.getCartByMemberId(user.getId());
+        Cart cart = cartService.getCartByMemberId(member.getId());
         model.addAttribute("cart", cart);
         model.addAttribute("totalPrice", cart.getItems().stream()
                 .map(item -> item.getProduct().getPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())))

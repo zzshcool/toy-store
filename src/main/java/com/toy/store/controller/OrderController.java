@@ -18,10 +18,26 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
+    @Autowired
+    private com.toy.store.repository.MemberRepository memberRepository;
+
+    @Autowired
+    private com.toy.store.service.TokenService tokenService;
+
     @PostMapping("/checkout")
-    public String checkout(@AuthenticationPrincipal UserDetailsImpl user, RedirectAttributes redirectAttributes) {
+    public String checkout(jakarta.servlet.http.HttpServletRequest request, RedirectAttributes redirectAttributes) {
+        com.toy.store.service.TokenService.TokenInfo info = (com.toy.store.service.TokenService.TokenInfo) request
+                .getAttribute("currentUser");
+        if (info == null) {
+            return "redirect:/login";
+        }
+        com.toy.store.model.Member member = memberRepository.findByUsername(info.getUsername()).orElse(null);
+        if (member == null) {
+            return "redirect:/login";
+        }
+
         try {
-            Order order = orderService.checkout(user.getId());
+            Order order = orderService.checkout(member.getId());
             redirectAttributes.addFlashAttribute("successMessage", "訂單處理成功！訂單編號：" + order.getId());
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("errorMessage", "結帳失敗：" + e.getMessage());
@@ -30,9 +46,16 @@ public class OrderController {
     }
 
     @PostMapping("/{id}/refund")
-    public String refundOrder(@AuthenticationPrincipal UserDetailsImpl user,
+    public String refundOrder(jakarta.servlet.http.HttpServletRequest request,
             @org.springframework.web.bind.annotation.PathVariable Long id,
             RedirectAttributes redirectAttributes) {
+        com.toy.store.service.TokenService.TokenInfo info = (com.toy.store.service.TokenService.TokenInfo) request
+                .getAttribute("currentUser");
+        if (info == null)
+            return "redirect:/login";
+        com.toy.store.model.Member member = memberRepository.findByUsername(info.getUsername()).orElse(null);
+        if (member == null)
+            return "redirect:/login";
         try {
             // Logic should be in Service, but for simplicity adding here or calling service
             // Assuming OrderService has a refund method or we implement it now
@@ -45,8 +68,16 @@ public class OrderController {
     }
 
     @GetMapping
-    public String getMyOrders(@AuthenticationPrincipal UserDetailsImpl user, Model model) {
-        model.addAttribute("orders", orderService.getMemberOrders(user.getId()));
+    public String getMyOrders(jakarta.servlet.http.HttpServletRequest request, Model model) {
+        com.toy.store.service.TokenService.TokenInfo info = (com.toy.store.service.TokenService.TokenInfo) request
+                .getAttribute("currentUser");
+        if (info == null)
+            return "redirect:/login";
+        com.toy.store.model.Member member = memberRepository.findByUsername(info.getUsername()).orElse(null);
+        if (member == null)
+            return "redirect:/login";
+
+        model.addAttribute("orders", orderService.getMemberOrders(member.getId()));
         return "orders";
     }
 }

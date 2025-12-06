@@ -40,6 +40,11 @@ public class TransactionService {
             throw new RuntimeException("Insufficient wallet balance");
         }
 
+        if (type == Transaction.TransactionType.DEPOSIT) {
+            member.setMonthlyRecharge(member.getMonthlyRecharge().add(amount));
+            checkAndUpgradeLevel(member);
+        }
+
         member.setPlatformWalletBalance(newBalance);
         memberRepository.save(member);
 
@@ -51,5 +56,20 @@ public class TransactionService {
         transaction.setReferenceId(refId);
 
         transactionRepository.save(transaction);
+    }
+
+    private void checkAndUpgradeLevel(Member member) {
+        com.toy.store.model.MemberLevel current = member.getLevel();
+        com.toy.store.model.MemberLevel next = current.next();
+
+        // Check if eligible for next level(s)
+        while (next != current && member.getMonthlyRecharge().compareTo(next.getThreshold()) >= 0) {
+            current = next;
+            next = current.next();
+        }
+
+        if (current != member.getLevel()) {
+            member.setLevel(current);
+        }
     }
 }

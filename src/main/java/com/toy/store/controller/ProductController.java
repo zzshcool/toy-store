@@ -27,6 +27,9 @@ public class ProductController {
     @Autowired
     private com.toy.store.repository.MemberActionLogRepository memberActionLogRepository;
 
+    @Autowired
+    private com.toy.store.repository.MemberRepository memberRepository;
+
     @GetMapping
     public String getAllProducts(
             @RequestParam(defaultValue = "0") int page,
@@ -36,22 +39,22 @@ public class ProductController {
             @RequestParam(required = false) String subCategory,
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "desc") String direction,
-            Model model) {
+            Model model, jakarta.servlet.http.HttpServletRequest request) {
 
         // Log Action (if user is logged in)
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated()
-                && auth.getPrincipal() instanceof com.toy.store.security.services.UserDetailsImpl) {
-            com.toy.store.security.services.UserDetailsImpl user = (com.toy.store.security.services.UserDetailsImpl) auth
-                    .getPrincipal();
-            String details = "Page: " + page;
-            if (keyword != null)
-                details += ", Keyword: " + keyword;
-            if (category != null)
-                details += ", Category: " + category;
-            memberActionLogRepository.save(new com.toy.store.model.MemberActionLog(
-                    user.getId(), user.getUsername(), "VIEW_PRODUCTS", details, true));
+        com.toy.store.service.TokenService.TokenInfo info = (com.toy.store.service.TokenService.TokenInfo) request
+                .getAttribute("currentUser");
+        if (info != null && com.toy.store.service.TokenService.ROLE_USER.equals(info.getRole())) {
+            com.toy.store.model.Member member = memberRepository.findByUsername(info.getUsername()).orElse(null);
+            if (member != null) {
+                String details = "Page: " + page;
+                if (keyword != null)
+                    details += ", Keyword: " + keyword;
+                if (category != null)
+                    details += ", Category: " + category;
+                memberActionLogRepository.save(new com.toy.store.model.MemberActionLog(
+                        member.getId(), member.getUsername(), "VIEW_PRODUCTS", details, true));
+            }
         }
 
         Pageable pageable = PageRequest.of(page, size,

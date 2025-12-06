@@ -20,7 +20,8 @@ public class Activity {
 
     private String type; // e.g. SALE, PREORDER
 
-    private java.time.LocalDateTime expiryDate;
+    private java.time.LocalDateTime startDate;
+    private java.time.LocalDateTime expiryDate; // Using as End Date
 
     private boolean active = true;
 }

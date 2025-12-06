@@ -58,13 +58,54 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         // Seed Products and Mystery Boxes
-        seedSeries("鋼彈系列", new String[] { "鋼彈W", "鋼彈G武鬥", "鋼彈Seed", "無敵鐵金剛", "鋼彈(夏亞逆襲)" });
+        // Seed Products and Mystery Boxes
+        seedSeries("鋼彈系列",
+                new String[] { "鋼彈W", "鋼彈G武鬥", "鋼彈Seed", "無敵鐵金剛", "鋼彈(夏亞逆襲)", "鋼彈X", "鋼蛋Z", "鋼彈ZZ", "鋼彈UC" });
         seedSeries("任天堂系列", new String[] { "超級瑪莉", "神奇寶貝" });
-        seedSeries("Capcom系列", new String[] { "元祖洛克人", "洛克人X", "洛克人EX" });
+        seedSeries("Capcom系列", new String[] { "元祖洛克人", "洛克人X" });
+
+        // Seed Activities
+        seedActivities();
     }
 
+    @Autowired
+    private com.toy.store.repository.ActivityRepository activityRepository;
+
+    private void seedActivities() {
+        createActivity("開站活動", "慶祝開站活動，所有商品9折起", "SALE");
+        createActivity("首抽活動", "完成第一次抽獎，有機率獲得神秘禮物", "EVENT");
+        createActivity("儲值活動", "儲值金超過1萬，即可獲得神秘獎品", "PROMOTION");
+        createActivity("首購活動", "首次購買商品即可隨機抽取折扣，最高購物車內商品打五折", "DISCOUNT");
+    }
+
+    private void createActivity(String title, String description, String type) {
+        if (activityRepository.findAll().stream().noneMatch(a -> a.getTitle().equals(title))) {
+            com.toy.store.model.Activity activity = new com.toy.store.model.Activity();
+            activity.setTitle(title);
+            activity.setDescription(description);
+            activity.setType(type);
+            activity.setExpiryDate(java.time.LocalDateTime.of(2025, 12, 31, 23, 59, 59));
+            activity.setActive(true);
+            activityRepository.save(activity);
+        }
+    }
+
+    @Autowired
+    private com.toy.store.repository.CategoryRepository categoryRepository;
+
+    @Autowired
+    private com.toy.store.repository.SubCategoryRepository subCategoryRepository;
+
     private void seedSeries(String seriesName, String[] subSeriesList) {
-        // 1. Create Mystery Box Theme
+        // 1. Create Category Entity (for Dropdowns)
+        com.toy.store.model.Category categoryEntity = categoryRepository.findByName(seriesName);
+        if (categoryEntity == null) {
+            categoryEntity = new com.toy.store.model.Category();
+            categoryEntity.setName(seriesName);
+            categoryEntity = categoryRepository.save(categoryEntity);
+        }
+
+        // 2. Create Mystery Box Theme
         com.toy.store.model.MysteryBoxTheme theme = mysteryBoxThemeRepository.findByName(seriesName);
         if (theme == null) {
             theme = new com.toy.store.model.MysteryBoxTheme();
@@ -75,12 +116,20 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         for (String subSeries : subSeriesList) {
-            // 2. Create Products (Direct Buy)
+            // Create SubCategory Entity
+            if (subCategoryRepository.findByNameAndCategory(subSeries, categoryEntity) == null) {
+                com.toy.store.model.SubCategory sub = new com.toy.store.model.SubCategory();
+                sub.setName(subSeries);
+                sub.setCategory(categoryEntity);
+                subCategoryRepository.save(sub);
+            }
+
+            // 3. Create Products (Direct Buy)
             createProduct(subSeries + " 鑰匙圈", new BigDecimal("50.00"), 100, seriesName, subSeries);
             createProduct(subSeries + " 毛巾", new BigDecimal("50.00"), 100, seriesName, subSeries);
             createProduct(subSeries + " 系列公仔", new BigDecimal("350.00"), 5, seriesName, subSeries);
 
-            // 3. Create Mystery Box Items (Lottery)
+            // 4. Create Mystery Box Items (Lottery)
             createMysteryBoxItem(theme, subSeries + " 鑰匙圈", new BigDecimal("50.00"), 20);
             createMysteryBoxItem(theme, subSeries + " 毛巾", new BigDecimal("50.00"), 20);
             createMysteryBoxItem(theme, subSeries + " 系列公仔", new BigDecimal("350.00"), 1);

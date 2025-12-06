@@ -31,7 +31,7 @@ public class OrderService {
         List<CartItem> cartItems = cart.getItems();
 
         if (cartItems.isEmpty()) {
-            throw new RuntimeException("Cart is empty");
+            throw new RuntimeException("購物車是空的");
         }
 
         BigDecimal totalAmount = BigDecimal.ZERO;
@@ -42,7 +42,7 @@ public class OrderService {
             Product product = item.getProduct();
             if (product.getStock() < item.getQuantity()) {
                 throw new RuntimeException(
-                        "Product " + product.getName() + " is out of stock (Requested: " + item.getQuantity() + ")");
+                        "商品 " + product.getName() + " 庫存不足 (需求: " + item.getQuantity() + ")");
             }
             totalAmount = totalAmount.add(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
 
@@ -89,14 +89,14 @@ public class OrderService {
     @Transactional
     public void refundOrder(Long orderId, Long memberId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new RuntimeException("找不到訂單"));
 
         if (!order.getMember().getId().equals(memberId)) {
-            throw new RuntimeException("Unauthorized refund request");
+            throw new RuntimeException("無權限申請退款");
         }
 
         if (order.getStatus() == Order.OrderStatus.REFUNDED || order.getStatus() == Order.OrderStatus.CANCELLED) {
-            throw new RuntimeException("Order already refunded or cancelled");
+            throw new RuntimeException("訂單已退款或取消");
         }
 
         // 1. Refund Amount to Wallet
