@@ -25,11 +25,19 @@
                             <a th:href="@{/products}" style="font-weight: bold; display: block; padding: 5px;"
                                 th:styleappend="${currentCategory == null} ? 'color: var(--accent-color);' : ''">全部商品</a>
                         </li>
-                        <li th:each="cat : ${categories}" style="margin-bottom: 15px;">
-                            <a th:href="@{/products(category=${cat.key})}"
-                                style="font-weight: bold; display: block; padding: 5px;" th:text="${cat.key}"
-                                th:styleappend="${currentCategory == cat.key} ? 'color: var(--accent-color);' : ''">Category</a>
-                            <ul style="padding-left: 15px; margin-top: 5px;">
+                        <li th:each="cat, stat : ${categories}" style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <a th:href="@{/products(category=${cat.key})}"
+                                    style="font-weight: bold; display: block; padding: 5px; flex-grow: 1;"
+                                    th:text="${cat.key}"
+                                    th:styleappend="${currentCategory == cat.key} ? 'color: var(--accent-color);' : ''">Category</a>
+                                <a href="#" class="category-toggle" th:data-target="'cat-' + ${stat.index}"
+                                    style="padding: 5px; color: var(--text-secondary); text-decoration: none;">
+                                    <span th:text="${currentCategory == cat.key} ? '▼' : '▶'">▶</span>
+                                </a>
+                            </div>
+                            <ul th:id="'cat-' + ${stat.index}" style="padding-left: 15px; margin-top: 5px;"
+                                th:style="${currentCategory == cat.key} ? 'display: block;' : 'display: none;'">
                                 <li th:each="sub : ${cat.value}" style="margin-bottom: 5px;">
                                     <a th:href="@{/products(category=${cat.key}, subCategory=${sub})}" th:text="${sub}"
                                         style="font-size: 0.9rem; color: var(--text-secondary);"
@@ -43,7 +51,7 @@
                 <!-- Product Grid -->
                 <div style="flex-grow: 1;">
                     <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
-                        <div th:each="product : ${products}" class="card">
+                        <div th:each="product : ${products}" class="card product-card-wrapper">
                             <div class="img-placeholder" style="position: relative; height: 200px;">
                                 <!-- Imagine Image Here -->
                                 <span th:if="${product.stock == 0}"
@@ -81,19 +89,88 @@
                         </div>
                     </div>
 
-                    <div class="text-center mt-4" style="margin-top: 40px;">
-                        <span th:if="${products.hasPrevious()}"><a class="btn btn-outline btn-sm"
-                                th:href="@{/products(page=${products.number - 1}, keyword=${keyword}, category=${currentCategory}, subCategory=${currentSubCategory})}">上一頁</a></span>
-                        <span th:text="'第 ' + ${products.number + 1} + ' 頁 / 共 ' + ${products.totalPages} + ' 頁'"
-                            style="margin: 0 15px;">Page 1</span>
-                        <span th:if="${products.hasNext()}"><a class="btn btn-outline btn-sm"
-                                th:href="@{/products(page=${products.number + 1}, keyword=${keyword}, category=${currentCategory}, subCategory=${currentSubCategory})}">下一頁</a></span>
+                    <div id="loading" class="text-center" style="display: none; margin-top: 20px;">
+                        <p>載入中...</p>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
+
+                    <!-- Hidden pagination for JS to use -->
+                    <div id="pagination-controls" style="display: none;">
+                        <a th:if="${products.hasNext()}" class="pagination-next"
+                            th:href="@{/products(page=${products.number + 1}, keyword=${keyword}, category=${currentCategory}, subCategory=${currentSubCategory})}">Next</a>
+                    </div>
+
+                    <script>
+                        // Collapsible Categories
+                        document.addEventListener('DOMContentLoaded', function () {
+                            const toggles = document.querySelectorAll('.category-toggle');
+                            toggles.forEach(toggle => {
+                                toggle.addEventListener('click', function (e) {
+                                    e.preventDefault();
+                                    const targetId = this.getAttribute('data-target');
+                                    const targetUl = document.getElementById(targetId);
+                                    const icon = this.querySelector('span');
+
+                                    if (targetUl.style.display === 'none') {
+                                        targetUl.style.display = 'block';
+                                        icon.innerText = '▼';
+                                    } else {
+                                        targetUl.style.display = 'none';
+                                        icon.innerText = '▶';
+                                    }
+                                });
+                            });
+                        });
+
+                        // Infinite Scroll
+                        let isLoading = false;
+
+                        window.addEventListener('scroll', () => {
+                            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+
+                            if (scrollTop + clientHeight >= scrollHeight - 300 && !isLoading) {
+                                loadMoreProducts();
+                            }
+                        });
+
+                        function loadMoreProducts() {
+                            const nextLink = document.querySelector('.pagination-next');
+                            if (!nextLink) return; // No more pages
+
+                            isLoading = true;
+                            document.getElementById('loading').style.display = 'block';
+
+                            const url = nextLink.getAttribute('href');
+
+                            fetch(url)
+                                .then(response => response.text())
+                                .then(html => {
+                                    const parser = new DOMParser();
+                                    const doc = parser.parseFromString(html, 'text/html');
+
+                                    const newProducts = doc.querySelectorAll('.product-card-wrapper'); // We need to target the card wrapper
+                                    const grid = document.querySelector('.grid');
+
+                                    newProducts.forEach(product => {
+                                        grid.appendChild(product);
+                                    });
+
+                                    // Update next link
+                                    const newNextLink = doc.querySelector('.pagination-next');
+                                    const controls = document.getElementById('pagination-controls');
+                                    if (newNextLink) {
+                                        controls.innerHTML = '';
+                                        controls.appendChild(newNextLink);
+                                    } else {
+                                        controls.innerHTML = ''; // End of list
+                                    }
+                                })
+                                .catch(err => console.error('Error loading products:', err))
+                                .finally(() => {
+                                    isLoading = false;
+                                    document.getElementById('loading').style.display = 'none';
+                                });
+                        }
+                    </script>
 </body>
 
 </html>

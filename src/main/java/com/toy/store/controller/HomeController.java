@@ -46,4 +46,9 @@ public class HomeController {
                 model.addAttribute("activities", activities);
                 return "index";
         }
+
+        @GetMapping("/refunds")
+        public String refunds() {
+                return "refunds";
+        }
 }
