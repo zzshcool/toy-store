@@ -11,6 +11,7 @@
         <div
             style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
             <button onclick="openTab('members')" class="btn btn-outline btn-sm">會員管理</button>
+            <button onclick="openTab('levels')" class="btn btn-outline btn-sm">等級管理</button>
             <button onclick="openTab('products')" class="btn btn-outline btn-sm">商品管理</button>
             <button onclick="openTab('categories')" class="btn btn-outline btn-sm">分類管理</button>
             <button onclick="openTab('mystery')" class="btn btn-outline btn-sm">盲盒管理</button>
@@ -28,6 +29,7 @@
                         <th>ID</th>
                         <th>使用者名稱</th>
                         <th>餘額</th>
+                        <th>等級</th>
                         <th>最後登入</th>
                         <th>註冊日期</th>
                         <th>狀態</th>
@@ -39,11 +41,12 @@
                         <td th:text="${member.id}">1</td>
                         <td th:text="${member.username}">User</td>
                         <td th:text="${member.platformWalletBalance}">1000</td>
+                        <td th:text="${member.level != null ? member.level.name : '平民'}">Level</td>
                         <td
                             th:text="${member.lastLoginTime != null ? #temporals.format(member.lastLoginTime, 'yyyy-MM-dd HH:mm') : '未登入'}">
                             2023-01-01</td>
                         <td
-                            th:text="${member.registrationDate != null ? #temporals.format(member.registrationDate, 'yyyy-MM-dd HH:mm') : '-'}">
+                            th:text="${member.createdAt != null ? #temporals.format(member.createdAt, 'yyyy-MM-dd HH:mm') : '-'}">
                             2023-01-01</td>
                         <td>
                             <span th:class="${member.enabled ? 'badge badge-success' : 'badge badge-danger'}"
@@ -58,6 +61,8 @@
                             </form>
                             <button class="btn btn-sm btn-info"
                                 th:onclick="'showHistory(' + ${member.id} + ')'">歷史紀錄</button>
+                            <button class="btn btn-sm btn-primary"
+                                th:onclick="editMember([[${member.id}]], '[[${member.email}]]', '[[${member.nickname}]]', [[${member.enabled}]], [[${member.level != null ? member.level.id : ''}]])">編輯</button>
                         </td>
                     </tr>
                 </tbody>
@@ -112,6 +117,54 @@
                             <a href="#" title="調整庫存">📦</a>
                             <form th:action="@{/admin/products/delete/{id}(id=${product.id})}" method="post"
                                 style="display:inline;" onsubmit="return confirm('確定刪除？');">
+                                <button type="submit" style="background:none;border:none;cursor:pointer;"
+                                    title="刪除">🗑️</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Member Level Management -->
+        <div id="levels" class="tab-content" style="display:none;">
+            <h3>會員等級管理</h3>
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>新增等級</h4>
+                <form th:action="@{/admin/member-levels}" method="post">
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">
+                        <input type="text" name="name" placeholder="等級名稱" class="form-control" required />
+                        <input type="number" name="sortOrder" placeholder="排序 (1=最低)" class="form-control" required />
+                        <input type="number" step="0.01" name="threshold" placeholder="累積儲值門檻" class="form-control"
+                            required />
+                        <input type="text" name="monthlyReward" placeholder="每月獎勵" class="form-control" />
+                        <button type="submit" class="btn btn-primary">新增</button>
+                    </div>
+                </form>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>排序</th>
+                        <th>名稱</th>
+                        <th>門檻</th>
+                        <th>每月獎勵</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="lvl : ${memberLevels}">
+                        <td th:text="${lvl.sortOrder}">1</td>
+                        <td th:text="${lvl.name}">Common</td>
+                        <td th:text="${lvl.threshold}">0</td>
+                        <td th:text="${lvl.monthlyReward}">-</td>
+                        <td th:text="${lvl.enabled ? '啟用' : '停用'}">Active</td>
+                        <td>
+                            <button class="btn btn-sm btn-info"
+                                th:onclick="editLevel([[${lvl.id}]], '[[${lvl.name}]]', [[${lvl.sortOrder}]], [[${lvl.threshold}]], '[[${lvl.monthlyReward}]]', [[${lvl.enabled}]])">✏️</button>
+                            <form th:action="@{/admin/member-levels/delete/{id}(id=${lvl.id})}" method="post"
+                                style="display:inline;" onsubmit="return confirm('確定刪除等級？');">
                                 <button type="submit" style="background:none;border:none;cursor:pointer;"
                                     title="刪除">🗑️</button>
                             </form>
@@ -242,6 +295,11 @@
                     <h4 th:text="${theme.name} + ' ($' + ${theme.price} + ')'">Gundam ($100)</h4>
                     <button class="btn btn-sm btn-info"
                         th:onclick="editTheme([[${theme.id}]], '[[${theme.name}]]', [[${theme.price}]])">編輯主題</button>
+
+                    <form th:action="@{/admin/mystery-box/themes/delete/{id}(id=${theme.id})}" method="post"
+                        style="display:inline;" onsubmit="return confirm('刪除主題將連同獎品一起刪除，確定？');">
+                        <button type="submit" class="btn btn-sm btn-danger">刪除主題</button>
+                    </form>
                 </div>
 
                 <!-- Add Item to Theme -->
@@ -271,12 +329,59 @@
                             <td th:text="${item.estimatedValue}">50</td>
                             <td th:text="${item.weight}">20</td>
                             <td>
-                                <a href="#">✏️</a>
-                                <a href="#">🗑️</a>
+                                <button class="btn btn-sm btn-info"
+                                    th:onclick="editBoxItem([[${item.id}]], '[[${item.name}]]', [[${item.estimatedValue}]], [[${item.weight}]])">✏️</button>
+                                <form th:action="@{/admin/mystery-box/items/delete/{id}(id=${item.id})}" method="post"
+                                    style="display:inline;" onsubmit="return confirm('確定刪除獎品？');">
+                                    <button type="submit" style="background:none;border:none;cursor:pointer;"
+                                        title="刪除">🗑️</button>
+                                </form>
                             </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Edit Theme Modal -->
+            <div id="editThemeModal" class="modal"
+                style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+                <div class="card" style="margin: 15% auto; width: 30%; padding: 20px;">
+                    <h4>編輯主題</h4>
+                    <form th:action="@{/admin/mystery-box/themes/update}" method="post">
+                        <input type="hidden" id="editThemeId" name="id">
+                        <input type="text" id="editThemeName" name="name" class="form-control" placeholder="名稱"
+                            required>
+                        <input type="number" step="0.01" id="editThemePrice" name="price" class="form-control"
+                            placeholder="價格" required>
+                        <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                            <button type="button" class="btn btn-secondary"
+                                onclick="document.getElementById('editThemeModal').style.display='none'">取消</button>
+                            <button type="submit" class="btn btn-primary">儲存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Edit Box Item Modal -->
+            <div id="editBoxItemModal" class="modal"
+                style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+                <div class="card" style="margin: 15% auto; width: 30%; padding: 20px;">
+                    <h4>編輯獎品</h4>
+                    <form th:action="@{/admin/mystery-box/items/update}" method="post">
+                        <input type="hidden" id="editBoxItemId" name="id">
+                        <input type="text" id="editBoxItemName" name="name" class="form-control" placeholder="名稱"
+                            required>
+                        <input type="number" id="editBoxItemValue" name="estimatedValue" class="form-control"
+                            placeholder="價值" required>
+                        <input type="number" id="editBoxItemWeight" name="weight" class="form-control" placeholder="權重"
+                            required>
+                        <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                            <button type="button" class="btn btn-secondary"
+                                onclick="document.getElementById('editBoxItemModal').style.display='none'">取消</button>
+                            <button type="submit" class="btn btn-primary">儲存</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
 
@@ -413,7 +518,7 @@
                 <tbody>
                     <tr th:each="log : ${logs}">
                         <td th:text="${log.id}">1</td>
-                        <td th:text="${log.username}">User</td>
+                        <td th:text="${log.adminUsername}">User</td>
                         <td th:text="${log.action}">LOGIN</td>
                         <td th:text="${log.details}">Success</td>
                         <td
@@ -424,7 +529,81 @@
             </table>
         </div>
 
+        <!-- Edit Member Level Modal -->
+        <div id="editLevelModal" class="modal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+            <div class="card" style="margin: 10% auto; width: 40%; padding: 20px;">
+                <h4>編輯等級</h4>
+                <form th:action="@{/admin/member-levels/update}" method="post">
+                    <input type="hidden" id="editLvlId" name="id">
+                    <div style="display: grid; gap: 10px;">
+                        <label>等級名稱</label>
+                        <input type="text" id="editLvlName" name="name" class="form-control" required />
+                        <label>排序</label>
+                        <input type="number" id="editLvlSort" name="sortOrder" class="form-control" required />
+                        <label>累積儲值門檻</label>
+                        <input type="number" step="0.01" id="editLvlThreshold" name="threshold" class="form-control"
+                            required />
+                        <label>每月獎勵</label>
+                        <input type="text" id="editLvlReward" name="monthlyReward" class="form-control" />
+                        <label>狀態</label>
+                        <select id="editLvlEnabled" name="enabled" class="form-control">
+                            <option value="true">啟用</option>
+                            <option value="false">停用</option>
+                        </select>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" class="btn btn-secondary"
+                            onclick="document.getElementById('editLevelModal').style.display='none'">取消</button>
+                        <button type="submit" class="btn btn-primary">儲存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Member Modal -->
+        <div id="editMemberModal" class="modal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+            <div class="card" style="margin: 10% auto; width: 40%; padding: 20px;">
+                <h4>編輯會員</h4>
+                <form th:action="@{/admin/members/update}" method="post">
+                    <input type="hidden" id="editMemberId" name="id">
+                    <div style="display: grid; gap: 10px;">
+                        <label>Email</label>
+                        <input type="text" id="editMemberEmail" name="email" class="form-control" />
+                        <label>暱稱</label>
+                        <input type="text" id="editMemberName" name="nickname" class="form-control" />
+                        <label>狀態</label>
+                        <select id="editMemberStatus" name="enabled" class="form-control">
+                            <option value="true">啟用</option>
+                            <option value="false">停用</option>
+                        </select>
+                        <label>等級</label>
+                        <select id="editMemberLevel" name="level" class="form-control">
+                            <option value="">選擇等級</option>
+                            <option th:each="lvl : ${memberLevels}" th:value="${lvl.id}" th:text="${lvl.name}"></option>
+                        </select>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" class="btn btn-secondary"
+                            onclick="document.getElementById('editMemberModal').style.display='none'">取消</button>
+                        <button type="submit" class="btn btn-primary">儲存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <script>
+            function editLevel(id, name, sort, threshold, reward, enabled) {
+                document.getElementById('editLvlId').value = id;
+                document.getElementById('editLvlName').value = name;
+                document.getElementById('editLvlSort').value = sort;
+                document.getElementById('editLvlThreshold').value = threshold;
+                document.getElementById('editLvlReward').value = reward;
+                document.getElementById('editLvlEnabled').value = enabled;
+                document.getElementById('editLevelModal').style.display = 'block';
+            }
+
             function openTab(tabName) {
                 var i;
                 var x = document.getElementsByClassName("tab-content");
@@ -453,6 +632,15 @@
                             select.appendChild(option);
                         });
                     });
+            }
+
+            function editMember(id, email, name, enabled, level) {
+                document.getElementById('editMemberId').value = id;
+                document.getElementById('editMemberEmail').value = email;
+                document.getElementById('editMemberName').value = name;
+                document.getElementById('editMemberStatus').value = enabled;
+                document.getElementById('editMemberLevel').value = level;
+                document.getElementById('editMemberModal').style.display = 'block';
             }
 
             function showHistory(memberId) {
@@ -495,6 +683,14 @@
                 document.getElementById('editSubCatId').value = id;
                 document.getElementById('editSubCatName').value = name;
                 document.getElementById('editSubCategoryModal').style.display = 'block';
+            }
+
+            function editBoxItem(id, name, value, weight) {
+                document.getElementById('editBoxItemId').value = id;
+                document.getElementById('editBoxItemName').value = name;
+                document.getElementById('editBoxItemValue').value = value;
+                document.getElementById('editBoxItemWeight').value = weight;
+                document.getElementById('editBoxItemModal').style.display = 'block';
             }
         </script>
     </div>

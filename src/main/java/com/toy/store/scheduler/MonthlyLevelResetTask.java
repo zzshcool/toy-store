@@ -17,23 +17,40 @@ public class MonthlyLevelResetTask {
     @Autowired
     private MemberRepository memberRepository;
 
+    @Autowired
+    private com.toy.store.repository.MemberLevelRepository memberLevelRepository;
+
     // Run at 00:00 on the 1st day of every month
     @Scheduled(cron = "0 0 0 1 * ?")
     @Transactional
     public void resetMemberLevels() {
         List<Member> members = memberRepository.findAll();
+        List<MemberLevel> levels = memberLevelRepository.findByEnabledTrueOrderBySortOrderAsc();
+
+        if (levels.isEmpty())
+            return;
+
         for (Member member : members) {
             MemberLevel currentLevel = member.getLevel();
+            if (currentLevel == null)
+                continue;
+
             BigDecimal monthlyRecharge = member.getMonthlyRecharge();
 
-            // Logic: "If unable to reach standard, return to previous level"
-            // We check if their monthly recharge met the CURRENT level's threshold.
-            // If not, downgrade.
-            // Exception: Common level cannot downgrade.
+            // Find current level index
+            int currentIndex = -1;
+            for (int i = 0; i < levels.size(); i++) {
+                if (levels.get(i).getId().equals(currentLevel.getId())) {
+                    currentIndex = i;
+                    break;
+                }
+            }
 
-            if (currentLevel != MemberLevel.COMMON) {
+            // Downgrade if threshold not met and not the lowest level
+            if (currentIndex > 0) {
                 if (monthlyRecharge.compareTo(currentLevel.getThreshold()) < 0) {
-                    member.setLevel(currentLevel.previous());
+                    // Downgrade to previous level
+                    member.setLevel(levels.get(currentIndex - 1));
                 }
             }
 

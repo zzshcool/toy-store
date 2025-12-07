@@ -45,10 +45,9 @@ public class Member {
 
     private LocalDateTime lastLoginTime;
 
-    private LocalDateTime registrationDate = LocalDateTime.now();
-
-    @Enumerated(EnumType.STRING)
-    private MemberLevel level = MemberLevel.COMMON;
+    @ManyToOne
+    @JoinColumn(name = "member_level_id")
+    private MemberLevel level;
 
     @Column(nullable = false)
     private BigDecimal monthlyRecharge = BigDecimal.ZERO;

@@ -20,6 +20,9 @@ public class TransactionService {
     @Autowired
     private TransactionRepository transactionRepository;
 
+    @Autowired
+    private com.toy.store.repository.MemberLevelRepository memberLevelRepository;
+
     /**
      * Updates member wallet balance atomically.
      * 

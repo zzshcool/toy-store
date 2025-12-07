@@ -1,44 +1,50 @@
 package com.toy.store.model;
 
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
-public enum MemberLevel {
-    COMMON("平民", new BigDecimal("0")),
-    BRONZE("青銅", new BigDecimal("10000")),
-    BRASS("黃銅", new BigDecimal("100000")),
-    GOLD("黃金", new BigDecimal("300000")),
-    PLATINUM("白金", new BigDecimal("500000")),
-    SUPER_PLATINUM("超白金", new BigDecimal("1000000"));
+@Entity
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Table(name = "member_levels")
+public class MemberLevel {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    private final String displayName;
-    private final BigDecimal threshold;
+    @Column(nullable = false)
+    private String name;
 
-    MemberLevel(String displayName, BigDecimal threshold) {
-        this.displayName = displayName;
-        this.threshold = threshold;
+    @Column(nullable = false)
+    private Integer sortOrder;
+
+    @Column(nullable = false)
+    private BigDecimal threshold;
+
+    private boolean enabled = true;
+
+    private String monthlyReward;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public BigDecimal getThreshold() {
-        return threshold;
-    }
-
-    public MemberLevel next() {
-        int ordinal = this.ordinal();
-        if (ordinal < values().length - 1) {
-            return values()[ordinal + 1];
-        }
-        return this;
-    }
-
-    public MemberLevel previous() {
-        int ordinal = this.ordinal();
-        if (ordinal > 0) {
-            return values()[ordinal - 1];
-        }
-        return this;
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }
