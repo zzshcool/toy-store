@@ -12,12 +12,18 @@
     <nav class="navbar">
         <div class="container nav-content">
             <a th:href="@{/}" class="nav-logo">TOY<span class="logo-accent">SOUL</span></a>
-            <ul class="nav-menu">
+            <div class="hamburger" onclick="toggleMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <ul class="nav-menu" id="navMenu">
                 <li><a th:href="@{/}" class="nav-link">首頁</a></li>
                 <li><a th:href="@{/products}" class="nav-link">商品列表</a></li>
                 <li><a th:href="@{/mystery-box}" class="nav-link">盲盒抽獎</a></li>
 
-                <li th:if="${currentUser != null}" style="display: flex; align-items: center; gap: 15px;">
+                <li th:if="${currentUser != null}"
+                    style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                     <span th:if="${currentUser != null}" style="color: var(--accent-color); font-weight: bold;">
                         $<span th:text="${currentUser.platformWalletBalance}">1000</span>
                     </span>
@@ -71,6 +77,11 @@
     </footer>
 
     <script>
+        function toggleMenu() {
+            const menu = document.getElementById('navMenu');
+            menu.classList.toggle('active');
+        }
+
         function toggleCart() {
             const panel = document.getElementById('floatingCartPanel');
             if (panel.style.right === '0px') {
