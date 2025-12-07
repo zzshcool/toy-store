@@ -17,12 +17,14 @@ public class AdminActionLog {
     private String adminUsername;
     private String action; // e.g., "CREATE_PRODUCT", "BLOCK_MEMBER"
     private String details;
+    private String requestParams;
     private LocalDateTime timestamp = LocalDateTime.now();
 
-    public AdminActionLog(String adminUsername, String action, String details) {
+    public AdminActionLog(String adminUsername, String action, String details, String requestParams) {
         this.adminUsername = adminUsername;
         this.action = action;
         this.details = details;
+        this.requestParams = requestParams;
         this.timestamp = LocalDateTime.now();
     }
 }

@@ -149,7 +149,15 @@ public class AdminController {
     private void logAction(String action, String details, HttpServletRequest request) {
         TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
         String adminName = (info != null) ? info.getUsername() : "Unknown";
-        adminActionLogRepository.save(new com.toy.store.model.AdminActionLog(adminName, action, details));
+
+        StringBuilder params = new StringBuilder();
+        java.util.Map<String, String[]> map = request.getParameterMap();
+        for (String key : map.keySet()) {
+            params.append(key).append("=").append(java.util.Arrays.toString(map.get(key))).append("; ");
+        }
+
+        adminActionLogRepository
+                .save(new com.toy.store.model.AdminActionLog(adminName, action, details, params.toString()));
     }
 
     // --- Product Management ---
@@ -265,7 +273,7 @@ public class AdminController {
             theme.setName(name);
             theme.setPrice(price);
             mysteryBoxThemeRepository.save(theme);
-            logAction(request, "UPDATE_THEME", "Updated theme: " + name);
+            logAction("UPDATE_THEME", "Updated theme: " + name, request);
         });
         return "redirect:/admin?tab=mystery";
     }
@@ -274,7 +282,7 @@ public class AdminController {
     public String addActivity(@ModelAttribute("newActivity") com.toy.store.model.Activity activity,
             HttpServletRequest request) {
         activityRepository.save(activity);
-        logAction(request, "CREATE_ACTIVITY", "Created activity: " + activity.getTitle());
+        logAction("CREATE_ACTIVITY", "Created activity: " + activity.getTitle(), request);
         return "redirect:/admin";
     }
 
@@ -282,7 +290,7 @@ public class AdminController {
     public String deleteActivity(@PathVariable Long id, HttpServletRequest request) {
         activityRepository.findById(id).ifPresent(activity -> {
             activityRepository.delete(activity);
-            logAction(request, "DELETE_ACTIVITY", "Deleted activity: " + activity.getTitle());
+            logAction("DELETE_ACTIVITY", "Deleted activity: " + activity.getTitle(), request);
         });
         return "redirect:/admin";
     }
@@ -292,8 +300,8 @@ public class AdminController {
         activityRepository.findById(id).ifPresent(activity -> {
             activity.setActive(!activity.isActive());
             activityRepository.save(activity);
-            logAction(request, "TOGGLE_ACTIVITY",
-                    "Toggled activity: " + activity.getTitle() + " to " + activity.isActive());
+            logAction("TOGGLE_ACTIVITY", "Toggled activity: " + activity.getTitle() + " to " + activity.isActive(),
+                    request);
         });
         return "redirect:/admin";
     }
@@ -317,7 +325,7 @@ public class AdminController {
                 activity.setExpiryDate(java.time.LocalDateTime.parse(expiryDate));
             }
             activityRepository.save(activity);
-            logAction(request, "UPDATE_ACTIVITY", "Updated activity: " + title);
+            logAction("UPDATE_ACTIVITY", "Updated activity: " + title, request);
         });
         return "redirect:/admin";
     }
@@ -335,7 +343,7 @@ public class AdminController {
             member.setEnabled(enabled);
             member.setLevel(level);
             memberRepository.save(member);
-            logAction(request, "UPDATE_MEMBER", "Updated member: " + member.getUsername() + " to level " + level);
+            logAction("UPDATE_MEMBER", "Updated member: " + member.getUsername() + " to level " + level, request);
         });
         return "redirect:/admin?tab=members";
     }
@@ -345,7 +353,7 @@ public class AdminController {
         categoryRepository.findById(id).ifPresent(cat -> {
             cat.setName(name);
             categoryRepository.save(cat);
-            logAction(request, "UPDATE_CATEGORY", "Updated category: " + name);
+            logAction("UPDATE_CATEGORY", "Updated category: " + name, request);
         });
         return "redirect:/admin?tab=categories";
     }
@@ -354,7 +362,7 @@ public class AdminController {
     public String deleteCategory(@PathVariable Long id, HttpServletRequest request) {
         categoryRepository.findById(id).ifPresent(cat -> {
             categoryRepository.delete(cat);
-            logAction(request, "DELETE_CATEGORY", "Deleted category: " + cat.getName());
+            logAction("DELETE_CATEGORY", "Deleted category: " + cat.getName(), request);
         });
         return "redirect:/admin?tab=categories";
     }
@@ -364,7 +372,7 @@ public class AdminController {
         subCategoryRepository.findById(id).ifPresent(sub -> {
             sub.setName(name);
             subCategoryRepository.save(sub);
-            logAction(request, "UPDATE_SUBCATEGORY", "Updated subcategory: " + name);
+            logAction("UPDATE_SUBCATEGORY", "Updated subcategory: " + name, request);
         });
         return "redirect:/admin?tab=categories";
     }
@@ -373,37 +381,31 @@ public class AdminController {
     public String deleteSubCategory(@PathVariable Long id, HttpServletRequest request) {
         subCategoryRepository.findById(id).ifPresent(sub -> {
             subCategoryRepository.delete(sub);
-            logAction(request, "DELETE_SUBCATEGORY", "Deleted subcategory: " + sub.getName());
+            logAction("DELETE_SUBCATEGORY", "Deleted subcategory: " + sub.getName(), request);
         });
         return "redirect:/admin?tab=categories";
     }
 
-    private void logAction(HttpServletRequest request, String action, String details) {
-        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
-        String adminName = info != null ? info.getUsername() : "Unknown";
-        adminActionLogRepository.save(new com.toy.store.model.AdminActionLog(adminName, action, details));
-    }
-
-    @PostMapping("/admin/member-levels")
+    @PostMapping("/member-levels")
     public String createMemberLevel(@ModelAttribute com.toy.store.model.MemberLevel memberLevel,
             HttpServletRequest request) {
         memberLevelRepository.save(memberLevel);
-        logAction(request, "CREATE_MEMBER_LEVEL", "Created level: " + memberLevel.getName());
+        logAction("CREATE_MEMBER_LEVEL", "Created level: " + memberLevel.getName(), request);
         return "redirect:/admin?tab=levels";
     }
 
-    @PostMapping("/admin/member-levels/update")
+    @PostMapping("/member-levels/update")
     public String updateMemberLevel(@ModelAttribute com.toy.store.model.MemberLevel memberLevel,
             HttpServletRequest request) {
         memberLevelRepository.save(memberLevel);
-        logAction(request, "UPDATE_MEMBER_LEVEL", "Updated level: " + memberLevel.getName());
+        logAction("UPDATE_MEMBER_LEVEL", "Updated level: " + memberLevel.getName(), request);
         return "redirect:/admin?tab=levels";
     }
 
-    @PostMapping("/admin/member-levels/delete/{id}")
+    @PostMapping("/member-levels/delete/{id}")
     public String deleteMemberLevel(@PathVariable Long id, HttpServletRequest request) {
         memberLevelRepository.deleteById(id);
-        logAction(request, "DELETE_MEMBER_LEVEL", "Deleted level ID: " + id);
+        logAction("DELETE_MEMBER_LEVEL", "Deleted level ID: " + id, request);
         return "redirect:/admin?tab=levels";
     }
 
@@ -414,7 +416,7 @@ public class AdminController {
             theme.setName(name);
             theme.setPrice(java.math.BigDecimal.valueOf(price));
             mysteryBoxThemeRepository.save(theme);
-            logAction(request, "UPDATE_THEME", "Updated theme ID: " + id);
+            logAction("UPDATE_THEME", "Updated theme ID: " + id, request);
         });
         return "redirect:/admin?tab=mystery";
     }
@@ -422,7 +424,7 @@ public class AdminController {
     @PostMapping("/mystery-box/themes/delete/{id}")
     public String deleteMysteryBoxTheme(@PathVariable Long id, HttpServletRequest request) {
         mysteryBoxThemeRepository.deleteById(id);
-        logAction(request, "DELETE_THEME", "Deleted theme ID: " + id);
+        logAction("DELETE_THEME", "Deleted theme ID: " + id, request);
         return "redirect:/admin?tab=mystery";
     }
 
@@ -434,7 +436,7 @@ public class AdminController {
             item.setEstimatedValue(java.math.BigDecimal.valueOf(estimatedValue));
             item.setWeight(weight);
             mysteryBoxItemRepository.save(item);
-            logAction(request, "UPDATE_ITEM", "Updated item ID: " + id);
+            logAction("UPDATE_ITEM", "Updated item ID: " + id, request);
         });
         return "redirect:/admin?tab=mystery";
     }
@@ -442,7 +444,7 @@ public class AdminController {
     @PostMapping("/mystery-box/items/delete/{id}")
     public String deleteMysteryBoxItem(@PathVariable Long id, HttpServletRequest request) {
         mysteryBoxItemRepository.deleteById(id);
-        logAction(request, "DELETE_ITEM", "Deleted item ID: " + id);
+        logAction("DELETE_ITEM", "Deleted item ID: " + id, request);
         return "redirect:/admin?tab=mystery";
     }
 }

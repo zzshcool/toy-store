@@ -66,6 +66,9 @@ public class DataInitializer implements CommandLineRunner {
 
         // Seed Activities
         seedActivities();
+
+        // Seed Member Levels
+        seedMemberLevels();
     }
 
     @Autowired
@@ -166,5 +169,31 @@ public class DataInitializer implements CommandLineRunner {
             theme.getItems().add(item);
             mysteryBoxThemeRepository.save(theme);
         }
+    }
+
+    @Autowired
+    private com.toy.store.repository.MemberLevelRepository memberLevelRepository;
+
+    private void seedMemberLevels() {
+        if (memberLevelRepository.count() == 0) {
+            createLevel("平民", 1, 0, "無");
+            createLevel("良民", 2, 10000, "送抽獎3次");
+            createLevel("青銅", 3, 50000, "送抽獎5次");
+            createLevel("黃銅", 4, 100000, "送抽獎10次");
+            createLevel("金銅", 5, 150000, "送抽獎15次");
+            createLevel("白銀", 6, 300000, "送抽獎20次");
+            createLevel("白金", 7, 400000, "送抽獎30次");
+            createLevel("黃金", 8, 500000, "送抽獎35次");
+        }
+    }
+
+    private void createLevel(String name, int sortOrder, double threshold, String monthlyReward) {
+        com.toy.store.model.MemberLevel level = new com.toy.store.model.MemberLevel();
+        level.setName(name);
+        level.setSortOrder(sortOrder);
+        level.setThreshold(new BigDecimal(threshold));
+        level.setMonthlyReward(monthlyReward);
+        level.setEnabled(true);
+        memberLevelRepository.save(level);
     }
 }
