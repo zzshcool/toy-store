@@ -48,7 +48,7 @@
     <div th:replace="${content}"></div>
 
     <!-- Floating Cart Button -->
-    <div id="floatingCartBtn" onclick="toggleCart()"
+    <div id="floatingCartBtn" th:if="${currentUser != null}" onclick="toggleCart()"
         style="position: fixed; bottom: 30px; right: 30px; background: var(--accent-color); color: #000; width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1000;">
         <span style="font-size: 24px;">🛒</span>
         <span id="cartBadge" class="badge"
@@ -56,7 +56,7 @@
     </div>
 
     <!-- Floating Cart Panel -->
-    <div id="floatingCartPanel"
+    <div id="floatingCartPanel" th:if="${currentUser != null}"
         style="position: fixed; top: 0; right: -350px; width: 350px; height: 100%; background: #fff; box-shadow: -2px 0 10px rgba(0,0,0,0.1); z-index: 1001; transition: right 0.3s ease; display: flex; flex-direction: column;">
         <div
             style="padding: 15px; background: var(--primary-color); color: #fff; display: flex; justify-content: space-between; align-items: center;">

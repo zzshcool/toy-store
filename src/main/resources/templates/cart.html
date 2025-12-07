@@ -24,31 +24,28 @@
                     <tbody>
                         <tr th:each="item : ${cart.items}">
                             <td>
-                                <h4 th:text="${item.product.name}" style="margin: 0; color: var(--text-primary);">商品名稱
-                                </h4>
-                            </td>
-                            <td th:text="'$' + ${item.product.price}">$99.00</td>
-                            <td>
-                                <form th:action="@{/cart/update}" method="post"
-                                    style="display: flex; gap: 5px; align-items: center;">
-                                    <input type="hidden" name="itemId" th:value="${item.id}">
-                                    <input type="hidden" name="quantity" th:value="${item.quantity - 1}">
-                                    <button type="submit" class="btn btn-sm"
-                                        style="background: #eee; color: #333;">-</button>
-                                </form>
-                                <span th:text="${item.quantity}" style="margin: 0 10px;">1</span>
-                                <form th:action="@{/cart/update}" method="post"
-                                    style="display: flex; gap: 5px; align-items: center;">
-                                    <input type="hidden" name="itemId" th:value="${item.id}">
-                                    <input type="hidden" name="quantity" th:value="${item.quantity + 1}">
-                                    <button type="submit" class="btn btn-sm" style="background: #eee; color: #333;"
-                                        th:if="${item.quantity < item.product.stock}">+</button>
-                                </form>
-                                <form th:action="@{/cart/remove}" method="post" style="margin-left: 10px;">
-                                    <input type="hidden" name="itemId" th:value="${item.id}">
-                                    <button type="submit" class="btn btn-sm"
-                                        style="background: #ff4d4d; color: white;">&times;</button>
-                                </form>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <form th:action="@{/cart/update}" method="post"
+                                        style="display: flex; gap: 5px; align-items: center; margin: 0;">
+                                        <input type="hidden" name="itemId" th:value="${item.id}">
+                                        <input type="hidden" name="quantity" th:value="${item.quantity - 1}">
+                                        <button type="submit" class="btn btn-sm"
+                                            style="background: #eee; color: #333;">-</button>
+                                    </form>
+                                    <span th:text="${item.quantity}" style="margin: 0;">1</span>
+                                    <form th:action="@{/cart/update}" method="post"
+                                        style="display: flex; gap: 5px; align-items: center; margin: 0;">
+                                        <input type="hidden" name="itemId" th:value="${item.id}">
+                                        <input type="hidden" name="quantity" th:value="${item.quantity + 1}">
+                                        <button type="submit" class="btn btn-sm" style="background: #eee; color: #333;"
+                                            th:if="${item.quantity < item.product.stock}">+</button>
+                                    </form>
+                                    <form th:action="@{/cart/remove}" method="post" style="margin: 0;">
+                                        <input type="hidden" name="itemId" th:value="${item.id}">
+                                        <button type="submit" class="btn btn-sm"
+                                            style="background: #ff4d4d; color: white;">&times;</button>
+                                    </form>
+                                </div>
                             </td>
                             <td th:text="'$' + ${item.product.price * item.quantity}">$99.00</td>
                         </tr>

@@ -32,7 +32,9 @@
                     <form th:action="@{/mystery-box/draw}" method="post" class="draw-form"
                         onsubmit="playAnimation(event, this)">
                         <input type="hidden" name="themeId" th:value="${theme.id}">
-                        <button type="submit" class="btn btn-primary">立即抽獎</button>
+                        <button th:if="${currentUser != null}" type="submit" class="btn btn-primary">立即抽獎</button>
+                        <a th:if="${currentUser == null}" th:href="@{/login}" class="btn btn-primary"
+                            style="background-color: #ccc; cursor: not-allowed;">請先登入</a>
                     </form>
                 </div>
             </div>
