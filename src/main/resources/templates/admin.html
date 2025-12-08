@@ -605,7 +605,8 @@
                 <div class="card" style="grid-column: span 2;">
                     <div class="card-header bg-info text-white">主畫面輪播</div>
                     <div class="card-body">
-                        <form th:action="@{/admin/platform/carousel/create}" method="post" class="row g-3">
+                        <form id="form-carousel-create" th:action="@{/admin/platform/carousel/create}" method="post"
+                            class="row g-3">
                             <div class="col-md-5">
                                 <input type="text" name="imageUrl" class="form-control" placeholder="圖片網址" required>
                             </div>
@@ -624,15 +625,13 @@
                                     <th>操作</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="tbody-carousel">
                                 <tr th:each="slide : ${carouselSlides}">
                                     <td><img th:src="${slide.imageUrl}" style="height: 50px;"></td>
                                     <td th:text="${slide.linkUrl}"></td>
                                     <td>
-                                        <form th:action="@{/admin/platform/carousel/delete/{id}(id=${slide.id})}"
-                                            method="post">
-                                            <button class="btn btn-sm btn-danger">刪除</button>
-                                        </form>
+                                        <button class="btn btn-sm btn-danger btn-delete-carousel"
+                                            th:data-id="${slide.id}">刪除</button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -644,7 +643,8 @@
                 <div class="card">
                     <div class="card-header bg-success text-white">新品項目 (New Arrivals)</div>
                     <div class="card-body">
-                        <form th:action="@{/admin/platform/featured/add}" method="post" class="row g-3">
+                        <form id="form-new-arrival" th:action="@{/admin/platform/featured/add}" method="post"
+                            class="row g-3">
                             <input type="hidden" name="type" value="NEW_ARRIVAL">
                             <div class="col-md-8">
                                 <select name="productId" class="form-control" required>
@@ -668,15 +668,13 @@
                                     <th>操作</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="tbody-new-arrival">
                                 <tr th:each="item : ${newArrivals}">
                                     <td th:text="${item.product.name}"></td>
                                     <td th:text="${item.sortOrder}"></td>
                                     <td>
-                                        <form th:action="@{/admin/platform/featured/delete/{id}(id=${item.id})}"
-                                            method="post">
-                                            <button class="btn btn-sm btn-danger">移除</button>
-                                        </form>
+                                        <button class="btn btn-sm btn-danger btn-delete-featured"
+                                            th:data-id="${item.id}">移除</button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -688,7 +686,8 @@
                 <div class="card">
                     <div class="card-header bg-warning text-dark">熱銷排行榜 (Best Sellers)</div>
                     <div class="card-body">
-                        <form th:action="@{/admin/platform/featured/add}" method="post" class="row g-3">
+                        <form id="form-best-seller" th:action="@{/admin/platform/featured/add}" method="post"
+                            class="row g-3">
                             <input type="hidden" name="type" value="BEST_SELLER">
                             <div class="col-md-8">
                                 <select name="productId" class="form-control" required>
@@ -712,15 +711,13 @@
                                     <th>操作</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="tbody-best-seller">
                                 <tr th:each="item : ${bestSellers}">
                                     <td th:text="${item.product.name}"></td>
                                     <td th:text="${item.sortOrder}"></td>
                                     <td>
-                                        <form th:action="@{/admin/platform/featured/delete/{id}(id=${item.id})}"
-                                            method="post">
-                                            <button class="btn btn-sm btn-danger">移除</button>
-                                        </form>
+                                        <button class="btn btn-sm btn-danger btn-delete-featured"
+                                            th:data-id="${item.id}">移除</button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -732,7 +729,7 @@
                 <div class="card" style="grid-column: span 2;">
                     <div class="card-header bg-danger text-white">及時推送 (Push Notifications)</div>
                     <div class="card-body">
-                        <form th:action="@{/admin/platform/notification/send}" method="post">
+                        <form id="form-notification" th:action="@{/admin/platform/notification/send}" method="post">
                             <div class="mb-3">
                                 <label>標題</label>
                                 <input type="text" name="title" class="form-control" required>
@@ -753,7 +750,7 @@
                                     <th>內容</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="tbody-notification">
                                 <tr th:each="notif : ${notifications}">
                                     <td th:text="${#temporals.format(notif.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
                                     <td th:text="${notif.title}"></td>
@@ -967,6 +964,98 @@
                 document.getElementById('distributeTitle').innerText = '派發優惠券 - ' + name;
                 document.getElementById('distributeCouponModal').style.display = 'block';
             }
+            // Platform Management AJAX
+            document.addEventListener('DOMContentLoaded', function () {
+                function handleForm(formId, tbodyId, rowBuilder) {
+                    const form = document.getElementById(formId);
+                    if (!form) return;
+                    form.addEventListener('submit', async function (e) {
+                        e.preventDefault();
+                        const formData = new FormData(form);
+                        const params = new URLSearchParams();
+                        for (const pair of formData.entries()) { params.append(pair[0], pair[1]); }
+
+                        try {
+                            const res = await fetch(form.action, { method: 'POST', body: params });
+                            const json = await res.json();
+                            if (json.success) {
+                                alert('操作成功');
+                                if (tbodyId && rowBuilder) {
+                                    const tbody = document.getElementById(tbodyId);
+                                    const tr = document.createElement('tr');
+                                    tr.innerHTML = rowBuilder(json);
+                                    tbody.appendChild(tr);
+                                } else {
+                                    location.reload();
+                                }
+                                form.reset();
+                            } else {
+                                alert('失敗: ' + json.message);
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            alert('發生錯誤');
+                        }
+                    });
+                }
+
+                // Carousel
+                handleForm('form-carousel-create', 'tbody-carousel', (json) => {
+                    const s = json.slide;
+                    return `<td><img src="${s.imageUrl}" style="height: 50px;"></td>
+                            <td>${s.linkUrl || ''}</td>
+                            <td><button class="btn btn-sm btn-danger btn-delete-carousel" data-id="${s.id}">刪除</button></td>`;
+                });
+
+                // New Arrival
+                handleForm('form-new-arrival', 'tbody-new-arrival', (json) => {
+                    const i = json.item;
+                    return `<td>${json.productName}</td>
+                            <td>${i.sortOrder}</td>
+                            <td><button class="btn btn-sm btn-danger btn-delete-featured" data-id="${i.id}">移除</button></td>`;
+                });
+
+                // Best Seller
+                handleForm('form-best-seller', 'tbody-best-seller', (json) => {
+                    const i = json.item;
+                    return `<td>${json.productName}</td>
+                            <td>${i.sortOrder}</td>
+                            <td><button class="btn btn-sm btn-danger btn-delete-featured" data-id="${i.id}">移除</button></td>`;
+                });
+
+                // Notification
+                handleForm('form-notification', null, null);
+
+                // Deletes
+                document.addEventListener('click', async function (e) {
+                    let endpoint = '';
+                    let id = '';
+                    if (e.target.classList.contains('btn-delete-carousel')) {
+                        endpoint = '/admin/platform/carousel/delete/';
+                        id = e.target.getAttribute('data-id');
+                    } else if (e.target.classList.contains('btn-delete-featured')) {
+                        endpoint = '/admin/platform/featured/delete/';
+                        id = e.target.getAttribute('data-id');
+                    }
+
+                    if (endpoint && id) {
+                        e.preventDefault();
+                        if (!confirm('確定刪除？')) return;
+                        try {
+                            const res = await fetch(endpoint + id, { method: 'POST' });
+                            const json = await res.json();
+                            if (json.success) {
+                                e.target.closest('tr').remove();
+                            } else {
+                                alert('刪除失敗: ' + json.message);
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            alert('刪除錯誤');
+                        }
+                    }
+                });
+            });
         </script>
     </div>
 </body>

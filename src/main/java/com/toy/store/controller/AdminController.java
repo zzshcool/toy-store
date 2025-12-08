@@ -104,6 +104,9 @@ public class AdminController {
     @Autowired
     private com.toy.store.repository.NotificationRepository notificationRepository;
 
+    @Autowired
+    private com.toy.store.repository.ProductRepository productRepository;
+
     @GetMapping("/login")
     public String adminLogin() {
         return "admin_login";
@@ -522,50 +525,113 @@ public class AdminController {
     // --- Platform Management ---
 
     @PostMapping("/platform/carousel/create")
-    public String createCarouselSlide(@ModelAttribute com.toy.store.model.CarouselSlide slide,
-            HttpServletRequest request) {
-        carouselSlideRepository.save(slide);
-        logAction("CREATE_CAROUSEL", "Created slide: " + slide.getImageUrl(), request);
-        return "redirect:/admin?tab=platform";
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<java.util.Map<String, Object>> createCarouselSlide(
+            @RequestParam String imageUrl, @RequestParam(required = false) String linkUrl, HttpServletRequest request) {
+
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        try {
+            com.toy.store.model.CarouselSlide slide = new com.toy.store.model.CarouselSlide();
+            slide.setImageUrl(imageUrl);
+            slide.setLinkUrl(linkUrl);
+            slide.setSortOrder(0); // Default
+            com.toy.store.model.CarouselSlide saved = carouselSlideRepository.save(slide);
+
+            logAction("PLATFORM", "Added Carousel Slide: " + imageUrl, request);
+
+            response.put("success", true);
+            response.put("slide", saved);
+            return org.springframework.http.ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return org.springframework.http.ResponseEntity.status(500).body(response);
+        }
     }
 
     @PostMapping("/platform/carousel/delete/{id}")
-    public String deleteCarouselSlide(@PathVariable Long id, HttpServletRequest request) {
-        carouselSlideRepository.deleteById(id);
-        logAction("DELETE_CAROUSEL", "Deleted slide ID: " + id, request);
-        return "redirect:/admin?tab=platform";
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<java.util.Map<String, Object>> deleteCarouselSlide(
+            @PathVariable Long id, HttpServletRequest request) {
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        try {
+            carouselSlideRepository.deleteById(id);
+            logAction("PLATFORM", "Deleted Carousel Slide ID: " + id, request);
+            response.put("success", true);
+            return org.springframework.http.ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return org.springframework.http.ResponseEntity.status(500).body(response);
+        }
     }
 
     @PostMapping("/platform/featured/add")
-    public String addFeaturedItem(@RequestParam Long productId,
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<java.util.Map<String, Object>> addFeaturedItem(
+            @RequestParam Long productId,
             @RequestParam com.toy.store.model.FeaturedItem.Type type,
-            @RequestParam Integer sortOrder, HttpServletRequest request) {
-        com.toy.store.model.Product product = productService.findAll(org.springframework.data.domain.Pageable.unpaged())
-                .getContent().stream().filter(p -> p.getId().equals(productId)).findFirst().orElseThrow();
+            @RequestParam(defaultValue = "0") Integer sortOrder, HttpServletRequest request) {
 
-        com.toy.store.model.FeaturedItem item = new com.toy.store.model.FeaturedItem();
-        item.setProduct(product);
-        item.setItemType(type);
-        item.setSortOrder(sortOrder);
-        featuredItemRepository.save(item);
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        try {
+            com.toy.store.model.Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        logAction("ADD_FEATURED", "Added featured item: " + product.getName() + " (" + type + ")", request);
-        return "redirect:/admin?tab=platform";
+            com.toy.store.model.FeaturedItem item = new com.toy.store.model.FeaturedItem();
+            item.setProduct(product);
+            item.setItemType(type);
+            item.setSortOrder(sortOrder);
+            com.toy.store.model.FeaturedItem saved = featuredItemRepository.save(item);
+
+            logAction("PLATFORM", "Added Featured Item: " + product.getName() + " as " + type, request);
+
+            response.put("success", true);
+            response.put("item", saved);
+            // Include product name for UI update
+            response.put("productName", product.getName());
+            return org.springframework.http.ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return org.springframework.http.ResponseEntity.status(500).body(response);
+        }
     }
 
     @PostMapping("/platform/featured/delete/{id}")
-    public String deleteFeaturedItem(@PathVariable Long id, HttpServletRequest request) {
-        featuredItemRepository.deleteById(id);
-        logAction("DELETE_FEATURED", "Deleted featured item ID: " + id, request);
-        return "redirect:/admin?tab=platform";
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<java.util.Map<String, Object>> deleteFeaturedItem(
+            @PathVariable Long id, HttpServletRequest request) {
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        try {
+            featuredItemRepository.deleteById(id);
+            logAction("PLATFORM", "Deleted Featured Item ID: " + id, request);
+            response.put("success", true);
+            return org.springframework.http.ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return org.springframework.http.ResponseEntity.status(500).body(response);
+        }
     }
 
     @PostMapping("/platform/notification/send")
-    public String sendNotification(@ModelAttribute com.toy.store.model.Notification notification,
-            HttpServletRequest request) {
-        notificationRepository.save(notification);
-        // In a real app, this would also push to WebSocket / FCM
-        logAction("SEND_NOTIFICATION", "Sent notification: " + notification.getTitle(), request);
-        return "redirect:/admin?tab=platform";
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<java.util.Map<String, Object>> sendNotification(
+            @ModelAttribute com.toy.store.model.Notification notification, HttpServletRequest request) {
+
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        try {
+            com.toy.store.model.Notification saved = notificationRepository.save(notification);
+            logAction("PLATFORM", "Sent Notification: " + notification.getTitle(), request);
+
+            response.put("success", true);
+            response.put("notification", saved);
+            return org.springframework.http.ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return org.springframework.http.ResponseEntity.status(500).body(response);
+        }
     }
 }

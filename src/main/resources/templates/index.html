@@ -4,7 +4,60 @@
 <body>
     <div th:fragment="content">
 
-        <header class="hero">
+        <style>
+            /* Carousel Styles */
+            .carousel-container {
+                position: relative;
+                width: 85%;
+                height: 400px;
+                overflow: hidden;
+                margin: 20px auto 40px auto;
+                border-radius: 10px;
+                background: #ddd;
+            }
+
+            .carousel-slide {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                opacity: 0;
+                transition: opacity 1s ease-in-out;
+                background-size: cover;
+                background-position: center;
+            }
+
+            .carousel-slide.active {
+                opacity: 1;
+            }
+
+            /* Indicators */
+            .carousel-indicators {
+                position: absolute;
+                bottom: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                display: flex;
+                gap: 10px;
+                z-index: 3;
+            }
+
+            .indicator {
+                width: 10px;
+                height: 10px;
+                background: rgba(255, 255, 255, 0.5);
+                border-radius: 50%;
+                cursor: pointer;
+            }
+
+            .indicator.active {
+                background: white;
+            }
+        </style>
+
+        <!-- Default Hero if no slides -->
+        <header class="hero" th:if="${#lists.isEmpty(carouselSlides)}">
             <div>
                 <h1>釋放你的 <span style="color: var(--accent-color)">童心靈魂</span></h1>
                 <p>探索稀有收藏品、限定公仔與神秘盲盒。</p>
@@ -15,7 +68,75 @@
             </div>
         </header>
 
+        <!-- Dynamic Carousel -->
+        <div class="carousel-container" th:if="${!#lists.isEmpty(carouselSlides)}">
+            <div th:each="slide, iterStat : ${carouselSlides}"
+                th:class="'carousel-slide ' + (${iterStat.index == 0} ? 'active' : '')"
+                th:style="'background-image: url(' + ${slide.imageUrl} + ');'">
+                <a th:if="${slide.linkUrl != null and slide.linkUrl != ''}" th:href="${slide.linkUrl}"
+                    style="display:block; width:100%; height:100%;"></a>
+            </div>
+            <div class="carousel-indicators">
+                <div th:each="slide, iterStat : ${carouselSlides}"
+                    th:class="'indicator ' + (${iterStat.index == 0} ? 'active' : '')"
+                    th:onclick="'goToSlide(' + ${iterStat.index} + ')'"></div>
+            </div>
+        </div>
+
         <div class="container">
+
+            <!-- New Arrivals -->
+            <div th:if="${!#lists.isEmpty(newArrivals)}" style="margin-bottom: 40px;">
+                <h2 class="section-title">新品項目 (New Arrivals)</h2>
+                <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
+                    <div th:each="item : ${newArrivals}" class="card">
+                        <div class="img-placeholder"
+                            style="position: relative; height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #888;">
+                            <span th:if="${item.product.stock == 0}"
+                                style="position: absolute; top: 10px; right: 10px; background: var(--error-color); color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">缺貨中</span>
+                            <span>(圖片)</span>
+                        </div>
+                        <div style="padding: 15px;">
+                            <h3 th:text="${item.product.name}" style="font-size: 1.1rem; margin-bottom: 10px;">Product
+                            </h3>
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <span style="font-weight: bold; color: var(--accent-color); font-size: 1.2rem;"
+                                    th:text="'$' + ${item.product.price}">$100</span>
+                            </div>
+                            <a th:href="@{/products(keyword=${item.product.name})}" class="btn btn-primary btn-sm"
+                                style="width: 100%; text-align: center;">查看詳情</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Best Sellers -->
+            <div th:if="${!#lists.isEmpty(bestSellers)}" style="margin-bottom: 40px;">
+                <h2 class="section-title">熱銷排行榜 (Best Sellers)</h2>
+                <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
+                    <div th:each="item : ${bestSellers}" class="card">
+                        <div class="img-placeholder"
+                            style="position: relative; height: 200px; background: #fff5eb; display: flex; align-items: center; justify-content: center; color: #888;">
+                            <span th:if="${item.product.stock == 0}"
+                                style="position: absolute; top: 10px; right: 10px; background: var(--error-color); color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">缺貨中</span>
+                            <span>(熱銷)</span>
+                        </div>
+                        <div style="padding: 15px;">
+                            <h3 th:text="${item.product.name}" style="font-size: 1.1rem; margin-bottom: 10px;">Product
+                            </h3>
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <span style="font-weight: bold; color: var(--accent-color); font-size: 1.2rem;"
+                                    th:text="'$' + ${item.product.price}">$100</span>
+                            </div>
+                            <a th:href="@{/products(keyword=${item.product.name})}" class="btn btn-primary btn-sm"
+                                style="width: 100%; text-align: center;">查看詳情</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <h2 class="section-title">最新活動</h2>
             <div class="grid">
                 <div th:each="activity : ${activities}" class="card">
@@ -32,7 +153,33 @@
             </div>
         </div>
 
+        <script>
+            // Carousel Logic
+            let currentSlide = 0;
+            const slides = document.querySelectorAll('.carousel-slide');
+            const indicators = document.querySelectorAll('.indicator');
+            const totalSlides = slides.length;
+
+            function goToSlide(n) {
+                if (totalSlides === 0) return;
+                slides[currentSlide].classList.remove('active');
+                indicators[currentSlide].classList.remove('active');
+
+                currentSlide = (n + totalSlides) % totalSlides;
+
+                slides[currentSlide].classList.add('active');
+                indicators[currentSlide].classList.add('active');
+            }
+
+            function nextSlide() {
+                goToSlide(currentSlide + 1);
+            }
+
+            if (totalSlides > 0) {
+                setInterval(nextSlide, 5000);
+            }
+        </script>
+
     </div>
-</body>
 
 </html>

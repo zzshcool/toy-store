@@ -18,6 +18,12 @@ public class HomeController {
     @org.springframework.beans.factory.annotation.Autowired
     private com.toy.store.repository.MemberRepository memberRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.toy.store.repository.CarouselSlideRepository carouselSlideRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.toy.store.repository.FeaturedItemRepository featuredItemRepository;
+
     @GetMapping("/")
     public String home(Model model, jakarta.servlet.http.HttpServletRequest request) {
         // Log Action (if user is logged in)
@@ -41,6 +47,14 @@ public class HomeController {
                 .collect(java.util.stream.Collectors.toList());
 
         model.addAttribute("activities", activities);
+
+        // Platform Data
+        model.addAttribute("carouselSlides", carouselSlideRepository.findAllByOrderBySortOrderAsc());
+        model.addAttribute("newArrivals", featuredItemRepository
+                .findByItemTypeOrderBySortOrderAsc(com.toy.store.model.FeaturedItem.Type.NEW_ARRIVAL));
+        model.addAttribute("bestSellers", featuredItemRepository
+                .findByItemTypeOrderBySortOrderAsc(com.toy.store.model.FeaturedItem.Type.BEST_SELLER));
+
         return "index";
     }
 
