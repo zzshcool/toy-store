@@ -63,16 +63,24 @@ public class TransactionService {
 
     private void checkAndUpgradeLevel(Member member) {
         com.toy.store.model.MemberLevel current = member.getLevel();
-        com.toy.store.model.MemberLevel next = current.next();
 
-        // Check if eligible for next level(s)
-        while (next != current && member.getMonthlyRecharge().compareTo(next.getThreshold()) >= 0) {
-            current = next;
-            next = current.next();
+        // Fetch all enabled levels sorted by sort order
+        java.util.List<com.toy.store.model.MemberLevel> allLevels = memberLevelRepository
+                .findByEnabledTrueOrderBySortOrderAsc();
+
+        com.toy.store.model.MemberLevel targetLevel = current;
+
+        // Find the highest eligible level
+        for (com.toy.store.model.MemberLevel level : allLevels) {
+            // Check if level is higher than current and member meets the threshold
+            if (level.getSortOrder() > current.getSortOrder() &&
+                    member.getMonthlyRecharge().compareTo(level.getThreshold()) >= 0) {
+                targetLevel = level;
+            }
         }
 
-        if (current != member.getLevel()) {
-            member.setLevel(current);
+        if (!targetLevel.equals(current)) {
+            member.setLevel(targetLevel);
         }
     }
 }
