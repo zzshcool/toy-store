@@ -382,6 +382,18 @@ th {
 }
 
 @media (max-width: 768px) {
+    .section {
+        padding: 40px 0;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+    }
+    
+    .hero h1 {
+        font-size: 2.5rem;
+    }
+
     .hamburger {
         display: flex;
     }
@@ -403,9 +415,9 @@ th {
     }
 
     .nav-menu.active {
-        max-height: 400px;
-        /* Adjust as needed */
+        max-height: 500px; /* Increased to accommodate more items if needed */
         border-top: 1px solid #eee;
+        overflow-y: auto; /* Allow scrolling if menu is too long */
     }
 
     .nav-menu li {
@@ -427,5 +439,15 @@ th {
         flex-direction: column;
         gap: 10px;
         padding: 15px 0;
+    }
+    
+    /* Mobile Cart Full Width */
+    #floatingCartPanel {
+        width: 100% !important;
+        right: -100% !important; /* Move fully off-screen */
+    }
+    
+    #floatingCartPanel[style*="right: 0px"] {
+        right: 0px !important;
     }
 }
