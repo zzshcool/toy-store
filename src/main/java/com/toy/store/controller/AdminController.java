@@ -34,7 +34,45 @@ public class AdminController {
     private com.toy.store.repository.TransactionRepository transactionRepository;
 
     @Autowired
+    private com.toy.store.service.CouponService couponService;
+
+    @Autowired
+    private com.toy.store.repository.CouponRepository couponRepository;
+
+    @Autowired
     private com.toy.store.repository.ActivityRepository activityRepository;
+
+    @GetMapping("/coupons")
+    public String coupons(Model model) {
+        model.addAttribute("coupons", couponRepository.findAll());
+        model.addAttribute("levels", memberLevelRepository.findAll());
+        model.addAttribute("members", memberRepository.findAll());
+        return "admin_coupons";
+    }
+
+    @PostMapping("/coupons/create")
+    public String createCoupon(@RequestParam String name,
+            @RequestParam(required = false) String code,
+            @RequestParam com.toy.store.model.Coupon.CouponType type,
+            @RequestParam java.math.BigDecimal value,
+            @RequestParam(required = false) String description,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime validFrom,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime validUntil) {
+        couponService.createCoupon(name, code, type, value, description, validFrom, validUntil);
+        return "redirect:/admin?tab=coupons";
+    }
+
+    @PostMapping("/coupons/distribute/level")
+    public String distributeToLevel(@RequestParam Long couponId, @RequestParam Long levelId) {
+        couponService.distributeToLevel(couponId, levelId);
+        return "redirect:/admin?tab=coupons";
+    }
+
+    @PostMapping("/coupons/distribute/member")
+    public String distributeToMember(@RequestParam Long couponId, @RequestParam Long memberId) {
+        couponService.distributeToMember(couponId, memberId);
+        return "redirect:/admin?tab=coupons";
+    }
 
     @Autowired
     private com.toy.store.repository.CategoryRepository categoryRepository;
@@ -57,6 +95,15 @@ public class AdminController {
     @Autowired
     private com.toy.store.repository.AdminUserRepository adminUserRepository;
 
+    @Autowired
+    private com.toy.store.repository.CarouselSlideRepository carouselSlideRepository;
+
+    @Autowired
+    private com.toy.store.repository.FeaturedItemRepository featuredItemRepository;
+
+    @Autowired
+    private com.toy.store.repository.NotificationRepository notificationRepository;
+
     @GetMapping("/login")
     public String adminLogin() {
         return "admin_login";
@@ -64,7 +111,7 @@ public class AdminController {
 
     @PostMapping("/login-submit")
     public String loginSubmit(@RequestParam String username, @RequestParam String password,
-                              HttpServletResponse response) {
+            HttpServletResponse response, HttpServletRequest request) {
 
         java.util.Optional<com.toy.store.model.AdminUser> adminOpt = adminUserRepository.findByUsername(username);
 
@@ -77,13 +124,23 @@ public class AdminController {
                 cookie.setPath("/");
                 cookie.setMaxAge(28800);
                 response.addCookie(cookie);
+
+                // Log Login Action
+                adminActionLogRepository.save(new com.toy.store.model.AdminActionLog(
+                        username, "LOGIN", "Admin login successful", "IP: " + request.getRemoteAddr()));
+
                 return "redirect:/admin";
             }
         }
+
+        // Log Failed Attempt
+        adminActionLogRepository.save(new com.toy.store.model.AdminActionLog(
+                username, "LOGIN_FAILED", "Invalid credentials", "IP: " + request.getRemoteAddr()));
+
         return "redirect:/admin/login?error";
     }
 
-    @RequestMapping(value = "/logout", method = {RequestMethod.GET, RequestMethod.POST})
+    @RequestMapping(value = "/logout", method = { RequestMethod.GET, RequestMethod.POST })
     public String logout(HttpServletRequest request, HttpServletResponse response) {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
@@ -119,11 +176,20 @@ public class AdminController {
                     .by(org.springframework.data.domain.Sort.Direction.DESC, "timestamp")));
             model.addAttribute("categories", categoryRepository.findAll());
             model.addAttribute("memberLevels", memberLevelRepository.findAllByOrderBySortOrderAsc());
+            model.addAttribute("coupons", couponRepository.findAll());
 
             model.addAttribute("newProduct", new Product());
             model.addAttribute("newTheme", new com.toy.store.model.MysteryBoxTheme());
             model.addAttribute("newActivity", new com.toy.store.model.Activity());
             model.addAttribute("newCategory", new com.toy.store.model.Category());
+
+            // Platform Data
+            model.addAttribute("carouselSlides", carouselSlideRepository.findAllByOrderBySortOrderAsc());
+            model.addAttribute("newArrivals", featuredItemRepository
+                    .findByItemTypeOrderBySortOrderAsc(com.toy.store.model.FeaturedItem.Type.NEW_ARRIVAL));
+            model.addAttribute("bestSellers", featuredItemRepository
+                    .findByItemTypeOrderBySortOrderAsc(com.toy.store.model.FeaturedItem.Type.BEST_SELLER));
+            model.addAttribute("notifications", notificationRepository.findAllByOrderByCreatedAtDesc());
         } catch (Exception e) {
             e.printStackTrace(); // Print to server console for good measure
             model.addAttribute("errorMessage", "系統錯誤: " + e.getMessage() + " (" + e.getClass().getSimpleName() + ")");
@@ -135,10 +201,17 @@ public class AdminController {
             model.addAttribute("activities", java.util.Collections.emptyList());
             model.addAttribute("logs", java.util.Collections.emptyList());
             model.addAttribute("categories", java.util.Collections.emptyList());
+            model.addAttribute("coupons", java.util.Collections.emptyList());
             model.addAttribute("newProduct", new Product());
             model.addAttribute("newTheme", new com.toy.store.model.MysteryBoxTheme());
             model.addAttribute("newActivity", new com.toy.store.model.Activity());
             model.addAttribute("newCategory", new com.toy.store.model.Category());
+
+            // Initialize platform empty lists
+            model.addAttribute("carouselSlides", java.util.Collections.emptyList());
+            model.addAttribute("newArrivals", java.util.Collections.emptyList());
+            model.addAttribute("bestSellers", java.util.Collections.emptyList());
+            model.addAttribute("notifications", java.util.Collections.emptyList());
         }
 
         return "admin";
@@ -182,7 +255,7 @@ public class AdminController {
 
     @PostMapping("/subcategories")
     public String createSubCategory(@RequestParam Long categoryId, @RequestParam String name,
-                                    HttpServletRequest request) {
+            HttpServletRequest request) {
         com.toy.store.model.Category cat = categoryRepository.findById(categoryId).orElseThrow();
         com.toy.store.model.SubCategory sub = new com.toy.store.model.SubCategory();
         sub.setName(name);
@@ -246,7 +319,7 @@ public class AdminController {
 
     @PostMapping("/mystery-box/items")
     public String createMysteryBoxItem(@RequestParam Long themeId,
-                                       @ModelAttribute com.toy.store.model.MysteryBoxItem item, HttpServletRequest request) {
+            @ModelAttribute com.toy.store.model.MysteryBoxItem item, HttpServletRequest request) {
         com.toy.store.model.MysteryBoxTheme theme = mysteryBoxThemeRepository.findById(themeId).orElseThrow();
         item.setTheme(theme);
         mysteryBoxItemRepository.save(item);
@@ -264,9 +337,9 @@ public class AdminController {
 
     @PostMapping("/admin/mystery-box/themes/update")
     public String updateTheme(@RequestParam Long id,
-                              @RequestParam String name,
-                              @RequestParam java.math.BigDecimal price,
-                              HttpServletRequest request) {
+            @RequestParam String name,
+            @RequestParam java.math.BigDecimal price,
+            HttpServletRequest request) {
         mysteryBoxThemeRepository.findById(id).ifPresent(theme -> {
             theme.setName(name);
             theme.setPrice(price);
@@ -278,7 +351,7 @@ public class AdminController {
 
     @PostMapping("/admin/activities/add")
     public String addActivity(@ModelAttribute("newActivity") com.toy.store.model.Activity activity,
-                              HttpServletRequest request) {
+            HttpServletRequest request) {
         activityRepository.save(activity);
         logAction("CREATE_ACTIVITY", "Created activity: " + activity.getTitle(), request);
         return "redirect:/admin";
@@ -306,12 +379,12 @@ public class AdminController {
 
     @PostMapping("/admin/activities/update")
     public String updateActivity(@RequestParam Long id,
-                                 @RequestParam String title,
-                                 @RequestParam String description,
-                                 @RequestParam String type,
-                                 @RequestParam(required = false) String startDate,
-                                 @RequestParam(required = false) String expiryDate,
-                                 HttpServletRequest request) {
+            @RequestParam String title,
+            @RequestParam String description,
+            @RequestParam String type,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String expiryDate,
+            HttpServletRequest request) {
         activityRepository.findById(id).ifPresent(activity -> {
             activity.setTitle(title);
             activity.setDescription(description);
@@ -330,11 +403,11 @@ public class AdminController {
 
     @PostMapping("/admin/members/update")
     public String updateMember(@RequestParam Long id,
-                               @RequestParam String email,
-                               @RequestParam String nickname,
-                               @RequestParam boolean enabled,
-                               @RequestParam com.toy.store.model.MemberLevel level,
-                               HttpServletRequest request) {
+            @RequestParam String email,
+            @RequestParam String nickname,
+            @RequestParam boolean enabled,
+            @RequestParam com.toy.store.model.MemberLevel level,
+            HttpServletRequest request) {
         memberRepository.findById(id).ifPresent(member -> {
             member.setEmail(email);
             member.setNickname(nickname);
@@ -386,7 +459,7 @@ public class AdminController {
 
     @PostMapping("/member-levels")
     public String createMemberLevel(@ModelAttribute com.toy.store.model.MemberLevel memberLevel,
-                                    HttpServletRequest request) {
+            HttpServletRequest request) {
         memberLevelRepository.save(memberLevel);
         logAction("CREATE_MEMBER_LEVEL", "Created level: " + memberLevel.getName(), request);
         return "redirect:/admin?tab=levels";
@@ -394,7 +467,7 @@ public class AdminController {
 
     @PostMapping("/member-levels/update")
     public String updateMemberLevel(@ModelAttribute com.toy.store.model.MemberLevel memberLevel,
-                                    HttpServletRequest request) {
+            HttpServletRequest request) {
         memberLevelRepository.save(memberLevel);
         logAction("UPDATE_MEMBER_LEVEL", "Updated level: " + memberLevel.getName(), request);
         return "redirect:/admin?tab=levels";
@@ -409,7 +482,7 @@ public class AdminController {
 
     @PostMapping("/mystery-box/themes/update")
     public String updateMysteryBoxTheme(@RequestParam Long id, @RequestParam String name, @RequestParam Double price,
-                                        HttpServletRequest request) {
+            HttpServletRequest request) {
         mysteryBoxThemeRepository.findById(id).ifPresent(theme -> {
             theme.setName(name);
             theme.setPrice(java.math.BigDecimal.valueOf(price));
@@ -428,7 +501,7 @@ public class AdminController {
 
     @PostMapping("/mystery-box/items/update")
     public String updateMysteryBoxItem(@RequestParam Long id, @RequestParam String name,
-                                       @RequestParam Double estimatedValue, @RequestParam Integer weight, HttpServletRequest request) {
+            @RequestParam Double estimatedValue, @RequestParam Integer weight, HttpServletRequest request) {
         mysteryBoxItemRepository.findById(id).ifPresent(item -> {
             item.setName(name);
             item.setEstimatedValue(java.math.BigDecimal.valueOf(estimatedValue));
@@ -444,5 +517,55 @@ public class AdminController {
         mysteryBoxItemRepository.deleteById(id);
         logAction("DELETE_ITEM", "Deleted item ID: " + id, request);
         return "redirect:/admin?tab=mystery";
+    }
+
+    // --- Platform Management ---
+
+    @PostMapping("/platform/carousel/create")
+    public String createCarouselSlide(@ModelAttribute com.toy.store.model.CarouselSlide slide,
+            HttpServletRequest request) {
+        carouselSlideRepository.save(slide);
+        logAction("CREATE_CAROUSEL", "Created slide: " + slide.getImageUrl(), request);
+        return "redirect:/admin?tab=platform";
+    }
+
+    @PostMapping("/platform/carousel/delete/{id}")
+    public String deleteCarouselSlide(@PathVariable Long id, HttpServletRequest request) {
+        carouselSlideRepository.deleteById(id);
+        logAction("DELETE_CAROUSEL", "Deleted slide ID: " + id, request);
+        return "redirect:/admin?tab=platform";
+    }
+
+    @PostMapping("/platform/featured/add")
+    public String addFeaturedItem(@RequestParam Long productId,
+            @RequestParam com.toy.store.model.FeaturedItem.Type type,
+            @RequestParam Integer sortOrder, HttpServletRequest request) {
+        com.toy.store.model.Product product = productService.findAll(org.springframework.data.domain.Pageable.unpaged())
+                .getContent().stream().filter(p -> p.getId().equals(productId)).findFirst().orElseThrow();
+
+        com.toy.store.model.FeaturedItem item = new com.toy.store.model.FeaturedItem();
+        item.setProduct(product);
+        item.setItemType(type);
+        item.setSortOrder(sortOrder);
+        featuredItemRepository.save(item);
+
+        logAction("ADD_FEATURED", "Added featured item: " + product.getName() + " (" + type + ")", request);
+        return "redirect:/admin?tab=platform";
+    }
+
+    @PostMapping("/platform/featured/delete/{id}")
+    public String deleteFeaturedItem(@PathVariable Long id, HttpServletRequest request) {
+        featuredItemRepository.deleteById(id);
+        logAction("DELETE_FEATURED", "Deleted featured item ID: " + id, request);
+        return "redirect:/admin?tab=platform";
+    }
+
+    @PostMapping("/platform/notification/send")
+    public String sendNotification(@ModelAttribute com.toy.store.model.Notification notification,
+            HttpServletRequest request) {
+        notificationRepository.save(notification);
+        // In a real app, this would also push to WebSocket / FCM
+        logAction("SEND_NOTIFICATION", "Sent notification: " + notification.getTitle(), request);
+        return "redirect:/admin?tab=platform";
     }
 }

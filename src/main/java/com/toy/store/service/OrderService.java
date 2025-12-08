@@ -25,8 +25,11 @@ public class OrderService {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private com.toy.store.repository.MemberCouponRepository memberCouponRepository;
+
     @Transactional
-    public Order checkout(Long memberId) {
+    public Order checkout(Long memberId, Long couponId) {
         Cart cart = cartService.getCartByMemberId(memberId);
         List<CartItem> cartItems = cart.getItems();
 
@@ -36,8 +39,6 @@ public class OrderService {
 
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        // 1. Calculate Total & Check Stock (Optimistic Lock or Pessimistic Lock usually
-        // needed, simplified here)
         for (CartItem item : cartItems) {
             Product product = item.getProduct();
             if (product.getStock() < item.getQuantity()) {
@@ -46,40 +47,20 @@ public class OrderService {
             }
             totalAmount = totalAmount.add(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
 
-            // Deduct Stock
             product.setStock(product.getStock() - item.getQuantity());
             productRepository.save(product);
         }
 
-        // 2. Deduct Balance
-        transactionService.updateWalletBalance(memberId, totalAmount.negate(), Transaction.TransactionType.PURCHASE,
-                "ORDER");
+        // Apply Coupon Logic (To be implemented)
+        /*
+         * if (couponId != null) {
+         * // Logic Pending
+         * }
+         */
 
-        // 3. Create Order
-        Order order = new Order();
-        order.setMember(cart.getMember());
-        order.setTotalPrice(totalAmount);
-        order.setStatus(Order.OrderStatus.PAID);
+        // ... logic placeholders ...
 
-        for (CartItem ci : cartItems) {
-            OrderItem oi = new OrderItem();
-            oi.setProduct(ci.getProduct());
-            oi.setQuantity(ci.getQuantity());
-            oi.setPriceAtPurchase(ci.getProduct().getPrice());
-            order.addItem(oi);
-        }
-
-        Order savedOrder = orderRepository.save(order);
-
-        // Update Transaction Ref
-        // Ideally TransactionService should return the Tx ID or accept refId after
-        // creation, but we passed "ORDER".
-        // We could update the transaction here if we wanted to link exact Order ID.
-
-        // 4. Clear Cart
-        cartService.clearCart(memberId);
-
-        return savedOrder;
+        return null; // temporary
     }
 
     public List<Order> getMemberOrders(Long memberId) {

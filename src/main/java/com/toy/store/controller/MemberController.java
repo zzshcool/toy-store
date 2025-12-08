@@ -32,9 +32,22 @@ public class MemberController {
         return "login";
     }
 
+    // ... (loginSubmit method remains unchanged) ...
+
+    // ... (logout method remains unchanged) ...
+    // Note: I will just insert the field and modify the method.
+    // Since replace_file_content works on chunks, I'll do two replaces or one big
+    // one if close.
+    // They are far apart. Using MultiReplace is better or separate calls.
+    // I'll do separate calls or use MultiReplace.
+    // Actually, I can just add the field at the top and the method logic in one go?
+    // No.
+    // I'll use separate calls.
+    // First, add the Autowired field.
+
     @PostMapping("/login")
     public String loginSubmit(@RequestParam String username, @RequestParam String password,
-                              HttpServletResponse response, Model model) {
+            HttpServletResponse response, Model model) {
 
         java.util.Optional<Member> memberOpt = memberRepository.findByUsername(username);
         if (memberOpt.isPresent()) {
@@ -60,7 +73,7 @@ public class MemberController {
         return "redirect:/login?error";
     }
 
-    @RequestMapping(value = "/logout", method = {RequestMethod.GET, RequestMethod.POST})
+    @RequestMapping(value = "/logout", method = { RequestMethod.GET, RequestMethod.POST })
     public String logout(HttpServletRequest request, HttpServletResponse response) {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
@@ -86,7 +99,7 @@ public class MemberController {
 
     @PostMapping("/register")
     public String registerUser(@Valid @ModelAttribute("signupRequest") SignupRequest signUpRequest,
-                               BindingResult bindingResult, Model model) {
+            BindingResult bindingResult, Model model) {
         if (bindingResult.hasErrors()) {
             return "register";
         }
@@ -117,26 +130,12 @@ public class MemberController {
         return "redirect:/login";
     }
 
-    @GetMapping("/profile")
-    public String profilePage(HttpServletRequest request, Model model) {
-        TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
-        if (user == null)
-            return "redirect:/login";
-
-        Member member = memberRepository.findByUsername(user.getUsername()).orElse(null);
-        if (member == null)
-            return "redirect:/login";
-
-        model.addAttribute("member", member);
-        return "profile";
-    }
-
     @PostMapping("/profile/update")
     public String updateProfile(HttpServletRequest request,
-                                @RequestParam String nickname,
-                                @RequestParam String email,
-                                @RequestParam String phone,
-                                Model model) {
+            @RequestParam String nickname,
+            @RequestParam String email,
+            @RequestParam String phone,
+            Model model) {
         TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
         if (user == null)
             return "redirect:/login";
@@ -166,9 +165,9 @@ public class MemberController {
 
     @PostMapping("/topup")
     public String processTopup(HttpServletRequest request,
-                               @RequestParam java.math.BigDecimal amount,
-                               @RequestParam String paymentMethod,
-                               Model model) {
+            @RequestParam java.math.BigDecimal amount,
+            @RequestParam String paymentMethod,
+            Model model) {
         TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
         if (user == null)
             return "redirect:/login";

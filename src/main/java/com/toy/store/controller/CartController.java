@@ -28,6 +28,9 @@ public class CartController {
         return memberRepository.findByUsername(info.getUsername()).orElse(null);
     }
 
+    @Autowired
+    private com.toy.store.service.CouponService couponService;
+
     @GetMapping
     public String getCart(HttpServletRequest request, Model model) {
         Member member = getMemberFromRequest(request);
@@ -39,6 +42,7 @@ public class CartController {
         model.addAttribute("totalPrice", cart.getItems().stream()
                 .map(item -> item.getProduct().getPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())))
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add));
+        model.addAttribute("availableCoupons", couponService.getMemberCoupons(member.getId()));
         return "cart";
     }
 

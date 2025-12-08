@@ -23,7 +23,9 @@ public class OrderController {
     private com.toy.store.service.TokenService tokenService;
 
     @PostMapping("/checkout")
-    public String checkout(jakarta.servlet.http.HttpServletRequest request, RedirectAttributes redirectAttributes) {
+    public String checkout(jakarta.servlet.http.HttpServletRequest request,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Long couponId,
+            RedirectAttributes redirectAttributes) {
         com.toy.store.service.TokenService.TokenInfo info = (com.toy.store.service.TokenService.TokenInfo) request
                 .getAttribute("currentUser");
         if (info == null) {
@@ -35,7 +37,7 @@ public class OrderController {
         }
 
         try {
-            Order order = orderService.checkout(member.getId());
+            Order order = orderService.checkout(member.getId(), couponId);
             redirectAttributes.addFlashAttribute("successMessage", "訂單處理成功！訂單編號：" + order.getId());
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("errorMessage", "結帳失敗：" + e.getMessage());
@@ -45,8 +47,8 @@ public class OrderController {
 
     @PostMapping("/{id}/refund")
     public String refundOrder(jakarta.servlet.http.HttpServletRequest request,
-                              @org.springframework.web.bind.annotation.PathVariable Long id,
-                              RedirectAttributes redirectAttributes) {
+            @org.springframework.web.bind.annotation.PathVariable Long id,
+            RedirectAttributes redirectAttributes) {
         com.toy.store.service.TokenService.TokenInfo info = (com.toy.store.service.TokenService.TokenInfo) request
                 .getAttribute("currentUser");
         if (info == null)

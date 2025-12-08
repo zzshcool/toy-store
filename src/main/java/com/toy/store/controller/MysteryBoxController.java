@@ -33,8 +33,9 @@ public class MysteryBoxController {
 
     @PostMapping("/draw")
     public String drawBox(HttpServletRequest request,
-                          @RequestParam Long themeId,
-                          RedirectAttributes redirectAttributes) {
+            @RequestParam Long themeId,
+            @RequestParam(required = false) Long couponId,
+            RedirectAttributes redirectAttributes) {
 
         TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
         if (info == null)
@@ -44,7 +45,7 @@ public class MysteryBoxController {
             return "redirect:/login";
 
         try {
-            MysteryBoxItem item = mysteryBoxService.drawBox(member.getId(), themeId);
+            MysteryBoxItem item = mysteryBoxService.drawBox(member.getId(), themeId, couponId);
             redirectAttributes.addFlashAttribute("wonItem", item);
 
             // Log Action

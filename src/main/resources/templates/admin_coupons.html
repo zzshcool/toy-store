@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{admin_layout :: html(title='優惠券管理', content=~{::content})}">
+
+<head>
+    <meta charset="UTF-8">
+</head>
+
+<body>
+    <div th:fragment="content">
+        <h2 class="mb-4">優惠券管理</h2>
+
+        <!-- Create Coupon Form -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                新增優惠券
+            </div>
+            <div class="card-body">
+                <form th:action="@{/admin/coupons/create}" method="post">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">名稱</label>
+                            <input type="text" name="name" class="form-control" required placeholder="例如：新春9折券">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">代碼 (選填)</label>
+                            <input type="text" name="code" class="form-control" placeholder="例如：NEWYEAR2025">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">類型</label>
+                            <select name="type" class="form-select" required>
+                                <option value="DISCOUNT_PERCENT">商品折扣 (折數)</option>
+                                <option value="DISCOUNT_AMOUNT">商品購物金 (金額)</option>
+                                <option value="MYSTERY_BOX_FREE">抽獎次數 (次)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">數值</label>
+                            <input type="number" step="0.01" name="value" class="form-control" required
+                                placeholder="0.9 或 100">
+                            <small class="text-muted">例如：打9折輸入0.9，折100元輸入100</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">描述</label>
+                            <input type="text" name="description" class="form-control">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">生效日</label>
+                            <input type="datetime-local" name="validFrom" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">到期日</label>
+                            <input type="datetime-local" name="validUntil" class="form-control" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">建立優惠券</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Coupon List -->
+        <div class="card">
+            <div class="card-header">
+                現有優惠券列表
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>名稱</th>
+                                <th>類型</th>
+                                <th>數值</th>
+                                <th>有效期</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="coupon : ${coupons}">
+                                <td th:text="${coupon.id}">1</td>
+                                <td th:text="${coupon.name}">Coupon Name</td>
+                                <td th:text="${coupon.type}">TYPE</td>
+                                <td th:text="${coupon.value}">100</td>
+                                <td>
+                                    <span
+                                        th:text="${#temporals.format(coupon.validFrom, 'yyyy-MM-dd HH:mm')}">Start</span>
+                                    ~
+                                    <span
+                                        th:text="${#temporals.format(coupon.validUntil, 'yyyy-MM-dd HH:mm')}">End</span>
+                                </td>
+                                <td>
+                                    <!-- Distribute Modal Trigger -->
+                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                        th:data-bs-target="'#distributeModal' + ${coupon.id}">
+                                        派發
+                                    </button>
+
+                                    <!-- Distribute Modal -->
+                                    <div class="modal fade" th:id="'distributeModal' + ${coupon.id}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">派發優惠券 - <span
+                                                            th:text="${coupon.name}"></span></h5>
+                                                    <button type="button" class="btn-close"
+                                                        data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <!-- By Level -->
+                                                    <form th:action="@{/admin/coupons/distribute/level}" method="post"
+                                                        class="mb-3">
+                                                        <input type="hidden" name="couponId" th:value="${coupon.id}">
+                                                        <h6>按等級派發</h6>
+                                                        <div class="input-group">
+                                                            <select name="levelId" class="form-select" required>
+                                                                <option th:each="lvl : ${levels}" th:value="${lvl.id}"
+                                                                    th:text="${lvl.name}">Level</option>
+                                                            </select>
+                                                            <button class="btn btn-primary" type="submit">發送</button>
+                                                        </div>
+                                                    </form>
+                                                    <hr>
+                                                    <!-- By Member -->
+                                                    <form th:action="@{/admin/coupons/distribute/member}" method="post">
+                                                        <input type="hidden" name="couponId" th:value="${coupon.id}">
+                                                        <h6>按會員派發 (ID)</h6>
+                                                        <div class="input-group">
+                                                            <input type="number" name="memberId" class="form-control"
+                                                                placeholder="Member ID" required>
+                                                            <!-- Ideally select2 or datalist for search -->
+                                                            <button class="btn btn-primary" type="submit">發送</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -27,6 +27,10 @@ public class Order {
     @Column(nullable = false)
     private BigDecimal totalPrice;
 
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    private String couponName;
+
     @Enumerated(EnumType.STRING)
     private OrderStatus status = OrderStatus.PENDING;
 

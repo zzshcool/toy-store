@@ -25,23 +25,59 @@ public class MysteryBoxService {
     @Autowired
     private TransactionService transactionService;
 
+    @Autowired
+    private com.toy.store.repository.MemberCouponRepository memberCouponRepository;
+
     private final Random random = new Random();
 
     /**
      * Draws a mystery box.
-     * 1. Check/Deduct Balance
+     * 1. Check/Deduct Balance (OR Use Coupon)
      * 2. Weighted Random Selection
-     * 3. Return Item (and maybe record prize transaction/inventory if needed)
+     * 3. Return Item
      */
     @Transactional
-    public MysteryBoxItem drawBox(Long memberId, Long themeId) {
+    public MysteryBoxItem drawBox(Long memberId, Long themeId, Long couponId) {
         // 1. Get Theme
         MysteryBoxTheme theme = themeRepository.findById(themeId)
                 .orElseThrow(() -> new RuntimeException("Theme not found"));
 
-        // 2. Deduct Cost (Transaction Service handles balance check)
-        transactionService.updateWalletBalance(memberId, theme.getPrice().negate(),
-                Transaction.TransactionType.MYSTERY_BOX_COST, "THEME-" + themeId);
+        boolean useCoupon = false;
+
+        if (couponId != null) {
+            com.toy.store.model.MemberCoupon memberCoupon = memberCouponRepository.findById(couponId)
+                    .orElseThrow(() -> new RuntimeException("Coupon not found"));
+
+            if (!memberCoupon.getMember().getId().equals(memberId)) {
+                throw new RuntimeException("Invalid coupon user");
+            }
+            if (memberCoupon.getStatus() != com.toy.store.model.MemberCoupon.Status.UNUSED) {
+                throw new RuntimeException("Coupon already used");
+            }
+            if (memberCoupon.getCoupon().getType() != com.toy.store.model.Coupon.CouponType.MYSTERY_BOX_FREE) {
+                throw new RuntimeException("Not a Mystery Box coupon");
+            }
+
+            // Mark used
+            memberCoupon.setStatus(com.toy.store.model.MemberCoupon.Status.USED);
+            memberCoupon.setUsedAt(java.time.LocalDateTime.now());
+            memberCouponRepository.save(memberCoupon);
+            useCoupon = true;
+            memberCoupon.setUsedAt(java.time.LocalDateTime.now());
+            memberCouponRepository.save(memberCoupon);
+            useCoupon = true;
+        }
+
+        if (!useCoupon) {
+            // 2. Deduct Cost
+            transactionService.updateWalletBalance(memberId, theme.getPrice().negate(),
+                    Transaction.TransactionType.MYSTERY_BOX_COST, "THEME-" + themeId);
+        } else {
+            // Log free spin usage?
+            // Maybe via TransactionService with 0 amount or just skipping it.
+            // We can record a 0 amount transaction or just rely on MemberCoupon history.
+            // Let's skip transaction deduction.
+        }
 
         // 3. Weighted Random Selection
         List<MysteryBoxItem> items = theme.getItems();
