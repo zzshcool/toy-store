@@ -389,7 +389,7 @@ th {
     .section-title {
         font-size: 1.5rem;
     }
-    
+
     .hero h1 {
         font-size: 2.5rem;
     }
@@ -415,9 +415,11 @@ th {
     }
 
     .nav-menu.active {
-        max-height: 500px; /* Increased to accommodate more items if needed */
+        max-height: 500px;
+        /* Increased to accommodate more items if needed */
         border-top: 1px solid #eee;
-        overflow-y: auto; /* Allow scrolling if menu is too long */
+        overflow-y: auto;
+        /* Allow scrolling if menu is too long */
     }
 
     .nav-menu li {
@@ -440,14 +442,80 @@ th {
         gap: 10px;
         padding: 15px 0;
     }
-    
+
     /* Mobile Cart Full Width */
     #floatingCartPanel {
         width: 100% !important;
-        right: -100% !important; /* Move fully off-screen */
+        right: -100% !important;
+        /* Move fully off-screen */
     }
-    
+
     #floatingCartPanel[style*="right: 0px"] {
         right: 0px !important;
+    }
+
+    /* Mobile Product Grid - 2 per row */
+    .grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+        gap: 15px;
+    }
+
+    .product-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100% !important;
+        border-right: none !important;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 20px;
+    }
+
+    .sidebar-content {
+        display: none;
+        /* Collapsed by default on mobile */
+        margin-top: 15px;
+    }
+
+    .sidebar-content.active {
+        display: block;
+    }
+
+    .mobile-filter-btn {
+        display: block !important;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    /* Authentication Pages Mobile */
+    .form-card {
+        padding: 20px !important;
+        margin: 20px 10px !important;
+    }
+}
+
+/* Desktop default for Product Layout */
+@media (min-width: 769px) {
+    .product-container {
+        display: flex;
+        gap: 30px;
+        align-items: flex-start;
+    }
+
+    .sidebar {
+        width: 250px;
+        flex-shrink: 0;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+
+    .sidebar-content {
+        display: block;
+    }
+
+    .mobile-filter-btn {
+        display: none;
     }
 }

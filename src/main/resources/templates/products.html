@@ -13,43 +13,47 @@
                 </form>
             </div>
 
-            <div style="display: flex; gap: 30px; align-items: flex-start;">
+            <div class="product-container">
                 <!-- Sidebar -->
-                <div
-                    style="width: 250px; flex-shrink: 0; background: #fff; padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
-                    <h3
-                        style="margin-bottom: 15px; border-bottom: 2px solid var(--accent-color); padding-bottom: 10px;">
-                        商品分類</h3>
-                    <ul style="list-style: none; padding: 0;">
-                        <li style="margin-bottom: 10px;">
-                            <a th:href="@{/products}" style="font-weight: bold; display: block; padding: 5px;"
-                                th:styleappend="${currentCategory == null} ? 'color: var(--accent-color);' : ''">全部商品</a>
-                        </li>
-                        <li th:each="cat, stat : ${categories}" style="margin-bottom: 15px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <a th:href="@{/products(category=${cat.key})}"
-                                    style="font-weight: bold; display: block; padding: 5px; flex-grow: 1;"
-                                    th:text="${cat.key}"
-                                    th:styleappend="${currentCategory == cat.key} ? 'color: var(--accent-color);' : ''">Category</a>
-                                <a href="#" class="category-toggle" th:data-target="'cat-' + ${stat.index}"
-                                    style="padding: 5px; color: var(--text-secondary); text-decoration: none;">
-                                    <span th:text="${currentCategory == cat.key} ? '▼' : '▶'">▶</span>
-                                </a>
-                            </div>
-                            <ul th:id="'cat-' + ${stat.index}" style="padding-left: 15px; margin-top: 5px;"
-                                th:style="${currentCategory == cat.key} ? 'display: block;' : 'display: none;'">
-                                <li th:each="sub : ${cat.value}" style="margin-bottom: 5px;">
-                                    <a th:href="@{/products(category=${cat.key}, subCategory=${sub})}" th:text="${sub}"
-                                        style="font-size: 0.9rem; color: var(--text-secondary);"
-                                        th:styleappend="${currentSubCategory == sub} ? 'color: var(--accent-color); font-weight: bold;' : ''">Sub</a>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
+                <div class="sidebar">
+                    <button class="btn btn-outline mobile-filter-btn" type="button" onclick="toggleSidebar()">
+                        顯示商品分類 ▼
+                    </button>
+                    <div id="sidebarContent" class="sidebar-content">
+                        <h3
+                            style="margin-bottom: 15px; border-bottom: 2px solid var(--accent-color); padding-bottom: 10px;">
+                            商品分類</h3>
+                        <ul style="list-style: none; padding: 0;">
+                            <li style="margin-bottom: 10px;">
+                                <a th:href="@{/products}" style="font-weight: bold; display: block; padding: 5px;"
+                                    th:styleappend="${currentCategory == null} ? 'color: var(--accent-color);' : ''">全部商品</a>
+                            </li>
+                            <li th:each="cat, stat : ${categories}" style="margin-bottom: 15px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <a th:href="@{/products(category=${cat.key})}"
+                                        style="font-weight: bold; display: block; padding: 5px; flex-grow: 1;"
+                                        th:text="${cat.key}"
+                                        th:styleappend="${currentCategory == cat.key} ? 'color: var(--accent-color);' : ''">Category</a>
+                                    <a href="#" class="category-toggle" th:data-target="'cat-' + ${stat.index}"
+                                        style="padding: 5px; color: var(--text-secondary); text-decoration: none;">
+                                        <span th:text="${currentCategory == cat.key} ? '▼' : '▶'">▶</span>
+                                    </a>
+                                </div>
+                                <ul th:id="'cat-' + ${stat.index}" style="padding-left: 15px; margin-top: 5px;"
+                                    th:style="${currentCategory == cat.key} ? 'display: block;' : 'display: none;'">
+                                    <li th:each="sub : ${cat.value}" style="margin-bottom: 5px;">
+                                        <a th:href="@{/products(category=${cat.key}, subCategory=${sub})}"
+                                            th:text="${sub}" style="font-size: 0.9rem; color: var(--text-secondary);"
+                                            th:styleappend="${currentSubCategory == sub} ? 'color: var(--accent-color); font-weight: bold;' : ''">Sub</a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
 
                 <!-- Product Grid -->
-                <div style="flex-grow: 1;">
+                <div class="product-content" style="flex-grow: 1;">
                     <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
                         <div th:each="product : ${products}" class="card product-card-wrapper">
                             <div class="img-placeholder" style="position: relative; height: 200px;">
@@ -169,6 +173,16 @@
                                     isLoading = false;
                                     document.getElementById('loading').style.display = 'none';
                                 });
+                        }
+                        function toggleSidebar() {
+                            const content = document.getElementById('sidebarContent');
+                            const btn = document.querySelector('.mobile-filter-btn');
+                            content.classList.toggle('active');
+                            if (content.classList.contains('active')) {
+                                btn.innerText = '隱藏商品分類 ▲';
+                            } else {
+                                btn.innerText = '顯示商品分類 ▼';
+                            }
                         }
                     </script>
 </body>
