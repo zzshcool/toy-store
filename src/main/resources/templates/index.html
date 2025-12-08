@@ -13,7 +13,7 @@
                 overflow: hidden;
                 margin: 20px auto 40px auto;
                 border-radius: 10px;
-                background: #ddd;
+                background: #fff;
             }
 
             .carousel-slide {
@@ -24,8 +24,15 @@
                 height: 100%;
                 opacity: 0;
                 transition: opacity 1s ease-in-out;
-                background-size: cover;
+                background-size: contain;
+                background-repeat: no-repeat;
                 background-position: center;
+            }
+
+            @media (max-width: 768px) {
+                .carousel-container {
+                    height: 250px;
+                }
             }
 
             .carousel-slide.active {
@@ -90,11 +97,16 @@
                 <h2 class="section-title">新品項目 (New Arrivals)</h2>
                 <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
                     <div th:each="item : ${newArrivals}" class="card">
-                        <div class="img-placeholder"
-                            style="position: relative; height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #888;">
+                        <div
+                            style="height: 200px; padding: 10px; display: flex; align-items: center; justify-content: center; position: relative;">
+                            <img th:if="${item.product.imageUrl != null}" th:src="${item.product.imageUrl}"
+                                style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                            <div th:if="${item.product.imageUrl == null}" class="img-placeholder"
+                                style="width: 100%; height: 100%;">
+                                <span>(無圖片)</span>
+                            </div>
                             <span th:if="${item.product.stock == 0}"
                                 style="position: absolute; top: 10px; right: 10px; background: var(--error-color); color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">缺貨中</span>
-                            <span>(圖片)</span>
                         </div>
                         <div style="padding: 15px;">
                             <h3 th:text="${item.product.name}" style="font-size: 1.1rem; margin-bottom: 10px;">Product
@@ -116,11 +128,16 @@
                 <h2 class="section-title">熱銷排行榜 (Best Sellers)</h2>
                 <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
                     <div th:each="item : ${bestSellers}" class="card">
-                        <div class="img-placeholder"
-                            style="position: relative; height: 200px; background: #fff5eb; display: flex; align-items: center; justify-content: center; color: #888;">
+                        <div
+                            style="height: 200px; padding: 10px; display: flex; align-items: center; justify-content: center; position: relative;">
+                            <img th:if="${item.product.imageUrl != null}" th:src="${item.product.imageUrl}"
+                                style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                            <div th:if="${item.product.imageUrl == null}" class="img-placeholder"
+                                style="width: 100%; height: 100%;">
+                                <span>(無圖片)</span>
+                            </div>
                             <span th:if="${item.product.stock == 0}"
                                 style="position: absolute; top: 10px; right: 10px; background: var(--error-color); color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">缺貨中</span>
-                            <span>(熱銷)</span>
                         </div>
                         <div style="padding: 15px;">
                             <h3 th:text="${item.product.name}" style="font-size: 1.1rem; margin-bottom: 10px;">Product
