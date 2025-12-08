@@ -2,9 +2,7 @@ package com.toy.store.controller;
 
 import com.toy.store.model.Product;
 import com.toy.store.repository.MemberRepository;
-import com.toy.store.model.MemberLevel;
 import com.toy.store.repository.MemberLevelRepository;
-import com.toy.store.repository.ProductRepository;
 import com.toy.store.service.ProductService;
 import com.toy.store.service.TokenService;
 import jakarta.servlet.http.Cookie;
@@ -66,7 +64,7 @@ public class AdminController {
 
     @PostMapping("/login-submit")
     public String loginSubmit(@RequestParam String username, @RequestParam String password,
-            HttpServletResponse response) {
+                              HttpServletResponse response) {
 
         java.util.Optional<com.toy.store.model.AdminUser> adminOpt = adminUserRepository.findByUsername(username);
 
@@ -85,7 +83,7 @@ public class AdminController {
         return "redirect:/admin/login?error";
     }
 
-    @RequestMapping(value = "/logout", method = { RequestMethod.GET, RequestMethod.POST })
+    @RequestMapping(value = "/logout", method = {RequestMethod.GET, RequestMethod.POST})
     public String logout(HttpServletRequest request, HttpServletResponse response) {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
@@ -184,7 +182,7 @@ public class AdminController {
 
     @PostMapping("/subcategories")
     public String createSubCategory(@RequestParam Long categoryId, @RequestParam String name,
-            HttpServletRequest request) {
+                                    HttpServletRequest request) {
         com.toy.store.model.Category cat = categoryRepository.findById(categoryId).orElseThrow();
         com.toy.store.model.SubCategory sub = new com.toy.store.model.SubCategory();
         sub.setName(name);
@@ -248,7 +246,7 @@ public class AdminController {
 
     @PostMapping("/mystery-box/items")
     public String createMysteryBoxItem(@RequestParam Long themeId,
-            @ModelAttribute com.toy.store.model.MysteryBoxItem item, HttpServletRequest request) {
+                                       @ModelAttribute com.toy.store.model.MysteryBoxItem item, HttpServletRequest request) {
         com.toy.store.model.MysteryBoxTheme theme = mysteryBoxThemeRepository.findById(themeId).orElseThrow();
         item.setTheme(theme);
         mysteryBoxItemRepository.save(item);
@@ -266,9 +264,9 @@ public class AdminController {
 
     @PostMapping("/admin/mystery-box/themes/update")
     public String updateTheme(@RequestParam Long id,
-            @RequestParam String name,
-            @RequestParam java.math.BigDecimal price,
-            HttpServletRequest request) {
+                              @RequestParam String name,
+                              @RequestParam java.math.BigDecimal price,
+                              HttpServletRequest request) {
         mysteryBoxThemeRepository.findById(id).ifPresent(theme -> {
             theme.setName(name);
             theme.setPrice(price);
@@ -280,7 +278,7 @@ public class AdminController {
 
     @PostMapping("/admin/activities/add")
     public String addActivity(@ModelAttribute("newActivity") com.toy.store.model.Activity activity,
-            HttpServletRequest request) {
+                              HttpServletRequest request) {
         activityRepository.save(activity);
         logAction("CREATE_ACTIVITY", "Created activity: " + activity.getTitle(), request);
         return "redirect:/admin";
@@ -308,12 +306,12 @@ public class AdminController {
 
     @PostMapping("/admin/activities/update")
     public String updateActivity(@RequestParam Long id,
-            @RequestParam String title,
-            @RequestParam String description,
-            @RequestParam String type,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String expiryDate,
-            HttpServletRequest request) {
+                                 @RequestParam String title,
+                                 @RequestParam String description,
+                                 @RequestParam String type,
+                                 @RequestParam(required = false) String startDate,
+                                 @RequestParam(required = false) String expiryDate,
+                                 HttpServletRequest request) {
         activityRepository.findById(id).ifPresent(activity -> {
             activity.setTitle(title);
             activity.setDescription(description);
@@ -332,11 +330,11 @@ public class AdminController {
 
     @PostMapping("/admin/members/update")
     public String updateMember(@RequestParam Long id,
-            @RequestParam String email,
-            @RequestParam String nickname,
-            @RequestParam boolean enabled,
-            @RequestParam com.toy.store.model.MemberLevel level,
-            HttpServletRequest request) {
+                               @RequestParam String email,
+                               @RequestParam String nickname,
+                               @RequestParam boolean enabled,
+                               @RequestParam com.toy.store.model.MemberLevel level,
+                               HttpServletRequest request) {
         memberRepository.findById(id).ifPresent(member -> {
             member.setEmail(email);
             member.setNickname(nickname);
@@ -388,7 +386,7 @@ public class AdminController {
 
     @PostMapping("/member-levels")
     public String createMemberLevel(@ModelAttribute com.toy.store.model.MemberLevel memberLevel,
-            HttpServletRequest request) {
+                                    HttpServletRequest request) {
         memberLevelRepository.save(memberLevel);
         logAction("CREATE_MEMBER_LEVEL", "Created level: " + memberLevel.getName(), request);
         return "redirect:/admin?tab=levels";
@@ -396,7 +394,7 @@ public class AdminController {
 
     @PostMapping("/member-levels/update")
     public String updateMemberLevel(@ModelAttribute com.toy.store.model.MemberLevel memberLevel,
-            HttpServletRequest request) {
+                                    HttpServletRequest request) {
         memberLevelRepository.save(memberLevel);
         logAction("UPDATE_MEMBER_LEVEL", "Updated level: " + memberLevel.getName(), request);
         return "redirect:/admin?tab=levels";
@@ -411,7 +409,7 @@ public class AdminController {
 
     @PostMapping("/mystery-box/themes/update")
     public String updateMysteryBoxTheme(@RequestParam Long id, @RequestParam String name, @RequestParam Double price,
-            HttpServletRequest request) {
+                                        HttpServletRequest request) {
         mysteryBoxThemeRepository.findById(id).ifPresent(theme -> {
             theme.setName(name);
             theme.setPrice(java.math.BigDecimal.valueOf(price));
@@ -430,7 +428,7 @@ public class AdminController {
 
     @PostMapping("/mystery-box/items/update")
     public String updateMysteryBoxItem(@RequestParam Long id, @RequestParam String name,
-            @RequestParam Double estimatedValue, @RequestParam Integer weight, HttpServletRequest request) {
+                                       @RequestParam Double estimatedValue, @RequestParam Integer weight, HttpServletRequest request) {
         mysteryBoxItemRepository.findById(id).ifPresent(item -> {
             item.setName(name);
             item.setEstimatedValue(java.math.BigDecimal.valueOf(estimatedValue));

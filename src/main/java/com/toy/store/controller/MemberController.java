@@ -34,7 +34,7 @@ public class MemberController {
 
     @PostMapping("/login")
     public String loginSubmit(@RequestParam String username, @RequestParam String password,
-            HttpServletResponse response, Model model) {
+                              HttpServletResponse response, Model model) {
 
         java.util.Optional<Member> memberOpt = memberRepository.findByUsername(username);
         if (memberOpt.isPresent()) {
@@ -60,7 +60,7 @@ public class MemberController {
         return "redirect:/login?error";
     }
 
-    @RequestMapping(value = "/logout", method = { RequestMethod.GET, RequestMethod.POST })
+    @RequestMapping(value = "/logout", method = {RequestMethod.GET, RequestMethod.POST})
     public String logout(HttpServletRequest request, HttpServletResponse response) {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
@@ -86,7 +86,7 @@ public class MemberController {
 
     @PostMapping("/register")
     public String registerUser(@Valid @ModelAttribute("signupRequest") SignupRequest signUpRequest,
-            BindingResult bindingResult, Model model) {
+                               BindingResult bindingResult, Model model) {
         if (bindingResult.hasErrors()) {
             return "register";
         }
@@ -133,10 +133,10 @@ public class MemberController {
 
     @PostMapping("/profile/update")
     public String updateProfile(HttpServletRequest request,
-            @RequestParam String nickname,
-            @RequestParam String email,
-            @RequestParam String phone,
-            Model model) {
+                                @RequestParam String nickname,
+                                @RequestParam String email,
+                                @RequestParam String phone,
+                                Model model) {
         TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
         if (user == null)
             return "redirect:/login";
@@ -166,9 +166,9 @@ public class MemberController {
 
     @PostMapping("/topup")
     public String processTopup(HttpServletRequest request,
-            @RequestParam java.math.BigDecimal amount,
-            @RequestParam String paymentMethod,
-            Model model) {
+                               @RequestParam java.math.BigDecimal amount,
+                               @RequestParam String paymentMethod,
+                               Model model) {
         TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
         if (user == null)
             return "redirect:/login";

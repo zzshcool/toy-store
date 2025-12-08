@@ -33,8 +33,8 @@ public class MysteryBoxController {
 
     @PostMapping("/draw")
     public String drawBox(HttpServletRequest request,
-            @RequestParam Long themeId,
-            RedirectAttributes redirectAttributes) {
+                          @RequestParam Long themeId,
+                          RedirectAttributes redirectAttributes) {
 
         TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
         if (info == null)

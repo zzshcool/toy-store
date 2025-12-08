@@ -37,7 +37,7 @@ public class Order {
     private LocalDateTime createTime = LocalDateTime.now();
 
     public enum OrderStatus {
-        PENDING, PAID, SHIPPED, COMPLETED, CANCELLED
+        PENDING, PAID, SHIPPED, COMPLETED, CANCELLED, REFUNDED
     }
 
     public void addItem(OrderItem item) {

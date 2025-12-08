@@ -4,6 +4,7 @@ import com.toy.store.model.MemberActionLog;
 import com.toy.store.repository.MemberActionLogRepository;
 import com.toy.store.security.services.UserDetailsImpl;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+@Slf4j
 @Aspect
 @Component
 public class MemberActionLogAspect {

@@ -1,10 +1,8 @@
 package com.toy.store.controller;
 
 import com.toy.store.model.Order;
-import com.toy.store.security.services.UserDetailsImpl;
 import com.toy.store.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,8 +45,8 @@ public class OrderController {
 
     @PostMapping("/{id}/refund")
     public String refundOrder(jakarta.servlet.http.HttpServletRequest request,
-            @org.springframework.web.bind.annotation.PathVariable Long id,
-            RedirectAttributes redirectAttributes) {
+                              @org.springframework.web.bind.annotation.PathVariable Long id,
+                              RedirectAttributes redirectAttributes) {
         com.toy.store.service.TokenService.TokenInfo info = (com.toy.store.service.TokenService.TokenInfo) request
                 .getAttribute("currentUser");
         if (info == null)
@@ -59,7 +57,7 @@ public class OrderController {
         try {
             // Logic should be in Service, but for simplicity adding here or calling service
             // Assuming OrderService has a refund method or we implement it now
-            orderService.refundOrder(id, user.getId());
+            orderService.refundOrder(id, member.getId());
             redirectAttributes.addFlashAttribute("successMessage", "訂單 #" + id + " 已申請退貨並退款。");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "退貨失敗：" + e.getMessage());
