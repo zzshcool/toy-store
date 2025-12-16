@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='抽獎紀錄', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <div class="container section">
+            <h2 class="section-title">📜 抽獎紀錄</h2>
+
+            <div th:if="${#lists.isEmpty(records)}" class="text-center" style="padding: 50px; color: #999;">
+                <p style="font-size: 3rem;">🎰</p>
+                <p>尚無抽獎紀錄</p>
+                <a th:href="@{/ichiban}" class="btn btn-primary" style="margin-top: 20px;">前往抽獎</a>
+            </div>
+
+            <div th:if="${!#lists.isEmpty(records)}" class="grid" style="gap: 15px;">
+                <div th:each="record : ${records}" class="card" style="padding: 15px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span th:switch="${record.gachaType.name()}">
+                            <span th:case="'ICHIBAN'"
+                                style="background: #e74c3c; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.8rem;">🎯
+                                一番賞</span>
+                            <span th:case="'ROULETTE'"
+                                style="background: #9b59b6; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.8rem;">🎡
+                                轉盤</span>
+                            <span th:case="'BINGO'"
+                                style="background: #3498db; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.8rem;">🎲
+                                九宮格</span>
+                            <span th:case="'MYSTERY_BOX'"
+                                style="background: #e67e22; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.8rem;">🎁
+                                盲盒</span>
+                            <span th:case="*"
+                                style="background: #95a5a6; color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.8rem;"
+                                th:text="${record.gachaType}">其他</span>
+                        </span>
+                        <span style="color: #999; font-size: 0.85rem;"
+                            th:text="${#temporals.format(record.createdAt, 'MM/dd HH:mm')}">01/01</span>
+                    </div>
+
+                    <h4 style="margin: 10px 0;" th:text="${record.prizeName}">獎品名稱</h4>
+
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; color: #666; font-size: 0.9rem;">
+                        <span th:if="${record.prizeRank != null}">
+                            等級：<strong th:text="${record.prizeRank}">A</strong>
+                        </span>
+                        <span th:if="${record.shardsEarned > 0}" style="color: var(--accent-color);">
+                            +<span th:text="${record.shardsEarned}">10</span> 💎
+                        </span>
+                        <span th:if="${record.isGuarantee}" style="color: #f39c12;">
+                            🎊 保底
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

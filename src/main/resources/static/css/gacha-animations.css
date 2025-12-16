@@ -1,0 +1,572 @@
+/*
+ * 抽獎系統動畫樣式庫
+ * 包含一番賞、轉盤、九宮格、扭蛋等動畫效果
+ */
+
+/* ==================== CSS 變數 ==================== */
+:root {
+    --gacha-primary: #FF6B6B;
+    --gacha-secondary: #4ECDC4;
+    --gacha-gold: #FFD93D;
+    --gacha-purple: #6C5CE7;
+    --gacha-dark: #2D3436;
+    --gacha-glow: 0 0 20px rgba(255, 215, 0, 0.6);
+}
+
+/* ==================== 一番賞格子樣式 ==================== */
+.ichiban-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 8px;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+@media (max-width: 768px) {
+    .ichiban-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+    }
+}
+
+.ichiban-slot {
+    aspect-ratio: 1;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: bold;
+    font-size: 1.2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.ichiban-slot.available {
+    background: linear-gradient(145deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.ichiban-slot.available:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+}
+
+.ichiban-slot.locked {
+    background: linear-gradient(145deg, #f39c12, #e74c3c);
+    color: white;
+    animation: pulse-lock 1.5s ease-in-out infinite;
+}
+
+.ichiban-slot.revealed {
+    background: linear-gradient(145deg, #95a5a6, #7f8c8d);
+    color: #ecf0f1;
+    cursor: default;
+}
+
+.ichiban-slot .slot-number {
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+.ichiban-slot .slot-status {
+    font-size: 0.7rem;
+    margin-top: 4px;
+    opacity: 0.9;
+}
+
+@keyframes pulse-lock {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* ==================== 轉盤樣式 ==================== */
+.roulette-container {
+    position: relative;
+    width: 350px;
+    height: 350px;
+    margin: 30px auto;
+}
+
+@media (max-width: 480px) {
+    .roulette-container {
+        width: 280px;
+        height: 280px;
+    }
+}
+
+.roulette-wheel {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: relative;
+    transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.3),
+        inset 0 0 50px rgba(255, 255, 255, 0.1);
+}
+
+.roulette-wheel.spinning {
+    animation: none;
+}
+
+.roulette-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(145deg, var(--gacha-gold), #f39c12);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    z-index: 10;
+    transition: transform 0.3s ease;
+}
+
+.roulette-center:hover {
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.roulette-pointer {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 20px solid transparent;
+    border-right: 20px solid transparent;
+    border-top: 35px solid var(--gacha-gold);
+    z-index: 20;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+}
+
+/* ==================== 九宮格樣式 ==================== */
+.bingo-grid {
+    display: grid;
+    gap: 10px;
+    max-width: 400px;
+    margin: 30px auto;
+    padding: 15px;
+    background: linear-gradient(145deg, #1a1a2e, #16213e);
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.bingo-grid.grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.bingo-grid.grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.bingo-grid.grid-5 {
+    grid-template-columns: repeat(5, 1fr);
+}
+
+.bingo-grid.grid-6 {
+    grid-template-columns: repeat(6, 1fr);
+}
+
+.bingo-cell {
+    aspect-ratio: 1;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 2rem;
+    position: relative;
+}
+
+.bingo-cell.hidden {
+    background: linear-gradient(145deg, #e74c3c, #c0392b);
+    box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+}
+
+.bingo-cell.hidden::before {
+    content: '❓';
+    font-size: 2rem;
+}
+
+.bingo-cell.hidden:hover {
+    transform: scale(1.1) rotate(5deg);
+    box-shadow: 0 10px 30px rgba(231, 76, 60, 0.6);
+}
+
+.bingo-cell.revealed {
+    background: linear-gradient(145deg, #27ae60, #2ecc71);
+    cursor: default;
+    animation: reveal-bounce 0.5s ease;
+}
+
+.bingo-cell.bingo-line {
+    animation: bingo-glow 1s ease-in-out infinite;
+}
+
+@keyframes reveal-bounce {
+    0% {
+        transform: scale(0.5) rotate(-10deg);
+    }
+
+    50% {
+        transform: scale(1.2) rotate(5deg);
+    }
+
+    100% {
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+@keyframes bingo-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px var(--gacha-gold);
+    }
+
+    50% {
+        box-shadow: 0 0 30px var(--gacha-gold), 0 0 50px var(--gacha-gold);
+    }
+}
+
+/* ==================== 碎片商店樣式 ==================== */
+.shard-balance {
+    background: linear-gradient(145deg, #6c5ce7, #a29bfe);
+    padding: 20px 30px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 15px;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+    box-shadow: 0 8px 25px rgba(108, 92, 231, 0.4);
+}
+
+.shard-balance .shard-icon {
+    font-size: 2rem;
+}
+
+.redeem-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.redeem-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+}
+
+.redeem-card.sold-out {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.redeem-card .card-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--gacha-gold);
+    color: #333;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+/* ==================== 扭蛋動畫 ==================== */
+.gacha-capsule {
+    width: 150px;
+    height: 180px;
+    position: relative;
+    margin: 0 auto;
+    animation: capsule-drop 0.8s ease-out;
+}
+
+.gacha-capsule .top {
+    width: 100%;
+    height: 50%;
+    background: linear-gradient(180deg, #ff6b6b 0%, #ee5a5a 100%);
+    border-radius: 75px 75px 0 0;
+    position: relative;
+}
+
+.gacha-capsule .bottom {
+    width: 100%;
+    height: 50%;
+    background: linear-gradient(180deg, #f5f5f5 0%, #ddd 100%);
+    border-radius: 0 0 75px 75px;
+}
+
+.gacha-capsule .shine {
+    position: absolute;
+    top: 15px;
+    left: 20px;
+    width: 30px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    transform: rotate(-20deg);
+}
+
+@keyframes capsule-drop {
+    0% {
+        transform: translateY(-200px) rotate(0deg);
+        opacity: 0;
+    }
+
+    60% {
+        transform: translateY(20px) rotate(360deg);
+        opacity: 1;
+    }
+
+    80% {
+        transform: translateY(-10px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.gacha-capsule.opening {
+    animation: capsule-shake 0.5s ease-in-out 3, capsule-open 0.5s ease forwards 1.5s;
+}
+
+@keyframes capsule-shake {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    25% {
+        transform: rotate(-15deg);
+    }
+
+    75% {
+        transform: rotate(15deg);
+    }
+}
+
+@keyframes capsule-open {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.3);
+    }
+
+    100% {
+        transform: scale(0);
+        opacity: 0;
+    }
+}
+
+/* ==================== 幸運值進度條 ==================== */
+.lucky-bar-container {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 30px;
+    height: 30px;
+    overflow: hidden;
+    position: relative;
+    margin: 20px 0;
+}
+
+.lucky-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2, #f39c12);
+    background-size: 200% 100%;
+    animation: lucky-gradient 2s linear infinite;
+    border-radius: 30px;
+    transition: width 0.5s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 15px;
+    color: white;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+@keyframes lucky-gradient {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 200% 50%;
+    }
+}
+
+.lucky-bar.guarantee {
+    animation: guarantee-pulse 0.5s ease infinite;
+}
+
+@keyframes guarantee-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px var(--gacha-gold);
+    }
+
+    50% {
+        box-shadow: 0 0 30px var(--gacha-gold), 0 0 50px var(--gacha-gold);
+    }
+}
+
+/* ==================== 獎品揭曉動畫 ==================== */
+.prize-reveal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fade-in 0.3s ease;
+}
+
+.prize-reveal-overlay .prize-card {
+    background: linear-gradient(145deg, #fff, #f0f0f0);
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    animation: prize-pop 0.6s ease;
+    box-shadow: var(--gacha-glow);
+}
+
+.prize-reveal-overlay .prize-rank {
+    font-size: 3rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--gacha-gold), #f39c12);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 20px;
+}
+
+.prize-reveal-overlay .confetti {
+    position: absolute;
+    animation: confetti-fall 3s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes prize-pop {
+    0% {
+        transform: scale(0.3) rotate(-10deg);
+        opacity: 0;
+    }
+
+    60% {
+        transform: scale(1.1) rotate(3deg);
+    }
+
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(-100vh) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* ==================== 閃光特效 ==================== */
+.sparkle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: radial-gradient(circle, white, transparent);
+    border-radius: 50%;
+    animation: sparkle-twinkle 1s ease-in-out infinite;
+}
+
+@keyframes sparkle-twinkle {
+
+    0%,
+    100% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ==================== 通用按鈕樣式 ==================== */
+.btn-gacha {
+    background: linear-gradient(145deg, var(--gacha-gold), #f39c12);
+    color: #333;
+    border: none;
+    padding: 15px 40px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 20px rgba(255, 215, 61, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.btn-gacha:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(255, 215, 61, 0.6);
+}
+
+.btn-gacha:active {
+    transform: translateY(0);
+}
+
+.btn-gacha:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    box-shadow: none;
+}

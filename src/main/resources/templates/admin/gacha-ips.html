@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>IP 主題管理 - 後台</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .admin-nav {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .admin-nav a {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .admin-nav a:hover,
+        .admin-nav a.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-coming {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .form-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>🎮 抽獎系統管理</h1>
+            <a th:href="@{/admin}" class="btn btn-outline">← 返回主後台</a>
+        </div>
+
+        <nav class="admin-nav">
+            <a th:href="@{/admin/gacha/ips}" class="active">IP 主題</a>
+            <a th:href="@{/admin/gacha/ichiban}">一番賞</a>
+            <a th:href="@{/admin/gacha/redeem}">兌換商店</a>
+            <a th:href="@{/admin/gacha/settings}">系統設定</a>
+        </nav>
+
+        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+        <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+        <!-- 新增 IP 表單 -->
+        <div class="form-card">
+            <h3 style="margin-bottom: 20px;">➕ 新增 IP 主題</h3>
+            <form th:action="@{/admin/gacha/ips/create}" method="post">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>IP 名稱</label>
+                        <input type="text" name="name" required placeholder="例：洛克人、航海王">
+                    </div>
+                    <div class="form-group">
+                        <label>圖片網址</label>
+                        <input type="text" name="imageUrl" placeholder="https://...">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <textarea name="description" rows="2" placeholder="IP 主題描述..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">建立 IP</button>
+            </form>
+        </div>
+
+        <!-- IP 列表 -->
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>名稱</th>
+                    <th>描述</th>
+                    <th>狀態</th>
+                    <th>建立時間</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="ip : ${ips}">
+                    <td th:text="${ip.id}"></td>
+                    <td th:text="${ip.name}"></td>
+                    <td th:text="${ip.description}"></td>
+                    <td>
+                        <span class="status-badge"
+                            th:classappend="${ip.status.name() == 'ACTIVE' ? 'status-active' : (ip.status.name() == 'INACTIVE' ? 'status-inactive' : 'status-coming')}"
+                            th:text="${ip.status.name()}"></span>
+                    </td>
+                    <td th:text="${#temporals.format(ip.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+                    <td>
+                        <button onclick="editIp(this)" class="btn btn-sm btn-outline" th:data-id="${ip.id}"
+                            th:data-name="${ip.name}" th:data-desc="${ip.description}" th:data-img="${ip.imageUrl}"
+                            th:data-status="${ip.status}">編輯</button>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(ips)}">
+                    <td colspan="6" class="text-center" style="padding: 30px;">尚無 IP 主題，請新增</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 編輯彈窗 -->
+    <div id="editModal"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; width: 90%;">
+            <h3 style="margin-bottom: 20px;">編輯 IP 主題</h3>
+            <form th:action="@{/admin/gacha/ips/__id__/update}" method="post" id="editForm">
+                <input type="hidden" name="id" id="editId">
+                <div class="form-group">
+                    <label>名稱</label>
+                    <input type="text" name="name" id="editName" required>
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <textarea name="description" id="editDesc" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>圖片網址</label>
+                    <input type="text" name="imageUrl" id="editImg">
+                </div>
+                <div class="form-group">
+                    <label>狀態</label>
+                    <select name="status" id="editStatus">
+                        <option value="ACTIVE">啟用中</option>
+                        <option value="INACTIVE">停用</option>
+                        <option value="COMING_SOON">即將推出</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 15px; margin-top: 20px;">
+                    <button type="button" onclick="closeEditModal()" class="btn btn-outline">取消</button>
+                    <button type="submit" class="btn btn-primary">儲存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function editIp(btn) {
+            const id = btn.dataset.id;
+            document.getElementById('editId').value = id;
+            document.getElementById('editName').value = btn.dataset.name;
+            document.getElementById('editDesc').value = btn.dataset.desc || '';
+            document.getElementById('editImg').value = btn.dataset.img || '';
+            document.getElementById('editStatus').value = btn.dataset.status;
+            document.getElementById('editForm').action = `/admin/gacha/ips/${id}/update`;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+    </script>
+</body>
+
+</html>

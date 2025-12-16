@@ -107,6 +107,22 @@ public class AdminController {
     @Autowired
     private com.toy.store.repository.ProductRepository productRepository;
 
+    // 抽獎系統 Repository
+    @Autowired
+    private com.toy.store.repository.GachaIpRepository gachaIpRepository;
+
+    @Autowired
+    private com.toy.store.repository.IchibanBoxRepository ichibanBoxRepository;
+
+    @Autowired
+    private com.toy.store.repository.RouletteGameRepository rouletteGameRepository;
+
+    @Autowired
+    private com.toy.store.repository.BingoGameRepository bingoGameRepository;
+
+    @Autowired
+    private com.toy.store.repository.RedeemShopItemRepository redeemShopItemRepository;
+
     @GetMapping("/login")
     public String adminLogin() {
         return "admin_login";
@@ -193,6 +209,13 @@ public class AdminController {
             model.addAttribute("bestSellers", featuredItemRepository
                     .findByItemTypeOrderBySortOrderAsc(com.toy.store.model.FeaturedItem.Type.BEST_SELLER));
             model.addAttribute("notifications", notificationRepository.findAllByOrderByCreatedAtDesc());
+
+            // Gacha Data
+            model.addAttribute("gachaIps", gachaIpRepository.findAllByOrderByCreatedAtDesc());
+            model.addAttribute("ichibanBoxes", ichibanBoxRepository.findAllByOrderByCreatedAtDesc());
+            model.addAttribute("rouletteGames", rouletteGameRepository.findAllByOrderByCreatedAtDesc());
+            model.addAttribute("bingoGames", bingoGameRepository.findAllByOrderByCreatedAtDesc());
+            model.addAttribute("redeemItems", redeemShopItemRepository.findAllByOrderBySortOrderAsc());
         } catch (Exception e) {
             e.printStackTrace(); // Print to server console for good measure
             model.addAttribute("errorMessage", "系統錯誤: " + e.getMessage() + " (" + e.getClass().getSimpleName() + ")");
@@ -215,6 +238,13 @@ public class AdminController {
             model.addAttribute("newArrivals", java.util.Collections.emptyList());
             model.addAttribute("bestSellers", java.util.Collections.emptyList());
             model.addAttribute("notifications", java.util.Collections.emptyList());
+
+            // Gacha empty lists
+            model.addAttribute("gachaIps", java.util.Collections.emptyList());
+            model.addAttribute("ichibanBoxes", java.util.Collections.emptyList());
+            model.addAttribute("rouletteGames", java.util.Collections.emptyList());
+            model.addAttribute("bingoGames", java.util.Collections.emptyList());
+            model.addAttribute("redeemItems", java.util.Collections.emptyList());
         }
 
         return "admin";

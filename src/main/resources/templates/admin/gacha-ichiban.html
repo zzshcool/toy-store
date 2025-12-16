@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>一番賞管理 - 後台</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .admin-nav {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .admin-nav a {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .admin-nav a:hover,
+        .admin-nav a.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-draft {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .status-soldout {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .form-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>🎯 一番賞管理</h1>
+            <a th:href="@{/admin}" class="btn btn-outline">← 返回主後台</a>
+        </div>
+
+        <nav class="admin-nav">
+            <a th:href="@{/admin/gacha/ips}">IP 主題</a>
+            <a th:href="@{/admin/gacha/ichiban}" class="active">一番賞</a>
+            <a th:href="@{/admin/gacha/redeem}">兌換商店</a>
+            <a th:href="@{/admin/gacha/settings}">系統設定</a>
+        </nav>
+
+        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+
+        <!-- 新增箱體表單 -->
+        <div class="form-card">
+            <h3 style="margin-bottom: 20px;">➕ 新增一番賞箱體</h3>
+            <form th:action="@{/admin/gacha/ichiban/create}" method="post">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>選擇 IP</label>
+                        <select name="ipId" required>
+                            <option value="">請選擇...</option>
+                            <option th:each="ip : ${ips}" th:value="${ip.id}" th:text="${ip.name}"></option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>箱體名稱</label>
+                        <input type="text" name="name" required placeholder="例：洛克人一番賞 第一彈">
+                    </div>
+                    <div class="form-group">
+                        <label>單抽價格</label>
+                        <input type="number" name="pricePerDraw" required value="680" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>總格數 (最多80)</label>
+                        <input type="number" name="totalSlots" required value="20" min="1" max="80">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <textarea name="description" rows="2" placeholder="箱體描述..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">建立箱體</button>
+            </form>
+        </div>
+
+        <!-- 箱體列表 -->
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>IP</th>
+                    <th>名稱</th>
+                    <th>價格</th>
+                    <th>格數</th>
+                    <th>狀態</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="box : ${boxes}">
+                    <td th:text="${box.id}"></td>
+                    <td th:text="${box.ipName}"></td>
+                    <td th:text="${box.name}"></td>
+                    <td>$<span th:text="${box.pricePerDraw}"></span></td>
+                    <td th:text="${box.totalSlots}"></td>
+                    <td>
+                        <span class="status-badge"
+                            th:classappend="${box.status.name() == 'ACTIVE' ? 'status-active' : (box.status.name() == 'DRAFT' ? 'status-draft' : 'status-soldout')}"
+                            th:text="${box.status.name()}"></span>
+                    </td>
+                    <td>
+                        <a th:href="@{/admin/gacha/ichiban/{id}/prizes(id=${box.id})}"
+                            class="btn btn-sm btn-outline">編輯獎品</a>
+                        <form th:if="${box.status.name() == 'DRAFT'}"
+                            th:action="@{/admin/gacha/ichiban/{id}/activate(id=${box.id})}" method="post"
+                            style="display: inline;">
+                            <button type="submit" class="btn btn-sm btn-primary"
+                                onclick="return confirm('確定上架此箱體？')">上架</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(boxes)}">
+                    <td colspan="7" class="text-center" style="padding: 30px;">尚無一番賞箱體</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>

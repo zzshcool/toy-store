@@ -64,6 +64,16 @@ public class TransactionService {
     private void checkAndUpgradeLevel(Member member) {
         com.toy.store.model.MemberLevel current = member.getLevel();
 
+        // 新會員無等級時，自動指派最低等級
+        if (current == null) {
+            java.util.List<com.toy.store.model.MemberLevel> allLevels = memberLevelRepository
+                    .findByEnabledTrueOrderBySortOrderAsc();
+            if (!allLevels.isEmpty()) {
+                member.setLevel(allLevels.get(0));
+            }
+            return;
+        }
+
         // Fetch all enabled levels sorted by sort order
         java.util.List<com.toy.store.model.MemberLevel> allLevels = memberLevelRepository
                 .findByEnabledTrueOrderBySortOrderAsc();

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='交易紀錄', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <div class="container section">
+            <h2 class="section-title">💳 交易紀錄</h2>
+
+            <div class="card" style="padding: 20px; margin-bottom: 30px;">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <span style="color: #666;">帳戶餘額：</span>
+                        <span style="font-size: 1.5rem; color: var(--accent-color); font-weight: bold;"
+                            th:text="'$' + ${#numbers.formatDecimal(member.platformWalletBalance, 1, 2)}">$1000.00</span>
+                    </div>
+                    <a th:href="@{/topup}" class="btn btn-primary">儲值</a>
+                </div>
+            </div>
+
+            <div th:if="${#lists.isEmpty(transactions)}" class="text-center" style="padding: 50px; color: #999;">
+                <p style="font-size: 3rem;">📭</p>
+                <p>尚無交易紀錄</p>
+            </div>
+
+            <div th:if="${!#lists.isEmpty(transactions)}" class="card" style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #eee;">時間</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #eee;">類型</th>
+                            <th style="padding: 12px; text-align: right; border-bottom: 2px solid #eee;">金額</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #eee;">說明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="tx : ${transactions}" style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 12px;" th:text="${#temporals.format(tx.timestamp, 'yyyy-MM-dd HH:mm')}">
+                                2024-01-01</td>
+                            <td style="padding: 12px;">
+                                <span th:switch="${tx.type.name()}">
+                                    <span th:case="'DEPOSIT'" style="color: #27ae60;">💰 儲值</span>
+                                    <span th:case="'PURCHASE'" style="color: #e74c3c;">🛒 消費</span>
+                                    <span th:case="'MYSTERY_BOX_COST'" style="color: #e67e22;">🎁 盲盒</span>
+                                    <span th:case="'REFUND'" style="color: #3498db;">↩️ 退款</span>
+                                    <span th:case="*" th:text="${tx.type}">其他</span>
+                                </span>
+                            </td>
+                            <td style="padding: 12px; text-align: right; font-weight: bold;"
+                                th:classappend="${tx.amount >= 0} ? 'text-success' : 'text-danger'"
+                                th:text="${tx.amount >= 0 ? '+' : ''} + ${#numbers.formatDecimal(tx.amount, 1, 2)}">
+                                +$100</td>
+                            <td style="padding: 12px; color: #666;" th:text="${tx.referenceId ?: '-'}">訂單編號</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <style>
+            .text-success {
+                color: #27ae60;
+            }
+
+            .text-danger {
+                color: #e74c3c;
+            }
+        </style>
+    </div>
+</body>
+
+</html>

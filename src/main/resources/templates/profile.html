@@ -1,53 +1,129 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='會員資料', content=~{::content})}">
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='會員中心', content=~{::content})}">
 
 <body>
     <div th:fragment="content">
         <div class="container section">
-            <h2 class="section-title">會員資料</h2>
+            <h2 class="section-title">👤 會員中心</h2>
 
-            <div class="form-card" style="max-width: 600px;">
-                <div th:if="${success}" class="alert alert-success text-center" th:text="${success}">更新成功</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; max-width: 1000px; margin: 0 auto;">
 
-                <form th:action="@{/profile/update}" method="post">
-                    <div class="form-group">
-                        <label>會員帳號 (不可修改)</label>
-                        <input type="text" class="form-control" th:value="${member.username}" disabled
-                            style="background-color: #f8f9fa;">
-                    </div>
+                <!-- 左側：會員資訊卡 -->
+                <div class="card" style="padding: 30px;">
+                    <div th:if="${success}" class="alert alert-success text-center" th:text="${success}">更新成功</div>
 
-                    <div class="form-group">
-                        <label>帳戶餘額</label>
-                        <div style="display: flex; align-items: center; gap: 15px;">
-                            <span style="font-size: 1.5rem; color: var(--accent-color); font-weight: bold;"
-                                th:text="'$' + ${member.platformWalletBalance}">$1000.00</span>
-                            <a th:href="@{/topup}" class="btn btn-primary btn-sm">儲值</a>
+                    <!-- 會員等級徽章 -->
+                    <div style="text-align: center; margin-bottom: 25px;">
+                        <div th:if="${member.level != null}"
+                            style="display: inline-block; padding: 10px 25px; border-radius: 30px; font-weight: bold; font-size: 1.2rem;"
+                            th:style="'background: linear-gradient(145deg, ' + (member.level.sortOrder >= 4 ? '#FFD700, #FFA500' : member.level.sortOrder >= 3 ? '#C0C0C0, #A0A0A0' : member.level.sortOrder >= 2 ? '#CD7F32, #B87333' : '#667eea, #764ba2') + '); color: white;'">
+                            <span th:text="${member.level.name}">VIP</span>
+                        </div>
+                        <div th:if="${member.level == null}"
+                            style="display: inline-block; padding: 10px 25px; border-radius: 30px; font-weight: bold; font-size: 1.2rem; background: linear-gradient(145deg, #95a5a6, #7f8c8d); color: white;">
+                            一般會員
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="nickname">暱稱</label>
-                        <input type="text" id="nickname" name="nickname" class="form-control"
-                            th:value="${member.nickname}" required>
+                    <form th:action="@{/profile/update}" method="post">
+                        <div class="form-group">
+                            <label>會員帳號 (不可修改)</label>
+                            <input type="text" class="form-control" th:value="${member.username}" disabled
+                                style="background-color: #f8f9fa;">
+                        </div>
+
+                        <div class="form-group">
+                            <label>帳戶餘額</label>
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <span style="font-size: 1.5rem; color: var(--accent-color); font-weight: bold;"
+                                    th:text="'$' + ${#numbers.formatDecimal(member.platformWalletBalance, 1, 2)}">$1000.00</span>
+                                <a th:href="@{/topup}" class="btn btn-primary btn-sm">儲值</a>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>本月儲值</label>
+                            <span style="font-size: 1.1rem; color: #666;"
+                                th:text="'$' + ${#numbers.formatDecimal(member.monthlyRecharge, 1, 2)}">$0.00</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="nickname">暱稱</label>
+                            <input type="text" id="nickname" name="nickname" class="form-control"
+                                th:value="${member.nickname}" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" class="form-control" th:value="${member.email}"
+                                required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="phone">電話</label>
+                            <input type="tel" id="phone" name="phone" class="form-control" th:value="${member.phone}">
+                        </div>
+
+                        <div class="text-center" style="margin-top: 30px;">
+                            <button type="submit" class="btn btn-primary">儲存變更</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 右側：等級說明 -->
+                <div class="card" style="padding: 30px;">
+                    <h3 style="margin-bottom: 25px;">🏆 會員等級說明</h3>
+
+                    <div th:each="level : ${levels}"
+                        style="padding: 15px; margin-bottom: 15px; border-radius: 12px; border: 2px solid #eee;"
+                        th:classappend="${member.level != null && member.level.id == level.id} ? 'level-current' : ''">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span style="font-weight: bold; font-size: 1.1rem;" th:text="${level.name}">VIP</span>
+                            <span th:if="${level.monthlyReward != null}"
+                                style="background: var(--accent-color); color: white; padding: 3px 10px; border-radius: 15px; font-size: 0.85rem;"
+                                th:text="${level.monthlyReward}">月獎勵</span>
+                        </div>
+                        <div style="color: #666; font-size: 0.9rem;">
+                            <span th:if="${level.threshold != null && level.threshold > 0}">
+                                月儲值滿 <strong
+                                    th:text="'$' + ${#numbers.formatDecimal(level.threshold, 1, 0)}">$1000</strong>
+                            </span>
+                            <span th:if="${level.threshold == null || level.threshold == 0}">
+                                新會員預設等級
+                            </span>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" id="email" name="email" class="form-control" th:value="${member.email}"
-                            required>
+                    <!-- 當前進度 -->
+                    <div th:if="${nextLevel != null}"
+                        style="margin-top: 25px; padding: 20px; background: #f8f9fa; border-radius: 12px;">
+                        <h4 style="margin-bottom: 15px;">📈 升級進度</h4>
+                        <p>距離 <strong th:text="${nextLevel.name}">下一等級</strong> 還需儲值</p>
+                        <p style="font-size: 1.5rem; color: var(--accent-color); font-weight: bold;"
+                            th:text="'$' + ${#numbers.formatDecimal(nextLevel.threshold - currentSpent, 1, 2)}">$500</p>
+                        <div
+                            style="background: #ddd; border-radius: 10px; height: 10px; margin-top: 10px; overflow: hidden;">
+                            <div style="height: 100%; background: linear-gradient(90deg, var(--accent-color), #f39c12); border-radius: 10px;"
+                                th:style="'width: ' + ${currentSpent / nextLevel.threshold * 100} + '%'"></div>
+                        </div>
                     </div>
-
-                    <div class="form-group">
-                        <label for="phone">電話</label>
-                        <input type="tel" id="phone" name="phone" class="form-control" th:value="${member.phone}">
-                    </div>
-
-                    <div class="text-center" style="margin-top: 30px;">
-                        <button type="submit" class="btn btn-primary">儲存變更</button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
+
+        <style>
+            .level-current {
+                border-color: var(--accent-color) !important;
+                background: linear-gradient(to right, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            }
+
+            @media (max-width: 768px) {
+                .container.section>div {
+                    grid-template-columns: 1fr !important;
+                }
+            }
+        </style>
     </div>
 </body>
 

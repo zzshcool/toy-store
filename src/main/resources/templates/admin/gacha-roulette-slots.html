@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>轉盤獎格設定 - 後台</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .admin-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .game-info {
+            background: linear-gradient(145deg, #6c5ce7, #a29bfe);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .game-info h2 {
+            margin: 0 0 10px 0;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+        }
+
+        .type-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .type-JACKPOT {
+            background: #e74c3c;
+        }
+
+        .type-RARE {
+            background: #f39c12;
+        }
+
+        .type-NORMAL {
+            background: #3498db;
+        }
+
+        .type-FREE_SPIN {
+            background: #27ae60;
+        }
+
+        .type-SHARD {
+            background: #95a5a6;
+        }
+
+        .probability {
+            font-weight: bold;
+            color: #6c5ce7;
+            font-size: 1.1rem;
+        }
+
+        .form-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .color-preview {
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            display: inline-block;
+            vertical-align: middle;
+            border: 1px solid #ddd;
+        }
+
+        .summary-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+
+        .summary-box .item {
+            padding: 0 20px;
+        }
+
+        .summary-box .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #6c5ce7;
+        }
+
+        .summary-box .label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="admin-container">
+        <a th:href="@{/admin/gacha/roulette}" class="btn btn-outline" style="margin-bottom: 20px;">← 返回轉盤列表</a>
+
+        <div class="game-info">
+            <h2 th:text="${game.name}">轉盤名稱</h2>
+            <p>IP：<span th:text="${game.ip.name}"></span> | 單次價格：$<span th:text="${game.pricePerSpin}"></span> |
+                總獎格：<span th:text="${game.totalSlots}"></span></p>
+        </div>
+
+        <div th:if="${success}" class="alert-success" th:text="${success}"></div>
+
+        <!-- 機率摘要 -->
+        <div class="summary-box">
+            <div class="item">
+                <div class="value" th:text="${totalWeight}">0</div>
+                <div class="label">總權重</div>
+            </div>
+            <div class="item">
+                <div class="value" th:text="${#lists.size(slots)}">0</div>
+                <div class="label">已設定獎格</div>
+            </div>
+            <div class="item">
+                <div class="value" th:text="${game.totalSlots - #lists.size(slots)}">0</div>
+                <div class="label">剩餘可設定</div>
+            </div>
+        </div>
+
+        <!-- 新增獎格表單 -->
+        <div class="form-card" th:if="${#lists.size(slots) < game.totalSlots}">
+            <h3 style="margin-bottom: 20px;">➕ 新增獎格</h3>
+            <form th:action="@{/admin/gacha/roulette/{id}/slots/add(id=${game.id})}" method="post">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>獎格類型</label>
+                        <select name="slotType" required>
+                            <option th:each="type : ${slotTypes}" th:value="${type}" th:text="${type.displayName}">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>獎品名稱</label>
+                        <input type="text" name="prizeName" required placeholder="例：限量公仔">
+                    </div>
+                    <div class="form-group">
+                        <label>權重 (機率分子)</label>
+                        <input type="number" name="weight" required value="10" min="1" max="1000">
+                    </div>
+                    <div class="form-group">
+                        <label>碎片數 (碎片類型)</label>
+                        <input type="number" name="shardAmount" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>顏色</label>
+                        <input type="color" name="color" value="#FFD700">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <input type="text" name="prizeDescription" placeholder="獎品描述...">
+                </div>
+                <button type="submit" class="btn btn-primary">新增獎格</button>
+            </form>
+        </div>
+
+        <!-- 已設定獎格列表 -->
+        <h3 style="margin-bottom: 15px;">🎰 已設定獎格（含機率）</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>順序</th>
+                    <th>類型</th>
+                    <th>獎品名稱</th>
+                    <th>權重</th>
+                    <th>機率</th>
+                    <th>碎片</th>
+                    <th>顏色</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="slot : ${slots}">
+                    <td th:text="${slot.slotOrder}"></td>
+                    <td><span class="type-badge" th:classappend="'type-' + ${slot.slotType}"
+                            th:text="${slot.slotType.displayName}"></span></td>
+                    <td th:text="${slot.prizeName}"></td>
+                    <td th:text="${slot.weight}"></td>
+                    <td class="probability">
+                        <span
+                            th:text="${totalWeight > 0 ? #numbers.formatDecimal(slot.weight * 100.0 / totalWeight, 1, 1) : 0}"></span>%
+                    </td>
+                    <td th:text="${slot.shardAmount != null ? slot.shardAmount : '-'}"></td>
+                    <td><span class="color-preview" th:style="'background:' + ${slot.color}"></span></td>
+                    <td>
+                        <form
+                            th:action="@{/admin/gacha/roulette/{gid}/slots/{sid}/delete(gid=${game.id}, sid=${slot.id})}"
+                            method="post" style="display: inline;">
+                            <button type="submit" class="btn btn-sm btn-outline" style="color: red; border-color: red;"
+                                onclick="return confirm('確定刪除此獎格？')">刪除</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(slots)}">
+                    <td colspan="8" class="text-center" style="padding: 30px;">尚無獎格，請新增</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 30px; text-align: center;"
+            th:if="${game.status.name() == 'DRAFT' and not #lists.isEmpty(slots)}">
+            <form th:action="@{/admin/gacha/roulette/{id}/activate(id=${game.id})}" method="post">
+                <button type="submit" class="btn btn-primary" style="padding: 15px 40px; font-size: 1.1rem;"
+                    onclick="return confirm('確定上架此轉盤？')">
+                    🚀 上架此轉盤
+                </button>
+            </form>
+        </div>
+
+        <div style="margin-top: 30px; background: #f0f8ff; padding: 20px; border-radius: 10px;">
+            <h4>📊 機率計算說明</h4>
+            <p style="color: #666;">機率 = (該獎格權重 ÷ 總權重) × 100%</p>
+            <p style="color: #666;">例如：權重 10，總權重 200 → 機率 = 10÷200×100% = 5%</p>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -18,19 +18,45 @@
                 <span></span>
             </div>
             <ul class="nav-menu" id="navMenu">
-                <li><a th:href="@{/}" class="nav-link">首頁</a></li>
-                <li><a th:href="@{/products}" class="nav-link">商品列表</a></li>
-                <li><a th:href="@{/mystery-box}" class="nav-link">盲盒抽獎</a></li>
+                <li><a th:href="@{/}" class="nav-link">🏠 首頁</a></li>
+                <li th:if="${@systemSettingService.isShoppingEnabled()}"><a th:href="@{/products}"
+                        class="nav-link">商品列表</a></li>
+                <!-- 抽獎系統 - 直接顯示各入口 -->
+                <li th:if="${@systemSettingService.isIchibanEnabled()}">
+                    <a th:href="@{/ichiban}" class="nav-link">🎯 一番賞</a>
+                </li>
+                <li th:if="${@systemSettingService.isRouletteEnabled()}">
+                    <a th:href="@{/roulette}" class="nav-link">🎡 轉盤</a>
+                </li>
+                <li th:if="${@systemSettingService.isBingoEnabled()}">
+                    <a th:href="@{/bingo}" class="nav-link">🎲 九宮格</a>
+                </li>
+                <li th:if="${@systemSettingService.isRedeemEnabled()}">
+                    <a th:href="@{/redeem-shop}" class="nav-link">💎 兌換</a>
+                </li>
+                <li th:if="${@systemSettingService.isMysteryBoxEnabled()}">
+                    <a th:href="@{/mystery-box}" class="nav-link">🎁 盲盒</a>
+                </li>
 
                 <li th:if="${currentUser != null}"
                     style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                    <span th:if="${currentUser != null}" style="color: var(--accent-color); font-weight: bold;">
-                        $<span th:text="${currentUser.platformWalletBalance}">1000</span>
+                    <!-- 等級徽章 -->
+                    <span th:if="${currentUser.level != null}"
+                        style="background: linear-gradient(145deg, #667eea, #764ba2); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold;"
+                        th:text="${currentUser.level.name}">VIP</span>
+                    <!-- 餘額 -->
+                    <span style="color: var(--accent-color); font-weight: bold;">
+                        💰 $<span th:text="${currentUser.platformWalletBalance}">1000</span>
                     </span>
-                    <a th:href="@{/cart}" class="nav-link">購物車</a>
-                    <a th:href="@{/orders}" class="nav-link">訂單</a>
-                    <a th:href="@{/profile}" class="nav-link"
-                        th:text="${currentUser.nickname != null ? currentUser.nickname : currentUser.username}">User</a>
+                    <a th:href="@{/transactions}" class="nav-link">💳 交易</a>
+                    <a th:href="@{/gacha-history}" class="nav-link">📜 紀錄</a>
+                    <a th:if="${@systemSettingService.isShoppingEnabled()}" th:href="@{/cart}" class="nav-link">🛒
+                        購物車</a>
+                    <a th:if="${@systemSettingService.isShoppingEnabled()}" th:href="@{/orders}" class="nav-link">📦
+                        訂單</a>
+                    <a th:href="@{/profile}" class="nav-link">👤
+                        <span
+                            th:text="${currentUser.nickname != null ? currentUser.nickname : currentUser.username}">User</span></a>
                     <form th:action="@{/logout}" method="post" style="display:inline;">
                         <button type="submit" class="nav-link"
                             style="background:none; border:none; padding:0; cursor: pointer; font-size: 0.95rem;">登出</button>
@@ -47,8 +73,40 @@
 
     <div th:replace="${content}"></div>
 
+    <!-- 抽獎跑馬燈 -->
+    <div id="gachaMarquee"
+        style="position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(90deg, rgba(102,126,234,0.95), rgba(118,75,162,0.95)); color: white; padding: 8px 0; z-index: 999; overflow: hidden;">
+        <div id="marqueeContent"
+            style="display: flex; gap: 60px; animation: scroll 30s linear infinite; white-space: nowrap;">
+            <span>🎰 載入中獎資訊...</span>
+        </div>
+    </div>
+    <style>
+        @keyframes scroll {
+            0% {
+                transform: translateX(100vw);
+            }
+
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+
+        #gachaMarquee .win-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #gachaMarquee .win-rare {
+            color: #FFD700;
+            font-weight: bold;
+        }
+    </style>
+
     <!-- Floating Cart Button -->
-    <div id="floatingCartBtn" th:if="${currentUser != null}" onclick="toggleCart()"
+    <div id="floatingCartBtn" th:if="${currentUser != null && @systemSettingService.isShoppingEnabled()}"
+        onclick="toggleCart()"
         style="position: fixed; bottom: 30px; right: 30px; background: var(--accent-color); color: #000; width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1000;">
         <span style="font-size: 24px;">🛒</span>
         <span id="cartBadge" class="badge"
@@ -56,7 +114,7 @@
     </div>
 
     <!-- Floating Cart Panel -->
-    <div id="floatingCartPanel" th:if="${currentUser != null}"
+    <div id="floatingCartPanel" th:if="${currentUser != null && @systemSettingService.isShoppingEnabled()}"
         style="position: fixed; top: 0; right: -350px; width: 350px; height: 100%; background: #fff; box-shadow: -2px 0 10px rgba(0,0,0,0.1); z-index: 1001; transition: right 0.3s ease; display: flex; flex-direction: column;">
         <div
             style="padding: 15px; background: var(--primary-color); color: #fff; display: flex; justify-content: space-between; align-items: center;">
@@ -215,6 +273,31 @@
         function scrollToTop() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        // 載入抽獎跑馬燈
+        function loadMarquee() {
+            fetch('/api/gacha/recent?limit=10')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.data.length > 0) {
+                        const container = document.getElementById('marqueeContent');
+                        container.innerHTML = data.data.map(r => {
+                            const icon = r.gachaType === 'ICHIBAN' ? '🎯' :
+                                r.gachaType === 'ROULETTE' ? '🎡' :
+                                    r.gachaType === 'BINGO' ? '🎲' : '🎁';
+                            const cls = r.isRare ? 'win-item win-rare' : 'win-item';
+                            return `<span class="${cls}">${icon} ${r.player} 獲得 ${r.prizeName}${r.prizeRank ? ' [' + r.prizeRank + '賞]' : ''}</span>`;
+                        }).join('');
+                    }
+                })
+                .catch(err => console.log('Marquee load failed'));
+        }
+
+        // 頁面載入時執行
+        document.addEventListener('DOMContentLoaded', function () {
+            loadMarquee();
+            setInterval(loadMarquee, 30000); // 每 30 秒更新
+        });
     </script>
 </body>
 

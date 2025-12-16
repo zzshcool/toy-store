@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>獎品配置 - 後台</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .admin-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .box-info {
+            background: linear-gradient(145deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .box-info h2 {
+            margin: 0 0 10px 0;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+        }
+
+        .rank-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .rank-A {
+            background: #e74c3c;
+        }
+
+        .rank-B {
+            background: #e67e22;
+        }
+
+        .rank-C {
+            background: #f1c40f;
+            color: #333;
+        }
+
+        .rank-D {
+            background: #3498db;
+        }
+
+        .rank-E {
+            background: #9b59b6;
+        }
+
+        .rank-F {
+            background: #1abc9c;
+        }
+
+        .rank-LAST {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            color: #333;
+        }
+
+        .form-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="admin-container">
+        <a th:href="@{/admin/gacha/ichiban}" class="btn btn-outline" style="margin-bottom: 20px;">← 返回箱體列表</a>
+
+        <div class="box-info">
+            <h2 th:text="${box.name}">箱體名稱</h2>
+            <p>IP：<span th:text="${box.ipName}"></span> | 單抽價格：$<span th:text="${box.pricePerDraw}"></span> | 總格數：<span
+                    th:text="${box.totalSlots}"></span></p>
+        </div>
+
+        <div th:if="${success}" class="alert-success" th:text="${success}"></div>
+
+        <!-- 新增獎品表單 -->
+        <div class="form-card">
+            <h3 style="margin-bottom: 20px;">➕ 新增獎品</h3>
+            <form th:action="@{/admin/gacha/ichiban/{id}/prizes/add(id=${box.id})}" method="post">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>等級</label>
+                        <select name="rank" required>
+                            <option th:each="rank : ${ranks}" th:value="${rank}" th:text="${rank.displayName}"></option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>獎品名稱</label>
+                        <input type="text" name="name" required placeholder="例：限量公仔">
+                    </div>
+                    <div class="form-group">
+                        <label>數量</label>
+                        <input type="number" name="quantity" required value="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>估計價值</label>
+                        <input type="number" name="estimatedValue" value="500" min="0">
+                    </div>
+                </div>
+                <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                    <div class="form-group">
+                        <label>描述</label>
+                        <input type="text" name="description" placeholder="獎品描述...">
+                    </div>
+                    <div class="form-group">
+                        <label>圖片網址</label>
+                        <input type="text" name="imageUrl" placeholder="https://...">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">新增獎品</button>
+            </form>
+        </div>
+
+        <!-- 已設定獎品列表 -->
+        <h3 style="margin-bottom: 15px;">📦 已設定獎品</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>等級</th>
+                    <th>名稱</th>
+                    <th>數量</th>
+                    <th>剩餘</th>
+                    <th>估計價值</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="prize : ${prizes}">
+                    <td><span class="rank-badge" th:classappend="'rank-' + ${prize.rank.name()}"
+                            th:text="${prize.rank.displayName}"></span></td>
+                    <td th:text="${prize.name}"></td>
+                    <td th:text="${prize.totalQuantity}"></td>
+                    <td th:text="${prize.remainingQuantity}"></td>
+                    <td>$<span th:text="${prize.estimatedValue}"></span></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(prizes)}">
+                    <td colspan="5" class="text-center" style="padding: 30px;">尚無獎品，請新增</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 30px; text-align: center;"
+            th:if="${box.status.name() == 'DRAFT' and not #lists.isEmpty(prizes)}">
+            <form th:action="@{/admin/gacha/ichiban/{id}/activate(id=${box.id})}" method="post">
+                <button type="submit" class="btn btn-primary" style="padding: 15px 40px; font-size: 1.1rem;"
+                    onclick="return confirm('確定上架此箱體？上架後將自動建立格子。')">
+                    🚀 上架此一番賞
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

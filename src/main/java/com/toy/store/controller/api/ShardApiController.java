@@ -1,0 +1,135 @@
+package com.toy.store.controller.api;
+
+import com.toy.store.dto.ApiResponse;
+import com.toy.store.model.*;
+import com.toy.store.service.ShardService;
+import com.toy.store.service.TokenService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * 碎片與兌換商店 API
+ */
+@RestController
+@RequestMapping("/api")
+public class ShardApiController {
+
+    @Autowired
+    private ShardService shardService;
+
+    @Autowired
+    private com.toy.store.repository.MemberRepository memberRepository;
+
+    /**
+     * 取得碎片餘額
+     */
+    @GetMapping("/shards/balance")
+    public ApiResponse<Map<String, Object>> getBalance(HttpServletRequest request) {
+        Long memberId = getMemberId(request);
+        if (memberId == null) {
+            return ApiResponse.error("請先登入");
+        }
+
+        int balance = shardService.getShardBalance(memberId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("balance", balance);
+        return ApiResponse.ok(result);
+    }
+
+    /**
+     * 取得碎片交易紀錄
+     */
+    @GetMapping("/shards/transactions")
+    public ApiResponse<List<Map<String, Object>>> getTransactions(HttpServletRequest request) {
+        Long memberId = getMemberId(request);
+        if (memberId == null) {
+            return ApiResponse.error("請先登入");
+        }
+
+        List<ShardTransaction> transactions = shardService.getTransactions(memberId);
+        List<Map<String, Object>> result = transactions.stream()
+                .map(this::transactionToMap)
+                .collect(Collectors.toList());
+        return ApiResponse.ok(result);
+    }
+
+    /**
+     * 取得兌換商店商品
+     */
+    @GetMapping("/redeem-shop")
+    public ApiResponse<List<Map<String, Object>>> getShopItems() {
+        List<RedeemShopItem> items = shardService.getAllItems();
+        List<Map<String, Object>> result = items.stream()
+                .map(this::itemToMap)
+                .collect(Collectors.toList());
+        return ApiResponse.ok(result);
+    }
+
+    /**
+     * 兌換商品
+     */
+    @PostMapping("/redeem-shop/{id}/redeem")
+    public ApiResponse<Map<String, Object>> redeem(
+            @PathVariable Long id,
+            HttpServletRequest request) {
+
+        Long memberId = getMemberId(request);
+        if (memberId == null) {
+            return ApiResponse.error("請先登入");
+        }
+
+        try {
+            ShardService.RedeemResult result = shardService.redeem(memberId, id);
+            Map<String, Object> response = new HashMap<>();
+            response.put("item", itemToMap(result.getItem()));
+            response.put("remainingBalance", result.getRemainingBalance());
+            return ApiResponse.ok(response, "🎉 兌換成功！");
+        } catch (Exception e) {
+            return ApiResponse.error(e.getMessage());
+        }
+    }
+
+    private Long getMemberId(HttpServletRequest request) {
+        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
+        if (info == null)
+            return null;
+        return memberRepository.findByUsername(info.getUsername())
+                .map(Member::getId)
+                .orElse(null);
+    }
+
+    private Map<String, Object> transactionToMap(ShardTransaction tx) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", tx.getId());
+        map.put("type", tx.getType().name());
+        map.put("typeDisplay", tx.getType().getDisplayName());
+        map.put("amount", tx.getAmount());
+        map.put("description", tx.getDescription());
+        map.put("createdAt", tx.getCreatedAt());
+        return map;
+    }
+
+    private Map<String, Object> itemToMap(RedeemShopItem item) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", item.getId());
+        map.put("name", item.getName());
+        map.put("description", item.getDescription());
+        map.put("imageUrl", item.getImageUrl());
+        map.put("shardCost", item.getShardCost());
+        map.put("estimatedValue", item.getEstimatedValue());
+        map.put("stock", item.getStock());
+        map.put("totalStock", item.getTotalStock());
+        map.put("stockPercentage", item.getStockPercentage());
+        map.put("itemType", item.getItemType().name());
+        map.put("itemTypeDisplay", item.getItemType().getDisplayName());
+        map.put("status", item.getStatus().name());
+        map.put("hasStock", item.hasStock());
+        return map;
+    }
+}

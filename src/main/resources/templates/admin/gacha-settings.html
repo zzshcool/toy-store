@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>系統設定 - 後台</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .admin-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .admin-nav {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .admin-nav a {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .admin-nav a:hover,
+        .admin-nav a.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .setting-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .setting-card .header {
+            background: var(--bg-secondary);
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-item .info {
+            flex: 1;
+        }
+
+        .setting-item .key {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .setting-item .action {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .toggle-btn {
+            width: 60px;
+            height: 30px;
+            border-radius: 15px;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            transition: background 0.3s;
+        }
+
+        .toggle-btn.on {
+            background: #27ae60;
+        }
+
+        .toggle-btn.off {
+            background: #e74c3c;
+        }
+
+        .toggle-btn::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: white;
+            transition: left 0.3s;
+        }
+
+        .toggle-btn.on::after {
+            left: 33px;
+        }
+
+        .toggle-btn.off::after {
+            left: 3px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>⚙️ 系統設定</h1>
+            <a th:href="@{/admin}" class="btn btn-outline">← 返回主後台</a>
+        </div>
+
+        <nav class="admin-nav">
+            <a th:href="@{/admin/gacha/ips}">IP 主題</a>
+            <a th:href="@{/admin/gacha/ichiban}">一番賞</a>
+            <a th:href="@{/admin/gacha/redeem}">兌換商店</a>
+            <a th:href="@{/admin/gacha/settings}" class="active">系統設定</a>
+        </nav>
+
+        <div th:if="${success}" class="alert-success" th:text="${success}"></div>
+
+        <!-- 功能開關 -->
+        <div class="setting-card">
+            <div class="header">🔌 功能開關</div>
+            <div th:each="setting : ${settings}" th:if="${setting.settingKey.startsWith('module.')}">
+                <div class="setting-item">
+                    <div class="info">
+                        <div th:text="${setting.description}">設定描述</div>
+                        <div class="key" th:text="${setting.settingKey}">key</div>
+                    </div>
+                    <div class="action">
+                        <form th:action="@{/admin/gacha/settings/update}" method="post">
+                            <input type="hidden" name="key" th:value="${setting.settingKey}">
+                            <input type="hidden" name="value"
+                                th:value="${setting.settingValue == 'true' ? 'false' : 'true'}">
+                            <button type="submit" class="toggle-btn"
+                                th:classappend="${setting.settingValue == 'true' ? 'on' : 'off'}"></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 遊戲參數 -->
+        <div class="setting-card">
+            <div class="header">🎮 遊戲參數</div>
+            <div th:each="setting : ${settings}" th:if="${setting.settingKey.startsWith('gacha.')}">
+                <div class="setting-item">
+                    <div class="info">
+                        <div th:text="${setting.description}">設定描述</div>
+                        <div class="key" th:text="${setting.settingKey}">key</div>
+                    </div>
+                    <div class="action">
+                        <form th:action="@{/admin/gacha/settings/update}" method="post"
+                            style="display: flex; gap: 10px;">
+                            <input type="hidden" name="key" th:value="${setting.settingKey}">
+                            <input type="number" name="value" th:value="${setting.settingValue}"
+                                style="width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 8px;">
+                            <button type="submit" class="btn btn-sm btn-primary">更新</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

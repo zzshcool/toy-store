@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='幸運轉盤', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <link rel="stylesheet" th:href="@{/css/gacha-animations.css}">
+
+        <div class="container section">
+            <h2 class="section-title">🎡 幸運轉盤</h2>
+
+            <!-- 幸運值顯示 -->
+            <div style="max-width: 500px; margin: 0 auto 30px auto; text-align: center;">
+                <p style="margin-bottom: 10px;">幸運值累積</p>
+                <div class="lucky-bar-container">
+                    <div id="luckyBar" class="lucky-bar" style="width: 0%;">
+                        <span id="luckyText">0/1000</span>
+                    </div>
+                </div>
+                <p id="luckyHint" style="color: var(--text-secondary); font-size: 0.9rem;">
+                    累積滿 1000 幸運值必中大獎！
+                </p>
+            </div>
+
+            <!-- 轉盤列表 -->
+            <div id="gameList" class="grid" style="margin-bottom: 40px;">
+                <div class="text-center" style="grid-column: 1/-1; padding: 40px;">
+                    <p>載入中...</p>
+                </div>
+            </div>
+
+            <!-- 轉盤遊戲區域 -->
+            <div id="rouletteGame" style="display: none;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h3 id="gameName" style="margin-bottom: 5px;">轉盤名稱</h3>
+                    <p style="color: var(--text-secondary);">
+                        <span style="color: var(--gacha-gold); font-weight: bold; font-size: 1.3rem;">
+                            $<span id="spinPrice">0</span>
+                        </span> / 次
+                    </p>
+                </div>
+
+                <div class="roulette-container">
+                    <div class="roulette-pointer"></div>
+                    <canvas id="wheelCanvas" class="roulette-wheel" width="350" height="350"></canvas>
+                    <div class="roulette-center" onclick="spin()">
+                        <span>🎰</span>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px;">
+                    <button id="spinBtn" class="btn-gacha" onclick="spin()">開始旋轉</button>
+                    <button class="btn btn-outline" onclick="backToList()" style="margin-left: 15px;">返回</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 結果彈窗 -->
+        <div id="resultModal" class="prize-reveal-overlay" style="display: none;">
+            <div class="prize-card">
+                <div id="resultType" style="font-size: 1.5rem; margin-bottom: 10px;">🎊</div>
+                <h2 id="resultPrize" style="margin: 0 0 20px 0;">獎品名稱</h2>
+                <p id="resultShards" style="color: #6c5ce7; margin-bottom: 5px;"></p>
+                <p id="resultGuarantee" style="color: var(--gacha-gold); font-weight: bold; display: none;">🎉 保底觸發！</p>
+                <p id="resultFreeSpin" style="color: #27ae60; font-weight: bold; display: none;">🎁 獲得免費再轉一次！</p>
+                <button class="btn-gacha" onclick="closeResult()" style="margin-top: 20px;">確定</button>
+            </div>
+        </div>
+
+        <!-- 確認扣款模態框 -->
+        <div id="confirmModal" class="prize-reveal-overlay" style="display: none;">
+            <div class="prize-card" style="max-width: 400px;">
+                <div style="font-size: 2rem; margin-bottom: 15px;">🎡</div>
+                <h3 style="margin: 0 0 15px 0;">確認旋轉</h3>
+                <p style="margin-bottom: 10px;">即將扣除餘額進行抽獎</p>
+                <div style="background: rgba(102,126,234,0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="margin: 0; font-size: 1.5rem; color: var(--accent-color); font-weight: bold;">
+                        $<span id="confirmPrice">0</span>
+                    </p>
+                </div>
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button class="btn btn-outline" onclick="cancelConfirm()">取消</button>
+                    <button class="btn-gacha" onclick="confirmSpin()">確認扣款</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let currentGameId = null;
+            let isSpinning = false;
+            let wheelSlots = [];
+
+            document.addEventListener('DOMContentLoaded', function () {
+                loadLuckyValue();
+                loadGameList();
+            });
+
+            function loadLuckyValue() {
+                fetch('/api/roulette/lucky-value')
+                    .then(r => r.json())
+                    .then(response => {
+                        if (response.success) {
+                            updateLuckyBar(response.data.luckyValue, 1000);
+                        }
+                    });
+            }
+
+            function updateLuckyBar(current, threshold) {
+                const percentage = Math.min((current / threshold) * 100, 100);
+                const bar = document.getElementById('luckyBar');
+                bar.style.width = percentage + '%';
+                document.getElementById('luckyText').textContent = `${current}/${threshold}`;
+
+                if (current >= threshold) {
+                    bar.classList.add('guarantee');
+                    document.getElementById('luckyHint').textContent = '🎉 保底已觸發！下次必中大獎！';
+                    document.getElementById('luckyHint').style.color = 'var(--gacha-gold)';
+                }
+            }
+
+            function loadGameList() {
+                fetch('/api/roulette')
+                    .then(r => r.json())
+                    .then(response => {
+                        if (response.success && response.data.length > 0) {
+                            renderGameList(response.data);
+                        } else {
+                            document.getElementById('gameList').innerHTML = `
+                                <div class="text-center" style="grid-column: 1/-1; padding: 40px;">
+                                    <p>目前沒有進行中的轉盤遊戲</p>
+                                </div>
+                            `;
+                        }
+                    });
+            }
+
+            function renderGameList(games) {
+                const html = games.map(game => `
+                    <div class="card" style="cursor: pointer;" onclick="selectGame(${game.id})">
+                        <div class="img-placeholder" style="background: linear-gradient(145deg, #e74c3c, #f39c12); border-radius: 50%; margin: 20px auto; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: white; font-size: 4rem;">🎡</span>
+                        </div>
+                        <div style="padding: 20px; text-align: center;">
+                            <span style="background: var(--gacha-gold); color: #333; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">
+                                ${game.ipName}
+                            </span>
+                            <h3 style="margin: 10px 0;">${game.name}</h3>
+                            <p style="color: var(--accent-color); font-weight: bold; font-size: 1.3rem;">$${game.pricePerSpin} / 次</p>
+                            <p style="color: #666; font-size: 0.9rem;">${game.totalSlots} 個獎格</p>
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('gameList').innerHTML = html;
+            }
+
+            function selectGame(gameId) {
+                currentGameId = gameId;
+                document.getElementById('gameList').style.display = 'none';
+                document.getElementById('rouletteGame').style.display = 'block';
+                loadGameDetails(gameId);
+            }
+
+            function backToList() {
+                currentGameId = null;
+                document.getElementById('gameList').style.display = 'grid';
+                document.getElementById('rouletteGame').style.display = 'none';
+            }
+
+            function loadGameDetails(gameId) {
+                fetch(`/api/roulette/${gameId}`)
+                    .then(r => r.json())
+                    .then(response => {
+                        if (response.success) {
+                            const game = response.data;
+                            document.getElementById('gameName').textContent = game.name;
+                            document.getElementById('spinPrice').textContent = game.pricePerSpin;
+                            wheelSlots = game.slots || [];
+                            drawWheel(wheelSlots);
+                        }
+                    });
+            }
+
+            function drawWheel(slots) {
+                const canvas = document.getElementById('wheelCanvas');
+                const ctx = canvas.getContext('2d');
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const radius = canvas.width / 2 - 5;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (slots.length === 0) return;
+
+                const sliceAngle = (2 * Math.PI) / slots.length;
+                const colors = ['#FF6B6B', '#4ECDC4', '#FFD93D', '#6C5CE7', '#A8E6CF', '#FF8B94', '#FFEAA7', '#DFE6E9'];
+
+                slots.forEach((slot, index) => {
+                    const startAngle = index * sliceAngle - Math.PI / 2;
+                    const endAngle = startAngle + sliceAngle;
+
+                    // 繪製扇形
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                    ctx.closePath();
+                    ctx.fillStyle = slot.color || colors[index % colors.length];
+                    ctx.fill();
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // 繪製文字
+                    ctx.save();
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate(startAngle + sliceAngle / 2);
+                    ctx.textAlign = 'right';
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.fillText(slot.prizeName.substring(0, 6), radius - 15, 5);
+                    ctx.restore();
+                });
+            }
+
+            let currentSpinPrice = 0;
+
+            function spin() {
+                if (isSpinning || !currentGameId) return;
+                // 顯示確認模態框
+                currentSpinPrice = document.getElementById('spinPrice').textContent;
+                document.getElementById('confirmPrice').textContent = currentSpinPrice;
+                document.getElementById('confirmModal').style.display = 'flex';
+            }
+
+            function cancelConfirm() {
+                document.getElementById('confirmModal').style.display = 'none';
+            }
+
+            function confirmSpin() {
+                document.getElementById('confirmModal').style.display = 'none';
+                isSpinning = true;
+                document.getElementById('spinBtn').disabled = true;
+
+                fetch(`/api/roulette/${currentGameId}/spin`, { method: 'POST' })
+                    .then(r => r.json())
+                    .then(response => {
+                        if (response.success) {
+                            const result = response.data;
+                            const slotIndex = wheelSlots.findIndex(s => s.id === result.slot.id);
+                            animateWheel(slotIndex, () => {
+                                showResult(result, response.message);
+                                loadLuckyValue();
+                                // 刷新餘額
+                                if (window.refreshBalance) window.refreshBalance();
+                            });
+                        } else {
+                            alert(response.message || '旋轉失敗');
+                            isSpinning = false;
+                            document.getElementById('spinBtn').disabled = false;
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error:', err);
+                        alert('操作失敗');
+                        isSpinning = false;
+                        document.getElementById('spinBtn').disabled = false;
+                    });
+            }
+
+            function animateWheel(targetIndex, callback) {
+                const canvas = document.getElementById('wheelCanvas');
+                const totalSlots = wheelSlots.length;
+                const sliceAngle = 360 / totalSlots;
+
+                // 計算目標角度（讓目標格子停在頂部指針位置）
+                const targetAngle = 360 * 5 + (360 - targetIndex * sliceAngle - sliceAngle / 2);
+
+                let currentAngle = 0;
+                const duration = 5000;
+                const startTime = Date.now();
+
+                function animate() {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+
+                    // 緩動函數
+                    const easeOut = 1 - Math.pow(1 - progress, 3);
+                    currentAngle = easeOut * targetAngle;
+
+                    canvas.style.transform = `rotate(${currentAngle}deg)`;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        isSpinning = false;
+                        document.getElementById('spinBtn').disabled = false;
+                        if (callback) callback();
+                    }
+                }
+                animate();
+            }
+
+            function showResult(result, message) {
+                const slot = result.slot;
+                document.getElementById('resultType').textContent = slot.isJackpot ? '🏆' : '🎊';
+                document.getElementById('resultPrize').textContent = slot.prizeName;
+                document.getElementById('resultShards').textContent = result.shardsEarned > 0 ? `+${result.shardsEarned} 碎片` : '';
+                document.getElementById('resultGuarantee').style.display = result.isGuarantee ? 'block' : 'none';
+                document.getElementById('resultFreeSpin').style.display = result.isFreeSpin ? 'block' : 'none';
+                document.getElementById('resultModal').style.display = 'flex';
+            }
+
+            function closeResult() {
+                document.getElementById('resultModal').style.display = 'none';
+            }
+        </script>
+    </div>
+</body>
+
+</html>

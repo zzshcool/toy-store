@@ -69,8 +69,10 @@
                 <h1>釋放你的 <span style="color: var(--accent-color)">童心靈魂</span></h1>
                 <p>探索稀有收藏品、限定公仔與神秘盲盒。</p>
                 <div>
-                    <a th:href="@{/products}" class="btn btn-primary">立即選購</a>
-                    <a th:href="@{/mystery-box}" class="btn btn-outline" style="margin-left: 10px;">試試手氣</a>
+                    <a th:if="${@systemSettingService.isShoppingEnabled()}" th:href="@{/products}"
+                        class="btn btn-primary">立即選購</a>
+                    <a th:href="@{/mystery-box}" class="btn btn-outline"
+                        th:style="${@systemSettingService.isShoppingEnabled() ? 'margin-left: 10px;' : ''}">試試手氣</a>
                 </div>
             </div>
         </header>
@@ -93,7 +95,8 @@
         <div class="container">
 
             <!-- New Arrivals -->
-            <div th:if="${!#lists.isEmpty(newArrivals)}" style="margin-bottom: 40px;">
+            <div th:if="${@systemSettingService.isShoppingEnabled() && !#lists.isEmpty(newArrivals)}"
+                style="margin-bottom: 40px;">
                 <h2 class="section-title">新品項目 (New Arrivals)</h2>
                 <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
                     <div th:each="item : ${newArrivals}" class="card">
@@ -124,7 +127,8 @@
             </div>
 
             <!-- Best Sellers -->
-            <div th:if="${!#lists.isEmpty(bestSellers)}" style="margin-bottom: 40px;">
+            <div th:if="${@systemSettingService.isShoppingEnabled() && !#lists.isEmpty(bestSellers)}"
+                style="margin-bottom: 40px;">
                 <h2 class="section-title">熱銷排行榜 (Best Sellers)</h2>
                 <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
                     <div th:each="item : ${bestSellers}" class="card">

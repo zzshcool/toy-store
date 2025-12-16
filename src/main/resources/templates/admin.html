@@ -9,7 +9,7 @@
             <b th:text="${errorMessage}">Error</b>
         </div>
         <div
-            style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+            style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; flex-wrap: wrap;">
             <button onclick="openTab('members')" class="btn btn-outline btn-sm">會員管理</button>
             <button onclick="openTab('levels')" class="btn btn-outline btn-sm">等級管理</button>
             <button onclick="openTab('products')" class="btn btn-outline btn-sm">商品管理</button>
@@ -20,6 +20,17 @@
             <button onclick="openTab('coupons')" class="btn btn-outline btn-sm">優惠券管理</button>
             <button onclick="openTab('platform')" class="btn btn-outline btn-sm">平台管理</button>
             <button onclick="openTab('logs')" class="btn btn-outline btn-sm">操作日誌</button>
+            <!-- 抽獎系統管理 Tabs -->
+            <button onclick="openTab('gacha-ips')" class="btn btn-outline btn-sm" style="background: #e8f4fd;">🎮
+                IP主題</button>
+            <button onclick="openTab('gacha-ichiban')" class="btn btn-outline btn-sm" style="background: #e8f4fd;">🎯
+                一番賞</button>
+            <button onclick="openTab('gacha-roulette')" class="btn btn-outline btn-sm" style="background: #e8f4fd;">🎡
+                轉盤</button>
+            <button onclick="openTab('gacha-bingo')" class="btn btn-outline btn-sm" style="background: #e8f4fd;">🎲
+                九宮格</button>
+            <button onclick="openTab('gacha-redeem')" class="btn btn-outline btn-sm" style="background: #e8f4fd;">💎
+                碎片商店</button>
         </div>
 
         <!-- Member Management -->
@@ -795,6 +806,286 @@
             </table>
         </div>
 
+        <!-- ==================== 抽獎系統管理 ==================== -->
+
+        <!-- IP 主題管理 -->
+        <div id="gacha-ips" class="tab-content" style="display:none;">
+            <h3>🎮 IP 主題管理</h3>
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>新增 IP 主題</h4>
+                <form th:action="@{/admin/gacha/ips/create}" method="post">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                        <input type="text" name="name" placeholder="IP 名稱" class="form-control" required />
+                        <input type="text" name="description" placeholder="描述" class="form-control" />
+                        <input type="text" name="imageUrl" placeholder="圖片網址" class="form-control" />
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 10px;">新增</button>
+                </form>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>名稱</th>
+                        <th>描述</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="ip : ${gachaIps}">
+                        <td th:text="${ip.id}">1</td>
+                        <td th:text="${ip.name}">鬼滅之刃</td>
+                        <td th:text="${ip.description}">描述</td>
+                        <td>
+                            <span
+                                th:class="${ip.status.name() == 'ACTIVE' ? 'badge badge-success' : 'badge badge-secondary'}"
+                                th:text="${ip.status.name() == 'ACTIVE' ? '啟用' : '停用'}">Active</span>
+                        </td>
+                        <td>
+                            <form th:action="@{/admin/gacha/ips/{id}/toggle(id=${ip.id})}" method="post"
+                                style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-info"
+                                    th:text="${ip.status.name() == 'ACTIVE' ? '停用' : '啟用'}">Toggle</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 一番賞管理 -->
+        <div id="gacha-ichiban" class="tab-content" style="display:none;">
+            <h3>🎯 一番賞管理</h3>
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>新增一番賞箱體</h4>
+                <form th:action="@{/admin/gacha/ichiban/create}" method="post">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
+                        <select name="ipId" class="form-control" required>
+                            <option value="">選擇 IP 主題</option>
+                            <option th:each="ip : ${gachaIps}" th:if="${ip.status.name() == 'ACTIVE'}"
+                                th:value="${ip.id}" th:text="${ip.name}"></option>
+                        </select>
+                        <input type="text" name="name" placeholder="箱體名稱" class="form-control" required />
+                        <input type="number" step="0.01" name="pricePerDraw" placeholder="單抽價格" class="form-control"
+                            required />
+                        <input type="number" name="totalSlots" placeholder="總格數" class="form-control" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 10px;">建立箱體</button>
+                </form>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>IP</th>
+                        <th>名稱</th>
+                        <th>單價</th>
+                        <th>格數</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="box : ${ichibanBoxes}">
+                        <td th:text="${box.id}">1</td>
+                        <td th:text="${box.ip != null ? box.ip.name : '-'}">IP</td>
+                        <td th:text="${box.name}">Box</td>
+                        <td th:text="'$' + ${box.pricePerDraw}">$680</td>
+                        <td th:text="${box.totalSlots}">20</td>
+                        <td>
+                            <span
+                                th:class="${box.status.name() == 'ACTIVE' ? 'badge badge-success' : (box.status.name() == 'SOLD_OUT' ? 'badge badge-danger' : 'badge badge-secondary')}"
+                                th:text="${box.status.name()}">Status</span>
+                        </td>
+                        <td>
+                            <a th:href="@{/admin/gacha/ichiban/{id}/prizes(id=${box.id})}"
+                                class="btn btn-sm btn-info">獎品設定</a>
+                            <form th:if="${box.status.name() == 'DRAFT'}"
+                                th:action="@{/admin/gacha/ichiban/{id}/activate(id=${box.id})}" method="post"
+                                style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-success">上架</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 轉盤管理 -->
+        <div id="gacha-roulette" class="tab-content" style="display:none;">
+            <h3>🎡 轉盤管理</h3>
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>新增轉盤遊戲</h4>
+                <form th:action="@{/admin/gacha/roulette/create}" method="post">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
+                        <select name="ipId" class="form-control" required>
+                            <option value="">選擇 IP 主題</option>
+                            <option th:each="ip : ${gachaIps}" th:if="${ip.status.name() == 'ACTIVE'}"
+                                th:value="${ip.id}" th:text="${ip.name}"></option>
+                        </select>
+                        <input type="text" name="name" placeholder="轉盤名稱" class="form-control" required />
+                        <input type="number" step="0.01" name="pricePerSpin" placeholder="單轉價格" class="form-control"
+                            required />
+                        <input type="number" name="totalSlots" placeholder="獎格數(8-12)" class="form-control" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 10px;">建立轉盤</button>
+                </form>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>IP</th>
+                        <th>名稱</th>
+                        <th>單價</th>
+                        <th>獎格數</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="game : ${rouletteGames}">
+                        <td th:text="${game.id}">1</td>
+                        <td th:text="${game.ip != null ? game.ip.name : '-'}">IP</td>
+                        <td th:text="${game.name}">Game</td>
+                        <td th:text="'$' + ${game.pricePerSpin}">$100</td>
+                        <td th:text="${game.totalSlots}">8</td>
+                        <td>
+                            <span
+                                th:class="${game.status.name() == 'ACTIVE' ? 'badge badge-success' : 'badge badge-secondary'}"
+                                th:text="${game.status.name()}">Status</span>
+                        </td>
+                        <td>
+                            <a th:href="@{/admin/gacha/roulette/{id}/slots(id=${game.id})}"
+                                class="btn btn-sm btn-info">獎格設定</a>
+                            <form th:if="${game.status.name() == 'DRAFT'}"
+                                th:action="@{/admin/gacha/roulette/{id}/activate(id=${game.id})}" method="post"
+                                style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-success">上架</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 九宮格管理 -->
+        <div id="gacha-bingo" class="tab-content" style="display:none;">
+            <h3>🎲 九宮格管理</h3>
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>新增九宮格遊戲</h4>
+                <form th:action="@{/admin/gacha/bingo/create}" method="post">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 10px;">
+                        <select name="ipId" class="form-control" required>
+                            <option value="">選擇 IP 主題</option>
+                            <option th:each="ip : ${gachaIps}" th:if="${ip.status.name() == 'ACTIVE'}"
+                                th:value="${ip.id}" th:text="${ip.name}"></option>
+                        </select>
+                        <input type="text" name="name" placeholder="遊戲名稱" class="form-control" required />
+                        <input type="number" step="0.01" name="pricePerDig" placeholder="單挖價格" class="form-control"
+                            required />
+                        <select name="gridSize" class="form-control" required>
+                            <option value="3">3x3</option>
+                            <option value="4">4x4</option>
+                            <option value="5">5x5</option>
+                        </select>
+                        <input type="text" name="bingoRewardName" placeholder="連線獎勵" class="form-control" />
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 10px;">建立九宮格</button>
+                </form>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>IP</th>
+                        <th>名稱</th>
+                        <th>單價</th>
+                        <th>尺寸</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="game : ${bingoGames}">
+                        <td th:text="${game.id}">1</td>
+                        <td th:text="${game.ip != null ? game.ip.name : '-'}">IP</td>
+                        <td th:text="${game.name}">Game</td>
+                        <td th:text="'$' + ${game.pricePerDig}">$80</td>
+                        <td th:text="${game.gridSize + 'x' + game.gridSize}">3x3</td>
+                        <td>
+                            <span
+                                th:class="${game.status.name() == 'ACTIVE' ? 'badge badge-success' : 'badge badge-secondary'}"
+                                th:text="${game.status.name()}">Status</span>
+                        </td>
+                        <td>
+                            <a th:href="@{/admin/gacha/bingo/{id}/cells(id=${game.id})}"
+                                class="btn btn-sm btn-info">格子設定</a>
+                            <form th:if="${game.status.name() == 'DRAFT'}"
+                                th:action="@{/admin/gacha/bingo/{id}/activate(id=${game.id})}" method="post"
+                                style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-success">上架</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 碎片商店管理 -->
+        <div id="gacha-redeem" class="tab-content" style="display:none;">
+            <h3>💎 碎片商店管理</h3>
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>新增兌換商品</h4>
+                <form th:action="@{/admin/gacha/redeem/create}" method="post">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 10px;">
+                        <input type="text" name="name" placeholder="商品名稱" class="form-control" required />
+                        <input type="number" name="shardCost" placeholder="碎片價格" class="form-control" required />
+                        <input type="number" step="0.01" name="estimatedValue" placeholder="估計價值" class="form-control"
+                            required />
+                        <input type="number" name="stock" placeholder="庫存" class="form-control" required />
+                        <select name="itemType" class="form-control" required>
+                            <option value="S_RANK">S級獎品</option>
+                            <option value="HIDDEN">隱藏版</option>
+                            <option value="SPECIAL">特典</option>
+                            <option value="PRIZE">周邊</option>
+                        </select>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <input type="text" name="imageUrl" placeholder="圖片網址" class="form-control" />
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 10px;">新增商品</button>
+                </form>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>名稱</th>
+                        <th>類型</th>
+                        <th>碎片價格</th>
+                        <th>庫存</th>
+                        <th>狀態</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="item : ${redeemItems}">
+                        <td th:text="${item.id}">1</td>
+                        <td th:text="${item.name}">商品</td>
+                        <td th:text="${item.itemType}">S_RANK</td>
+                        <td th:text="${item.shardCost}">1000</td>
+                        <td th:text="${item.stock + '/' + item.totalStock}">5/10</td>
+                        <td>
+                            <span
+                                th:class="${item.status.name() == 'ACTIVE' ? 'badge badge-success' : 'badge badge-secondary'}"
+                                th:text="${item.status.name()}">Active</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
         <!-- Edit Member Level Modal -->
         <div id="editLevelModal" class="modal"
             style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
@@ -907,6 +1198,23 @@
                 document.getElementById('editMemberStatus').value = enabled;
                 document.getElementById('editMemberLevel').value = level;
                 document.getElementById('editMemberModal').style.display = 'block';
+            }
+
+            // Tab 切換函數
+            function openTab(tabId) {
+                // 隱藏所有 tab-content
+                document.querySelectorAll('.tab-content').forEach(el => {
+                    el.style.display = 'none';
+                });
+                // 顯示目標 tab
+                const targetTab = document.getElementById(tabId);
+                if (targetTab) {
+                    targetTab.style.display = 'block';
+                }
+                // 更新 URL 參數
+                const url = new URL(window.location);
+                url.searchParams.set('tab', tabId);
+                window.history.replaceState({}, '', url);
             }
 
             function showHistory(memberId) {

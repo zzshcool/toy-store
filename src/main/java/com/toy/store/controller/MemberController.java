@@ -2,8 +2,10 @@ package com.toy.store.controller;
 
 import com.toy.store.dto.SignupRequest;
 import com.toy.store.model.Member;
+import com.toy.store.model.Transaction;
 import com.toy.store.repository.MemberRepository;
 import com.toy.store.service.TokenService;
+import com.toy.store.service.TransactionService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -27,23 +29,13 @@ public class MemberController {
     @Autowired
     private TokenService tokenService;
 
+    @Autowired
+    private TransactionService transactionService;
+
     @GetMapping("/login")
     public String loginPage() {
         return "login";
     }
-
-    // ... (loginSubmit method remains unchanged) ...
-
-    // ... (logout method remains unchanged) ...
-    // Note: I will just insert the field and modify the method.
-    // Since replace_file_content works on chunks, I'll do two replaces or one big
-    // one if close.
-    // They are far apart. Using MultiReplace is better or separate calls.
-    // I'll do separate calls or use MultiReplace.
-    // Actually, I can just add the field at the top and the method logic in one go?
-    // No.
-    // I'll use separate calls.
-    // First, add the Autowired field.
 
     @PostMapping("/login")
     public String loginSubmit(@RequestParam String username, @RequestParam String password,
@@ -59,7 +51,7 @@ public class MemberController {
                 Cookie cookie = new Cookie("AUTH_TOKEN", token);
                 cookie.setHttpOnly(true);
                 cookie.setPath("/");
-                cookie.setMaxAge(3600 * 24 * 7); // 7 days (Logic handled in TokenService)
+                cookie.setMaxAge(3600 * 24 * 7); // 7 days
                 response.addCookie(cookie);
 
                 // Update Last Login
@@ -97,6 +89,9 @@ public class MemberController {
         return "register";
     }
 
+    @Autowired
+    private com.toy.store.repository.MemberLevelRepository memberLevelRepository;
+
     @PostMapping("/register")
     public String registerUser(@Valid @ModelAttribute("signupRequest") SignupRequest signUpRequest,
             BindingResult bindingResult, Model model) {
@@ -118,12 +113,22 @@ public class MemberController {
         Member member = new Member();
         member.setUsername(signUpRequest.getUsername());
         member.setEmail(signUpRequest.getEmail());
+        member.setPhone(signUpRequest.getPhone());
         member.setPassword(encoder.encode(signUpRequest.getPassword()));
         member.setRole(Member.Role.USER);
         member.setPlatformWalletBalance(java.math.BigDecimal.ZERO);
 
-        // Set default nickname to username
-        member.setNickname(signUpRequest.getUsername());
+        // 設定暱稱（如果有填寫則使用填寫的，否則使用帳號名）
+        String nickname = signUpRequest.getNickname();
+        member.setNickname(
+                nickname != null && !nickname.trim().isEmpty() ? nickname.trim() : signUpRequest.getUsername());
+
+        // 初始化會員等級（自動指派最低等級）
+        java.util.List<com.toy.store.model.MemberLevel> levels = memberLevelRepository
+                .findByEnabledTrueOrderBySortOrderAsc();
+        if (!levels.isEmpty()) {
+            member.setLevel(levels.get(0));
+        }
 
         memberRepository.save(member);
 
@@ -174,8 +179,15 @@ public class MemberController {
 
         Member member = memberRepository.findByUsername(user.getUsername()).orElse(null);
         if (member != null) {
-            member.setPlatformWalletBalance(member.getPlatformWalletBalance().add(amount));
-            memberRepository.save(member);
+            // 使用 TransactionService 處理儲值（會記錄交易 + 檢查升等）
+            transactionService.updateWalletBalance(
+                    member.getId(),
+                    amount,
+                    Transaction.TransactionType.DEPOSIT,
+                    "TOPUP-" + paymentMethod);
+
+            // 重新載入會員資料
+            member = memberRepository.findById(member.getId()).orElseThrow();
             model.addAttribute("success", "儲值成功！(" + paymentMethod + ")");
             model.addAttribute("member", member);
         }
