@@ -348,8 +348,141 @@
                     });
             }
 
-            // 顯示開獎結果
+            // 顯示開獎結果（帶刮開動畫）
             function showResultModal(data) {
+                const prizes = data.prizes || [];
+                if (prizes.length === 0) return;
+
+                // 播放音效
+                playRevealSound();
+
+                // 如果只有一個獎品，顯示刮開動畫
+                if (prizes.length === 1) {
+                    showScratchReveal(prizes[0], data);
+                } else {
+                    // 多個獎品，依序快速展示後顯示結果
+                    showSequentialReveal(prizes, data);
+                }
+            }
+
+            // 播放揭曉音效
+            function playRevealSound() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+                    oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+                    oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.5);
+                } catch (e) {
+                    // 音效播放失敗，忽略
+                }
+            }
+
+            // 單張刮刮卡揭曉動畫
+            function showScratchReveal(item, data) {
+                const prize = item.prize || {};
+                const rankDisplay = prize.rankDisplay || '?賞';
+                const prizeName = prize.name || '神秘獎品';
+
+                // 建立刮開容器
+                const container = document.createElement('div');
+                container.className = 'scratch-reveal-container';
+                container.innerHTML = `
+                    <div class="scratch-card">
+                        <div class="scratch-card-back">
+                            <div class="scratch-card-prize">🎁</div>
+                            <div style="font-size: 1.5rem;">#${String(item.slotNumber).padStart(2, '0')}</div>
+                        </div>
+                        <div class="scratch-card-front">
+                            <div style="font-size: 1rem; opacity: 0.8;">點擊刮開</div>
+                            <div style="font-size: 4rem; margin: 15px 0;">✨</div>
+                            <div style="font-size: 0.9rem;">揭曉你的獎品！</div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(container);
+
+                // 點擊刮開
+                const front = container.querySelector('.scratch-card-front');
+                const back = container.querySelector('.scratch-card-back');
+
+                container.onclick = function () {
+                    front.classList.add('revealing');
+
+                    // 更新背面內容
+                    setTimeout(() => {
+                        back.innerHTML = `
+                            <div class="scratch-card-rank">${rankDisplay}</div>
+                            <div class="scratch-card-prize">🏆</div>
+                            <div class="scratch-card-name">${prizeName}</div>
+                            <div style="margin-top: 15px; color: #ffd93d;">+${item.shards} 碎片</div>
+                        `;
+
+                        // 觸發粒子爆發
+                        spawnConfetti();
+
+                        // 3秒後關閉並顯示總結
+                        setTimeout(() => {
+                            container.remove();
+                            showFinalSummary(data);
+                        }, 2500);
+                    }, 800);
+                };
+            }
+
+            // 多張獎品依序揭曉
+            function showSequentialReveal(prizes, data) {
+                let currentIndex = 0;
+
+                function revealNext() {
+                    if (currentIndex >= prizes.length) {
+                        showFinalSummary(data);
+                        return;
+                    }
+
+                    const item = prizes[currentIndex];
+                    const prize = item.prize || {};
+
+                    // 快速閃現卡片
+                    const flash = document.createElement('div');
+                    flash.className = 'scratch-reveal-container';
+                    flash.innerHTML = `
+                        <div style="text-align: center; color: white;">
+                            <div style="font-size: 1.5rem; margin-bottom: 10px;">#${String(item.slotNumber).padStart(2, '0')}</div>
+                            <div style="font-size: 3rem; margin-bottom: 15px;">🎁</div>
+                            <div style="font-size: 2rem; color: var(--gacha-gold); font-weight: bold;">${prize.rankDisplay || '?賞'}</div>
+                            <div style="font-size: 1.2rem; margin-top: 10px;">${prize.name || '神秘獎品'}</div>
+                            <div style="color: #a29bfe; margin-top: 5px;">+${item.shards} 碎片</div>
+                        </div>
+                    `;
+                    document.body.appendChild(flash);
+
+                    // 播放快速音效
+                    playRevealSound();
+
+                    setTimeout(() => {
+                        flash.remove();
+                        currentIndex++;
+                        revealNext();
+                    }, 800);
+                }
+
+                revealNext();
+            }
+
+            // 顯示最終總結
+            function showFinalSummary(data) {
                 const prizes = data.prizes || [];
                 const html = prizes.map(item => {
                     const prize = item.prize;
@@ -373,6 +506,27 @@
                 document.getElementById('totalShardsResult').textContent = data.totalShards;
                 document.getElementById('totalCostResult').textContent = data.totalCost;
                 document.getElementById('resultModal').style.display = 'block';
+            }
+
+            // 生成彩色碎片飄落
+            function spawnConfetti() {
+                const container = document.createElement('div');
+                container.className = 'confetti-container';
+                document.body.appendChild(container);
+
+                const colors = ['#ff6b6b', '#ffd93d', '#6c5ce7', '#00cec9', '#fd79a8', '#55efc4'];
+
+                for (let i = 0; i < 50; i++) {
+                    const piece = document.createElement('div');
+                    piece.className = 'confetti-piece';
+                    piece.style.left = Math.random() * 100 + '%';
+                    piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    piece.style.animationDelay = Math.random() * 0.5 + 's';
+                    piece.style.animationDuration = (2 + Math.random() * 2) + 's';
+                    container.appendChild(piece);
+                }
+
+                setTimeout(() => container.remove(), 4000);
             }
 
             // 關閉結果彈窗

@@ -363,6 +363,49 @@ INSERT INTO bingo_cells (game_id, position, row_num, col_num, prize_name, prize_
 (6, 9, 2, 2, '紅蘿蔔鑰匙圈', '零食', FALSE);
 
 -- =====================================================
+-- 灌籃高手 一番賞獎品 (box_id=11)
+-- =====================================================
+INSERT INTO ichiban_prizes (box_id, rank, name, description, image_url, estimated_value, total_quantity, remaining_quantity, sort_order) VALUES 
+(11, 'A', '櫻木花道 灌籃姿態公仔', '經典灌籃場景1/6比例可動公仔', '/images/prize/slam_a.jpg', 3000, 1, 1, 1),
+(11, 'B', '流川楓 運球公仔', '天才球員帥氣造型', '/images/prize/slam_b.jpg', 1800, 2, 2, 2),
+(11, 'C', '湘北隊服 複製品', '10號球衣官方授權複製', '/images/prize/slam_c.jpg', 1000, 3, 3, 3),
+(11, 'D', '安西教練 名言掛畫', '放棄的話比賽就結束了', '/images/prize/slam_d.jpg', 500, 5, 5, 4),
+(11, 'E', '湘北五虎 壓克力立牌', '五人組合立牌', '/images/prize/slam_e.jpg', 250, 7, 7, 5),
+(11, 'LAST', '櫻木花道 vs 流川楓 對決場景', '限量雙人組公仔', '/images/prize/slam_last.jpg', 5000, 1, 1, 99);
+
+-- 灌籃高手 一番賞格子 (box_id=11, 共 19 格)
+INSERT INTO ichiban_slots (box_id, slot_number, prize_id, status) VALUES 
+(11, 1, 37, 'AVAILABLE'),
+(11, 2, 38, 'AVAILABLE'), (11, 3, 38, 'AVAILABLE'),
+(11, 4, 39, 'AVAILABLE'), (11, 5, 39, 'AVAILABLE'), (11, 6, 39, 'AVAILABLE'),
+(11, 7, 40, 'AVAILABLE'), (11, 8, 40, 'AVAILABLE'), (11, 9, 40, 'AVAILABLE'), (11, 10, 40, 'AVAILABLE'), (11, 11, 40, 'AVAILABLE'),
+(11, 12, 41, 'AVAILABLE'), (11, 13, 41, 'AVAILABLE'), (11, 14, 41, 'AVAILABLE'), (11, 15, 41, 'AVAILABLE'), (11, 16, 41, 'AVAILABLE'), (11, 17, 41, 'AVAILABLE'), (11, 18, 41, 'AVAILABLE'),
+(11, 19, 42, 'AVAILABLE'), (11, 20, 41, 'AVAILABLE');
+
+-- 灌籃高手 轉盤獎格 (game_id=11)
+INSERT INTO roulette_slots (game_id, slot_order, slot_type, prize_name, prize_description, weight, shard_amount, color) VALUES 
+(11, 1, 'JACKPOT', '櫻木公仔', '天才籃球員！', 5, NULL, '#FF0000'),
+(11, 2, 'RARE', '流川楓周邊', '天才對決', 8, NULL, '#FF6600'),
+(11, 3, 'NORMAL', '三井壽徽章', '安西教練我想打籃球', 20, NULL, '#4ECDC4'),
+(11, 4, 'SHARD', '100碎片', '碎片獎勵', 25, 100, '#AAAAAA'),
+(11, 5, 'NORMAL', '宮城良田貼紙', '速度型後衛', 18, NULL, '#FFD93D'),
+(11, 6, 'FREE_SPIN', '再來一次', '免費再轉', 10, NULL, '#00FF00'),
+(11, 7, 'SHARD', '50碎片', '碎片獎勵', 28, 50, '#CCCCCC'),
+(11, 8, 'NORMAL', '赤木剛憲明信片', '大猩猩隊長', 20, NULL, '#6C5CE7');
+
+-- 灌籃高手 九宮格格子 (game_id=11, 3x3)
+INSERT INTO bingo_cells (game_id, position, row_num, col_num, prize_name, prize_description, is_revealed) VALUES 
+(11, 1, 0, 0, '櫻木花道貼紙', '天才', FALSE),
+(11, 2, 0, 1, '流川楓徽章', '睡神', FALSE),
+(11, 3, 0, 2, '三井壽卡片', '三分射手', FALSE),
+(11, 4, 1, 0, '宮城良田書籤', '速度', FALSE),
+(11, 5, 1, 1, '赤木剛憲吊飾', '隊長', FALSE),
+(11, 6, 1, 2, '安西教練筆', '名言', FALSE),
+(11, 7, 2, 0, '彩子杯墊', '經理', FALSE),
+(11, 8, 2, 1, '仙道彰周邊', '陵南王牌', FALSE),
+(11, 9, 2, 2, '湘北隊徽鑰匙圈', '全國制霸', FALSE);
+
+-- =====================================================
 -- 8. 兌換商店商品
 -- =====================================================
 INSERT INTO redeem_shop_items (name, description, image_url, shard_cost, estimated_value, stock, total_stock, item_type, status, sort_order, created_at) VALUES 
@@ -371,4 +414,5 @@ INSERT INTO redeem_shop_items (name, description, image_url, shard_cost, estimat
 ('七龍珠 特別款 發光神龍', 'LED發光版神龍模型', '/images/redeem/db_special.jpg', 20000, 12000, 1, 1, 'SPECIAL', 'ACTIVE', 3, NOW()),
 ('進擊的巨人 兵長組合包', '兵長主題周邊全套', '/images/redeem/aot_pack.jpg', 5000, 2000, 10, 10, 'PRIZE', 'ACTIVE', 10, NOW()),
 ('鋼之鍊金術師 懷錶複製品', '精密機械複製品', '/images/redeem/fma_watch.jpg', 8000, 3500, 5, 5, 'PRIZE', 'ACTIVE', 11, NOW()),
-('天竺鼠車車 超大抱枕', '60cm馬鈴薯造型', '/images/redeem/mc_pillow.jpg', 6000, 2500, 8, 8, 'PRIZE', 'ACTIVE', 12, NOW());
+('天竺鼠車車 超大抱枕', '60cm馬鈴薯造型', '/images/redeem/mc_pillow.jpg', 6000, 2500, 8, 8, 'PRIZE', 'ACTIVE', 12, NOW()),
+('灌籃高手 湘北隊服套組', '限量版全套隊服', '/images/redeem/slam_uniform.jpg', 12000, 6000, 3, 3, 'S_RANK', 'ACTIVE', 13, NOW());

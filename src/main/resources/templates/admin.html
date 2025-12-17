@@ -80,6 +80,22 @@
                     </tr>
                 </tbody>
             </table>
+
+            <!-- 會員分頁控制 -->
+            <div th:if="${membersPage != null}"
+                style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                <span>共 <strong th:text="${membersPage.totalElements}">0</strong> 筆，第 <strong
+                        th:text="${membersPage.number + 1}">1</strong>/<strong
+                        th:text="${membersPage.totalPages}">1</strong> 頁</span>
+                <div style="display: flex; gap: 5px;">
+                    <a th:if="${membersPage.hasPrevious()}"
+                        th:href="@{/admin(memberPage=${membersPage.number - 1}, memberSize=${membersPage.size})}"
+                        class="btn btn-sm btn-outline">« 上一頁</a>
+                    <a th:if="${membersPage.hasNext()}"
+                        th:href="@{/admin(memberPage=${membersPage.number + 1}, memberSize=${membersPage.size})}"
+                        class="btn btn-sm btn-outline">下一頁 »</a>
+                </div>
+            </div>
         </div>
 
         <!-- Product Management -->
@@ -423,6 +439,22 @@
                     </tr>
                 </tbody>
             </table>
+
+            <!-- 交易分頁控制 -->
+            <div th:if="${transactionsPage != null}"
+                style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                <span>共 <strong th:text="${transactionsPage.totalElements}">0</strong> 筆，第 <strong
+                        th:text="${transactionsPage.number + 1}">1</strong>/<strong
+                        th:text="${transactionsPage.totalPages}">1</strong> 頁</span>
+                <div style="display: flex; gap: 5px;">
+                    <a th:if="${transactionsPage.hasPrevious()}"
+                        th:href="@{/admin(txPage=${transactionsPage.number - 1}, txSize=${transactionsPage.size})}"
+                        class="btn btn-sm btn-outline">« 上一頁</a>
+                    <a th:if="${transactionsPage.hasNext()}"
+                        th:href="@{/admin(txPage=${transactionsPage.number + 1}, txSize=${transactionsPage.size})}"
+                        class="btn btn-sm btn-outline">下一頁 »</a>
+                </div>
+            </div>
         </div>
 
         <!-- Activity Management -->

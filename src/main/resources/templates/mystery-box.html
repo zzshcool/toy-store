@@ -156,20 +156,109 @@
                 capsule.style.display = 'block';
                 capsule.style.animation = 'capsule-shake 0.3s ease-in-out infinite';
 
-                setTimeout(() => {
-                    capsule.style.animation = 'capsule-open 0.5s ease forwards';
+                // 使用 AJAX 取代 form submit
+                fetch('/mystery-box/draw', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'themeId=' + selectedTheme.id
+                })
+                    .then(response => response.text())
+                    .then(html => {
+                        // 解析返回的 HTML 取得結果
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
 
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = '/mystery-box/draw';
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'themeId';
-                    input.value = selectedTheme.id;
-                    form.appendChild(input);
-                    document.body.appendChild(form);
-                    form.submit();
-                }, 1500);
+                        // 找出是否有獎品結果
+                        const wonItemScript = doc.querySelector('script');
+                        let prizeName = '神秘獎品';
+                        let prizeWeight = '?';
+                        let prizeValue = '?';
+
+                        // 嘗試從返回頁面提取獎品資訊
+                        const prizeNameEl = doc.getElementById('prizeNameResult');
+                        const prizeWeightEl = doc.getElementById('prizeWeightResult');
+                        const prizeValueEl = doc.getElementById('prizeValueResult');
+
+                        if (prizeNameEl) prizeName = prizeNameEl.textContent;
+                        if (prizeWeightEl) prizeWeight = prizeWeightEl.querySelector('span')?.textContent || '?';
+                        if (prizeValueEl) prizeValue = prizeValueEl.querySelector('span')?.textContent || '?';
+
+                        // 播放開獎動畫
+                        setTimeout(() => {
+                            capsule.style.animation = 'capsule-open 0.5s ease forwards';
+
+                            setTimeout(() => {
+                                // 播放音效
+                                playWinSound();
+                                // 產生彩色碎片
+                                spawnConfetti();
+                                // 顯示結果
+                                showAjaxResult(prizeName, prizeWeight, prizeValue);
+
+                                btn.disabled = false;
+                                btn.textContent = '🎲 投幣轉蛋！';
+                                capsule.style.display = 'none';
+                                capsule.style.animation = '';
+                                idleMachine.style.display = 'flex';
+                            }, 500);
+                        }, 1500);
+                    })
+                    .catch(err => {
+                        console.error('Error:', err);
+                        alert('抽獎失敗，請重試');
+                        btn.disabled = false;
+                        btn.textContent = '🎲 投幣轉蛋！';
+                        capsule.style.display = 'none';
+                        idleMachine.style.display = 'flex';
+                    });
+            }
+
+            // 播放中獎音效
+            function playWinSound() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
+                    oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.15);
+                    oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.3);
+
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.5);
+                } catch (e) { }
+            }
+
+            // 產生彩色碎片
+            function spawnConfetti() {
+                const container = document.createElement('div');
+                container.className = 'confetti-container';
+                document.body.appendChild(container);
+
+                const colors = ['#ff6b6b', '#ffd93d', '#6c5ce7', '#00cec9', '#fd79a8', '#55efc4'];
+                for (let i = 0; i < 50; i++) {
+                    const piece = document.createElement('div');
+                    piece.className = 'confetti-piece';
+                    piece.style.left = Math.random() * 100 + '%';
+                    piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    piece.style.animationDelay = Math.random() * 0.5 + 's';
+                    container.appendChild(piece);
+                }
+                setTimeout(() => container.remove(), 4000);
+            }
+
+            // 顯示 AJAX 結果
+            function showAjaxResult(name, weight, value) {
+                document.getElementById('prizeNameResult').textContent = name;
+                document.getElementById('prizeWeightResult').querySelector('span').textContent = weight;
+                document.getElementById('prizeValueResult').querySelector('span').textContent = value;
+                document.getElementById('resultModal').style.display = 'flex';
             }
 
             function closeResult() {

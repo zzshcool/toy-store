@@ -178,19 +178,39 @@ public class AdminController {
     }
 
     @GetMapping
-    public String adminDashboard(Model model, HttpServletRequest request) {
+    public String adminDashboard(Model model, HttpServletRequest request,
+            @RequestParam(defaultValue = "0") int memberPage,
+            @RequestParam(defaultValue = "20") int memberSize,
+            @RequestParam(defaultValue = "0") int txPage,
+            @RequestParam(defaultValue = "20") int txSize) {
         try {
             TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
             if (info != null) {
                 model.addAttribute("adminName", info.getUsername());
             }
-            model.addAttribute("members", memberRepository.findAll());
+
+            // Paginated members
+            org.springframework.data.domain.Pageable memberPageable = org.springframework.data.domain.PageRequest.of(
+                    memberPage, memberSize,
+                    org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
+            org.springframework.data.domain.Page<com.toy.store.model.Member> membersPage = memberRepository
+                    .findAll(memberPageable);
+            model.addAttribute("members", membersPage.getContent());
+            model.addAttribute("membersPage", membersPage);
+
             model.addAttribute("products",
                     productService.findAll(org.springframework.data.domain.Pageable.unpaged()).getContent());
             model.addAttribute("mysteryBoxThemes", mysteryBoxThemeRepository.findAll());
-            model.addAttribute("transactions", transactionRepository.findAll(org.springframework.data.domain.Sort
-                    .by(org.springframework.data.domain.Sort.Direction.DESC, "timestamp")));
-            model.addAttribute("activities", activityRepository.findAll());
+
+            // Paginated transactions
+            org.springframework.data.domain.Pageable txPageable = org.springframework.data.domain.PageRequest.of(txPage,
+                    txSize,
+                    org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC,
+                            "timestamp"));
+            org.springframework.data.domain.Page<com.toy.store.model.Transaction> txPageResult = transactionRepository
+                    .findAll(txPageable);
+            model.addAttribute("transactions", txPageResult.getContent());
+            model.addAttribute("transactionsPage", txPageResult);
             model.addAttribute("logs", adminActionLogRepository.findAll(org.springframework.data.domain.Sort
                     .by(org.springframework.data.domain.Sort.Direction.DESC, "timestamp")));
             model.addAttribute("categories", categoryRepository.findAll());
