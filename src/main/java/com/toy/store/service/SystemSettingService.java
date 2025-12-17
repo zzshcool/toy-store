@@ -39,6 +39,11 @@ public class SystemSettingService {
         createIfNotExists(SystemSetting.GACHA_SHARD_MAX, "50", "碎片最大掉落量");
         createIfNotExists(SystemSetting.GACHA_DUPLICATE_SHARD, "300", "重複款轉換碎片數");
         createIfNotExists(SystemSetting.GACHA_REDEEM_COST, "10000", "S賞兌換所需碎片");
+
+        // 驗證碼設定（預設關閉）
+        createIfNotExists(SystemSetting.CAPTCHA_ENABLED, "false", "圖形驗證碼開關");
+        createIfNotExists(SystemSetting.CAPTCHA_TYPE, "GRAPHIC", "驗證碼類型（GRAPHIC/OTP）");
+        createIfNotExists(SystemSetting.OTP_ENABLED, "false", "OTP 簡訊驗證開關");
     }
 
     private void createIfNotExists(String key, String value, String description) {

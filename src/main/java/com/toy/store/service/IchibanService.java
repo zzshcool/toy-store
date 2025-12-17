@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Random;
 
 /**
  * 一番賞服務
@@ -27,24 +26,13 @@ public class IchibanService {
     private IchibanPrizeRepository prizeRepository;
 
     @Autowired
-    private GachaIpRepository ipRepository;
-
-    @Autowired
-    private MemberLuckyValueRepository luckyValueRepository;
-
-    @Autowired
-    private ShardTransactionRepository shardTransactionRepository;
-
-    @Autowired
     private GachaRecordRepository recordRepository;
 
     @Autowired
     private TransactionService transactionService;
 
     @Autowired
-    private SystemSettingService settingService;
-
-    private final Random random = new Random();
+    private ShardService shardService;
 
     /**
      * 取得所有進行中的一番賞箱體
@@ -132,8 +120,8 @@ public class IchibanService {
         }
 
         // 產出碎片
-        int shards = generateShards();
-        addShardsToMember(memberId, shards, "ICHIBAN", boxId);
+        int shards = shardService.generateRandomShards();
+        shardService.addGachaShards(memberId, shards, "ICHIBAN", boxId, "一番賞抽獎獲得");
 
         // 記錄抽獎
         String prizeName = slot.getPrize() != null ? slot.getPrize().getName() : "未知獎品";
@@ -209,7 +197,7 @@ public class IchibanService {
             }
 
             // 產出碎片
-            int shards = generateShards();
+            int shards = shardService.generateRandomShards();
             totalShards += shards;
 
             // 記錄
@@ -222,7 +210,7 @@ public class IchibanService {
         }
 
         // 添加碎片給會員
-        addShardsToMember(memberId, totalShards, "ICHIBAN", boxId);
+        shardService.addGachaShards(memberId, totalShards, "ICHIBAN", boxId, "一番賞抽獎獲得");
 
         // 檢查箱體是否售罄
         checkBoxSoldOut(boxId);
@@ -331,30 +319,6 @@ public class IchibanService {
         // 更新實際格數
         box.setTotalSlots(slotNumber - 1);
         boxRepository.save(box);
-    }
-
-    /**
-     * 產生隨機碎片數量
-     */
-    private int generateShards() {
-        int min = settingService.getIntSetting(SystemSetting.GACHA_SHARD_MIN, 10);
-        int max = settingService.getIntSetting(SystemSetting.GACHA_SHARD_MAX, 50);
-        return random.nextInt(max - min + 1) + min;
-    }
-
-    /**
-     * 添加碎片給會員
-     */
-    private void addShardsToMember(Long memberId, int amount, String sourceType, Long sourceId) {
-        MemberLuckyValue luckyValue = luckyValueRepository.findByMemberId(memberId)
-                .orElse(new MemberLuckyValue(memberId));
-        luckyValue.addShards(amount);
-        luckyValueRepository.save(luckyValue);
-
-        ShardTransaction tx = ShardTransaction.createEarn(memberId, amount,
-                ShardTransaction.TransactionType.EARN_DRAW,
-                "一番賞抽獎獲得", sourceType, sourceId);
-        shardTransactionRepository.save(tx);
     }
 
     /**

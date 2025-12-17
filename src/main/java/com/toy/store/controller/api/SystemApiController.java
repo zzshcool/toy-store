@@ -25,12 +25,24 @@ public class SystemApiController {
     @GetMapping("/settings")
     public ApiResponse<Map<String, Object>> getPublicSettings() {
         Map<String, Object> settings = new HashMap<>();
+        // 功能開關
         settings.put("shoppingEnabled", settingService.isShoppingEnabled());
         settings.put("ichibanEnabled", settingService.isIchibanEnabled());
         settings.put("rouletteEnabled", settingService.isRouletteEnabled());
         settings.put("bingoEnabled", settingService.isBingoEnabled());
         settings.put("redeemEnabled", settingService.isRedeemEnabled());
+        settings.put("mysteryBoxEnabled", settingService.isMysteryBoxEnabled());
+        // 遊戲參數
         settings.put("luckyThreshold", settingService.getLuckyThreshold());
+        settings.put("shardMin", settingService.getIntSetting(SystemSetting.GACHA_SHARD_MIN, 10));
+        settings.put("shardMax", settingService.getIntSetting(SystemSetting.GACHA_SHARD_MAX, 50));
+        settings.put("redeemCost", settingService.getIntSetting(SystemSetting.GACHA_REDEEM_COST, 10000));
+        settings.put("duplicateShard", settingService.getIntSetting(SystemSetting.GACHA_DUPLICATE_SHARD, 300));
+        // 驗證碼設定
+        settings.put("captchaEnabled", settingService.getBooleanSetting(SystemSetting.CAPTCHA_ENABLED));
+        String captchaType = settingService.getSetting(SystemSetting.CAPTCHA_TYPE);
+        settings.put("captchaType", captchaType != null ? captchaType : "GRAPHIC");
+        settings.put("otpEnabled", settingService.getBooleanSetting(SystemSetting.OTP_ENABLED));
         return ApiResponse.ok(settings);
     }
 

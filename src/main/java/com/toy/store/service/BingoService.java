@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 /**
  * 九宮格服務
@@ -24,21 +23,13 @@ public class BingoService {
     private BingoCellRepository cellRepository;
 
     @Autowired
-    private MemberLuckyValueRepository luckyValueRepository;
-
-    @Autowired
-    private ShardTransactionRepository shardTransactionRepository;
-
-    @Autowired
     private GachaRecordRepository recordRepository;
 
     @Autowired
     private TransactionService transactionService;
 
     @Autowired
-    private SystemSettingService settingService;
-
-    private final Random random = new Random();
+    private ShardService shardService;
 
     /**
      * 取得所有進行中的九宮格遊戲
@@ -87,8 +78,8 @@ public class BingoService {
         cellRepository.save(cell);
 
         // 產出碎片
-        int shardsEarned = generateShards();
-        addShardsToMember(memberId, shardsEarned, "BINGO", gameId);
+        int shardsEarned = shardService.generateRandomShards();
+        shardService.addGachaShards(memberId, shardsEarned, "BINGO", gameId, "九宮格挖掘獲得");
 
         // 檢查連線
         List<BingoLine> bingoLines = checkBingoLines(gameId, game.getGridSize());
@@ -179,24 +170,6 @@ public class BingoService {
         }
 
         return bingoLines;
-    }
-
-    private int generateShards() {
-        int min = settingService.getIntSetting(SystemSetting.GACHA_SHARD_MIN, 10);
-        int max = settingService.getIntSetting(SystemSetting.GACHA_SHARD_MAX, 50);
-        return random.nextInt(max - min + 1) + min;
-    }
-
-    private void addShardsToMember(Long memberId, int amount, String sourceType, Long sourceId) {
-        MemberLuckyValue luckyValue = luckyValueRepository.findByMemberId(memberId)
-                .orElse(new MemberLuckyValue(memberId));
-        luckyValue.addShards(amount);
-        luckyValueRepository.save(luckyValue);
-
-        ShardTransaction tx = ShardTransaction.createEarn(memberId, amount,
-                ShardTransaction.TransactionType.EARN_DRAW,
-                "九宮格挖掘獲得", sourceType, sourceId);
-        shardTransactionRepository.save(tx);
     }
 
     /**

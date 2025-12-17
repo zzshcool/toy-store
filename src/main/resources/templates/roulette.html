@@ -13,11 +13,11 @@
                 <p style="margin-bottom: 10px;">幸運值累積</p>
                 <div class="lucky-bar-container">
                     <div id="luckyBar" class="lucky-bar" style="width: 0%;">
-                        <span id="luckyText">0/1000</span>
+                        <span id="luckyText">0/---</span>
                     </div>
                 </div>
                 <p id="luckyHint" style="color: var(--text-secondary); font-size: 0.9rem;">
-                    累積滿 1000 幸運值必中大獎！
+                    累積滿幸運值必中大獎！
                 </p>
             </div>
 
@@ -88,18 +88,31 @@
             let currentGameId = null;
             let isSpinning = false;
             let wheelSlots = [];
+            let luckyThreshold = 1000; // 從 API 動態讀取
 
             document.addEventListener('DOMContentLoaded', function () {
+                loadSystemSettings();
                 loadLuckyValue();
                 loadGameList();
             });
+
+            function loadSystemSettings() {
+                fetch('/api/system/settings')
+                    .then(r => r.json())
+                    .then(response => {
+                        if (response.success) {
+                            luckyThreshold = response.data.luckyThreshold || 1000;
+                            document.getElementById('luckyHint').textContent = `累積滿 ${luckyThreshold} 幸運值必中大獎！`;
+                        }
+                    });
+            }
 
             function loadLuckyValue() {
                 fetch('/api/roulette/lucky-value')
                     .then(r => r.json())
                     .then(response => {
                         if (response.success) {
-                            updateLuckyBar(response.data.luckyValue, 1000);
+                            updateLuckyBar(response.data.luckyValue, response.data.threshold || luckyThreshold);
                         }
                     });
             }

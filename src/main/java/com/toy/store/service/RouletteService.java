@@ -26,9 +26,6 @@ public class RouletteService {
     private MemberLuckyValueRepository luckyValueRepository;
 
     @Autowired
-    private ShardTransactionRepository shardTransactionRepository;
-
-    @Autowired
     private GachaRecordRepository recordRepository;
 
     @Autowired
@@ -36,6 +33,9 @@ public class RouletteService {
 
     @Autowired
     private SystemSettingService settingService;
+
+    @Autowired
+    private ShardService shardService;
 
     private final Random random = new Random();
 
@@ -111,15 +111,15 @@ public class RouletteService {
         switch (winningSlot.getSlotType()) {
             case SHARD:
                 shardsEarned = winningSlot.getShardAmount() != null ? winningSlot.getShardAmount() : 50;
-                addShardsToMember(memberId, shardsEarned, "ROULETTE", gameId);
+                shardService.addGachaShards(memberId, shardsEarned, "ROULETTE", gameId, "轉盤抽獎獲得");
                 break;
             case FREE_SPIN:
                 isFreeSpin = true;
                 break;
             default:
                 // 其他獎品，產出固定碎片
-                shardsEarned = generateShards();
-                addShardsToMember(memberId, shardsEarned, "ROULETTE", gameId);
+                shardsEarned = shardService.generateRandomShards();
+                shardService.addGachaShards(memberId, shardsEarned, "ROULETTE", gameId, "轉盤抽獎獲得");
                 break;
         }
 
@@ -174,23 +174,6 @@ public class RouletteService {
     private MemberLuckyValue getOrCreateLuckyValue(Long memberId) {
         return luckyValueRepository.findByMemberId(memberId)
                 .orElse(new MemberLuckyValue(memberId));
-    }
-
-    private int generateShards() {
-        int min = settingService.getIntSetting(SystemSetting.GACHA_SHARD_MIN, 10);
-        int max = settingService.getIntSetting(SystemSetting.GACHA_SHARD_MAX, 50);
-        return random.nextInt(max - min + 1) + min;
-    }
-
-    private void addShardsToMember(Long memberId, int amount, String sourceType, Long sourceId) {
-        MemberLuckyValue luckyValue = getOrCreateLuckyValue(memberId);
-        luckyValue.addShards(amount);
-        luckyValueRepository.save(luckyValue);
-
-        ShardTransaction tx = ShardTransaction.createEarn(memberId, amount,
-                ShardTransaction.TransactionType.EARN_DRAW,
-                "轉盤抽獎獲得", sourceType, sourceId);
-        shardTransactionRepository.save(tx);
     }
 
     /**

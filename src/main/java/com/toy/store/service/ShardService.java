@@ -137,6 +137,43 @@ public class ShardService {
         shardTransactionRepository.save(tx);
     }
 
+    // =====================================================
+    // 統一碎片操作（供 Roulette/Bingo/Ichiban 調用）
+    // =====================================================
+
+    private final java.util.Random random = new java.util.Random();
+
+    /**
+     * 產生隨機碎片數量（從系統設定讀取範圍）
+     */
+    public int generateRandomShards() {
+        int min = settingService.getIntSetting(SystemSetting.GACHA_SHARD_MIN, 10);
+        int max = settingService.getIntSetting(SystemSetting.GACHA_SHARD_MAX, 50);
+        return random.nextInt(max - min + 1) + min;
+    }
+
+    /**
+     * 抽獎獲得碎片（統一入口）
+     * 
+     * @param memberId    會員ID
+     * @param amount      碎片數量
+     * @param sourceType  來源類型（ROULETTE/BINGO/ICHIBAN）
+     * @param sourceId    來源ID
+     * @param description 描述
+     */
+    @Transactional
+    public void addGachaShards(Long memberId, int amount, String sourceType, Long sourceId, String description) {
+        MemberLuckyValue luckyValue = luckyValueRepository.findByMemberId(memberId)
+                .orElse(new MemberLuckyValue(memberId));
+        luckyValue.addShards(amount);
+        luckyValueRepository.save(luckyValue);
+
+        ShardTransaction tx = ShardTransaction.createEarn(memberId, amount,
+                ShardTransaction.TransactionType.EARN_DRAW,
+                description, sourceType, sourceId);
+        shardTransactionRepository.save(tx);
+    }
+
     /**
      * 兌換結果封裝類
      */
