@@ -1,11 +1,13 @@
 package com.toy.store.service;
 
 import com.toy.store.model.*;
+import com.toy.store.repository.GachaRecordRepository;
 import com.toy.store.repository.MysteryBoxThemeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
 import java.math.BigDecimal;
@@ -28,6 +30,9 @@ public class MysteryBoxService {
     @Autowired
     private com.toy.store.repository.MemberCouponRepository memberCouponRepository;
 
+    @Autowired
+    private GachaRecordRepository gachaRecordRepository;
+
     private final Random random = new Random();
 
     /**
@@ -40,22 +45,22 @@ public class MysteryBoxService {
     public MysteryBoxItem drawBox(Long memberId, Long themeId, Long couponId) {
         // 1. Get Theme
         MysteryBoxTheme theme = themeRepository.findById(themeId)
-                .orElseThrow(() -> new RuntimeException("Theme not found"));
+                .orElseThrow(() -> new RuntimeException("找不到盲盒主題"));
 
         boolean useCoupon = false;
 
         if (couponId != null) {
             com.toy.store.model.MemberCoupon memberCoupon = memberCouponRepository.findById(couponId)
-                    .orElseThrow(() -> new RuntimeException("Coupon not found"));
+                    .orElseThrow(() -> new RuntimeException("找不到優惠券"));
 
             if (!memberCoupon.getMember().getId().equals(memberId)) {
-                throw new RuntimeException("Invalid coupon user");
+                throw new RuntimeException("優惠券不屬於此會員");
             }
             if (memberCoupon.getStatus() != com.toy.store.model.MemberCoupon.Status.UNUSED) {
-                throw new RuntimeException("Coupon already used");
+                throw new RuntimeException("優惠券已使用");
             }
             if (memberCoupon.getCoupon().getType() != com.toy.store.model.Coupon.CouponType.MYSTERY_BOX_FREE) {
-                throw new RuntimeException("Not a Mystery Box coupon");
+                throw new RuntimeException("非盲盒免費券類型");
             }
 
             // Mark used
@@ -82,7 +87,7 @@ public class MysteryBoxService {
         // 3. Weighted Random Selection
         List<MysteryBoxItem> items = theme.getItems();
         if (items == null || items.isEmpty()) {
-            throw new RuntimeException("No items in this box theme");
+            throw new RuntimeException("此盲盒主題沒有獎品");
         }
 
         int totalWeight = items.stream().mapToInt(MysteryBoxItem::getWeight).sum();
@@ -98,7 +103,16 @@ public class MysteryBoxService {
             }
         }
 
-        // 4. Create Order Record for the Prize
+        // 4. 記錄抽獎紀錄
+        GachaRecord record = new GachaRecord();
+        record.setMemberId(memberId);
+        record.setGachaType(GachaRecord.GachaType.MYSTERY_BOX);
+        record.setGameId(themeId);
+        record.setPrizeName(selectedItem.getName());
+        record.setCreatedAt(LocalDateTime.now());
+        gachaRecordRepository.save(record);
+
+        // 5. Create Order Record for the Prize
         Order prizeOrder = new Order();
         prizeOrder.setMember(memberRepository.findById(memberId).orElseThrow());
         prizeOrder.setTotalPrice(BigDecimal.ZERO); // It's a prize

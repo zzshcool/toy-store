@@ -40,7 +40,7 @@ public class TransactionService {
 
         // Check for sufficient funds if subtracting
         if (amount.compareTo(BigDecimal.ZERO) < 0 && newBalance.compareTo(BigDecimal.ZERO) < 0) {
-            throw new RuntimeException("Insufficient wallet balance");
+            throw new RuntimeException("餘額不足，無法完成操作");
         }
 
         if (type == Transaction.TransactionType.DEPOSIT) {

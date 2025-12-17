@@ -16,7 +16,7 @@
 -- =====================================================
 -- 1. IP 主題
 -- =====================================================
-INSERT INTO gacha_ips (name, description, image_url, status, created_at) VALUES 
+MERGE INTO gacha_ips (name, description, image_url, status, created_at) KEY(name) VALUES 
 ('洛克人', 'Mega Man 經典遊戲系列，藍色機器人英雄的冒險故事', '/images/ip/rockman.jpg', 'ACTIVE', NOW()),
 ('獵人', 'Hunter × Hunter 獵人執照的考驗之旅', '/images/ip/hunter.jpg', 'ACTIVE', NOW()),
 ('七龍珠', 'Dragon Ball 集齊七顆龍珠實現願望', '/images/ip/dragonball.jpg', 'ACTIVE', NOW()),
@@ -47,7 +47,21 @@ INSERT INTO ichiban_boxes (ip_id, name, description, image_url, price_per_draw, 
 (3, '七龍珠一番賞 賽亞人篇', '悟空變身超級賽亞人經典場景復刻', '/images/ichiban/db1.jpg', 800, 80, 20, 'ACTIVE', NOW()),
 (4, '進擊的巨人一番賞 最終季', '艾連與調查兵團最終決戰紀念', '/images/ichiban/aot1.jpg', 720, 80, 20, 'ACTIVE', NOW()),
 (5, '鋼之鍊金術師一番賞', '艾力克兄弟的等價交換之旅', '/images/ichiban/fma1.jpg', 700, 80, 20, 'ACTIVE', NOW()),
-(6, '天竺鼠車車一番賞 PUI PUI篇', '毛茸茸的車車大集合', '/images/ichiban/molcar1.jpg', 580, 80, 16, 'ACTIVE', NOW());
+(6, '天竺鼠車車一番賞 PUI PUI篇', '毛茸茸的車車大集合', '/images/ichiban/molcar1.jpg', 580, 80, 16, 'ACTIVE', NOW()),
+(7, '神奇寶貝一番賞 寶可夢大師', '皮卡丘與傳說寶可夢限定周邊', '/images/ichiban/pokemon1.jpg', 750, 80, 20, 'ACTIVE', NOW()),
+(8, '鏈鋸人一番賞 惡魔獵人', '電次與瑪奇瑪的血腥戰鬥紀念', '/images/ichiban/csm1.jpg', 780, 80, 20, 'ACTIVE', NOW()),
+(9, 'BLEACH死神一番賞 卍解篇', '黑崎一護與隊長們的卍解場景', '/images/ichiban/bleach1.jpg', 720, 80, 20, 'ACTIVE', NOW()),
+(10, '美少女戰士一番賞 水晶篇', '月野兔與水手戰士華麗變身', '/images/ichiban/sailor1.jpg', 700, 80, 20, 'ACTIVE', NOW()),
+(11, '灌籃高手一番賞 全國大賽', '湘北籃球隊熱血對決', '/images/ichiban/slam1.jpg', 750, 80, 20, 'ACTIVE', NOW()),
+(12, '鬼滅之刃一番賞 無限列車', '炭治郎與煉獄杏壽郎的戰鬥', '/images/ichiban/kimetsu1.jpg', 800, 80, 20, 'ACTIVE', NOW()),
+(13, '超人力霸王一番賞 光之巨人', '初代奧特曼與怪獸對決', '/images/ichiban/ultra1.jpg', 680, 80, 20, 'ACTIVE', NOW()),
+(14, '櫻桃小丸子一番賞 日常篇', '小丸子與班上同學的歡樂時光', '/images/ichiban/maruko1.jpg', 550, 80, 16, 'ACTIVE', NOW()),
+(15, '死亡筆記本一番賞 對決篇', '夜神月與L的智慧之戰', '/images/ichiban/dn1.jpg', 720, 80, 20, 'ACTIVE', NOW()),
+(16, '銀魂一番賞 萬事屋篇', '銀時與神樂新八的搞笑日常', '/images/ichiban/gintama1.jpg', 700, 80, 20, 'ACTIVE', NOW()),
+(17, '新網球王子一番賞 U-17', '越前龍馬與世界強豪對決', '/images/ichiban/tenipuri1.jpg', 680, 80, 20, 'ACTIVE', NOW()),
+(18, '庫洛魔法使一番賞 封印篇', '小櫻收集庫洛牌的冒險', '/images/ichiban/ccs1.jpg', 700, 80, 20, 'ACTIVE', NOW()),
+(19, 'ONE PIECE航海王一番賞 和之國', '魯夫與四皇的頂上決戰', '/images/ichiban/op1.jpg', 850, 80, 25, 'ACTIVE', NOW()),
+(20, 'JoJo的奇妙冒險一番賞 黃金之風', '喬魯諾與護衛隊的替身之戰', '/images/ichiban/jojo1.jpg', 780, 80, 20, 'ACTIVE', NOW());
 
 -- =====================================================
 -- 3. 一番賞獎品 (洛克人 - ID=1)
@@ -174,7 +188,21 @@ INSERT INTO roulette_games (ip_id, name, description, image_url, price_per_spin,
 (3, '七龍珠許願轉盤', '向神龍許願吧！', '/images/roulette/db.jpg', 150, 25, 10, 'ACTIVE', NOW()),
 (4, '進擊巨人命運轉盤', '你是調查兵團還是...', '/images/roulette/aot.jpg', 100, 25, 8, 'ACTIVE', NOW()),
 (5, '鍊金術轉盤', '等價交換的法則！', '/images/roulette/fma.jpg', 100, 25, 8, 'ACTIVE', NOW()),
-(6, '車車幸運輪', 'PUI PUI 毛茸茸驚喜！', '/images/roulette/mc.jpg', 80, 25, 8, 'ACTIVE', NOW());
+(6, '車車幸運輪', 'PUI PUI 毛茸茸驚喜！', '/images/roulette/mc.jpg', 80, 25, 8, 'ACTIVE', NOW()),
+(7, '寶可夢大師轉盤', '捕捉你的命運寶可夢！', '/images/roulette/pokemon.jpg', 120, 25, 8, 'ACTIVE', NOW()),
+(8, '鏈鋸人惡魔轉盤', '與惡魔簽訂契約！', '/images/roulette/csm.jpg', 130, 25, 8, 'ACTIVE', NOW()),
+(9, '死神卍解轉盤', '解放你的斬魄刀！', '/images/roulette/bleach.jpg', 110, 25, 8, 'ACTIVE', NOW()),
+(10, '水晶變身轉盤', '以月亮之名！', '/images/roulette/sailor.jpg', 100, 25, 8, 'ACTIVE', NOW()),
+(11, '籃球高手轉盤', '全國大賽開始！', '/images/roulette/slam.jpg', 120, 25, 8, 'ACTIVE', NOW()),
+(12, '鬼滅之刃呼吸轉盤', '全集中呼吸！', '/images/roulette/kimetsu.jpg', 140, 25, 8, 'ACTIVE', NOW()),
+(13, '光之巨人轉盤', '變身奧特曼！', '/images/roulette/ultra.jpg', 100, 25, 8, 'ACTIVE', NOW()),
+(14, '小丸子日常轉盤', '今天發生什麼事？', '/images/roulette/maruko.jpg', 70, 25, 8, 'ACTIVE', NOW()),
+(15, '死亡筆記轉盤', '寫下你的命運！', '/images/roulette/dn.jpg', 120, 25, 8, 'ACTIVE', NOW()),
+(16, '萬事屋轉盤', '今天接什麼委託？', '/images/roulette/gintama.jpg', 100, 25, 8, 'ACTIVE', NOW()),
+(17, '網球王子轉盤', '使用必殺技！', '/images/roulette/tenipuri.jpg', 100, 25, 8, 'ACTIVE', NOW()),
+(18, '庫洛牌轉盤', '封印解除！', '/images/roulette/ccs.jpg', 100, 25, 8, 'ACTIVE', NOW()),
+(19, '海賊王冒險轉盤', '尋找ONE PIECE！', '/images/roulette/op.jpg', 150, 25, 10, 'ACTIVE', NOW()),
+(20, 'JoJo替身轉盤', '覺醒你的替身！', '/images/roulette/jojo.jpg', 130, 25, 8, 'ACTIVE', NOW());
 
 -- =====================================================
 -- 5. 轉盤獎格 (洛克人 - game_id=1)
@@ -246,7 +274,21 @@ INSERT INTO bingo_games (ip_id, name, description, image_url, price_per_dig, gri
 (3, '七龍珠尋寶九宮格', '找出龍珠所在！', '/images/bingo/db.jpg', 120, 4, 'ACTIVE', '龍珠雷達複製品', '/images/bingo/db_bingo.jpg', 1200, NOW()),
 (4, '進擊的巨人地下室', '發現真相！', '/images/bingo/aot.jpg', 100, 3, 'ACTIVE', '艾爾迪亞歷史書', '/images/bingo/aot_bingo.jpg', 900, NOW()),
 (5, '鋼之鍊金術師真理之門', '等價交換！', '/images/bingo/fma.jpg', 100, 3, 'ACTIVE', '真理之門模型', '/images/bingo/fma_bingo.jpg', 1000, NOW()),
-(6, '天竺鼠車車停車場', 'PUI PUI 找找看！', '/images/bingo/mc.jpg', 60, 3, 'ACTIVE', '車車停車場玩具', '/images/bingo/mc_bingo.jpg', 500, NOW());
+(6, '天竺鼠車車停車場', 'PUI PUI 找找看！', '/images/bingo/mc.jpg', 60, 3, 'ACTIVE', '車車停車場玩具', '/images/bingo/mc_bingo.jpg', 500, NOW()),
+(7, '寶可夢草叢探險', '誰在草叢裡？', '/images/bingo/pokemon.jpg', 90, 3, 'ACTIVE', '精靈球收納盒', '/images/bingo/pokemon_bingo.jpg', 700, NOW()),
+(8, '鏈鋸人契約九宮格', '與惡魔簽約！', '/images/bingo/csm.jpg', 110, 3, 'ACTIVE', '波奇塔抱枕', '/images/bingo/csm_bingo.jpg', 900, NOW()),
+(9, '死神尸魂界探索', '尋找隊長室！', '/images/bingo/bleach.jpg', 100, 3, 'ACTIVE', '隊長羽織複製品', '/images/bingo/bleach_bingo.jpg', 850, NOW()),
+(10, '水手服戰士月亮宮殿', '找到銀水晶！', '/images/bingo/sailor.jpg', 90, 3, 'ACTIVE', '變身胸針複製品', '/images/bingo/sailor_bingo.jpg', 750, NOW()),
+(11, '湘北體育館挖寶', '熱血籃球場！', '/images/bingo/slam.jpg', 100, 3, 'ACTIVE', '湘北隊服複製品', '/images/bingo/slam_bingo.jpg', 800, NOW()),
+(12, '鬼殺隊訓練場', '全集中呼吸！', '/images/bingo/kimetsu.jpg', 120, 3, 'ACTIVE', '日輪刀模型', '/images/bingo/kimetsu_bingo.jpg', 1100, NOW()),
+(13, '科特隊基地探索', '發現怪獸！', '/images/bingo/ultra.jpg', 80, 3, 'ACTIVE', '奧特曼面具', '/images/bingo/ultra_bingo.jpg', 650, NOW()),
+(14, '小丸子家尋寶', '找到日記！', '/images/bingo/maruko.jpg', 50, 3, 'ACTIVE', '小丸子日記本', '/images/bingo/maruko_bingo.jpg', 400, NOW()),
+(15, '死亡筆記推理', '誰是基拉？', '/images/bingo/dn.jpg', 100, 3, 'ACTIVE', '死亡筆記複製品', '/images/bingo/dn_bingo.jpg', 850, NOW()),
+(16, '萬事屋委託任務', '今天的委託！', '/images/bingo/gintama.jpg', 90, 3, 'ACTIVE', '木刀洞爺湖複製品', '/images/bingo/gintama_bingo.jpg', 700, NOW()),
+(17, '青學網球場', '黃金單打！', '/images/bingo/tenipuri.jpg', 90, 3, 'ACTIVE', '網球拍複製品', '/images/bingo/tenipuri_bingo.jpg', 700, NOW()),
+(18, '庫洛牌收集', '找到所有牌！', '/images/bingo/ccs.jpg', 90, 3, 'ACTIVE', '封印之杖複製品', '/images/bingo/ccs_bingo.jpg', 750, NOW()),
+(19, '偉大航路探險', '尋找寶藏！', '/images/bingo/op.jpg', 130, 4, 'ACTIVE', '草帽限定版', '/images/bingo/op_bingo.jpg', 1300, NOW()),
+(20, 'JoJo替身覺醒', '發現替身能力！', '/images/bingo/jojo.jpg', 110, 3, 'ACTIVE', '石之面具複製品', '/images/bingo/jojo_bingo.jpg', 900, NOW());
 
 -- =====================================================
 -- 7. 九宮格格子 (洛克人 3x3 - game_id=1)

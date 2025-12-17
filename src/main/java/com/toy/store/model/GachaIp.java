@@ -22,7 +22,7 @@ public class GachaIp {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name; // IP 名稱，如：洛克人
 
     @Column(length = 1000)
