@@ -1,5 +1,6 @@
 package com.toy.store.service;
 
+import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
 import com.toy.store.repository.GachaRecordRepository;
 import com.toy.store.repository.MysteryBoxThemeRepository;
@@ -45,22 +46,22 @@ public class MysteryBoxService {
     public MysteryBoxItem drawBox(Long memberId, Long themeId, Long couponId) {
         // 1. Get Theme
         MysteryBoxTheme theme = themeRepository.findById(themeId)
-                .orElseThrow(() -> new RuntimeException("找不到盲盒主題"));
+                .orElseThrow(() -> new AppException("找不到盲盒主題"));
 
         boolean useCoupon = false;
 
         if (couponId != null) {
             com.toy.store.model.MemberCoupon memberCoupon = memberCouponRepository.findById(couponId)
-                    .orElseThrow(() -> new RuntimeException("找不到優惠券"));
+                    .orElseThrow(() -> new AppException("找不到優惠券"));
 
             if (!memberCoupon.getMember().getId().equals(memberId)) {
-                throw new RuntimeException("優惠券不屬於此會員");
+                throw new AppException("優惠券不屬於此會員");
             }
             if (memberCoupon.getStatus() != com.toy.store.model.MemberCoupon.Status.UNUSED) {
-                throw new RuntimeException("優惠券已使用");
+                throw new AppException("優惠券已使用");
             }
             if (memberCoupon.getCoupon().getType() != com.toy.store.model.Coupon.CouponType.MYSTERY_BOX_FREE) {
-                throw new RuntimeException("非盲盒免費券類型");
+                throw new AppException("非盲盒免費券類型");
             }
 
             // Mark used
@@ -76,7 +77,7 @@ public class MysteryBoxService {
         if (!useCoupon) {
             // 2. Deduct Cost
             transactionService.updateWalletBalance(memberId, theme.getPrice().negate(),
-                    Transaction.TransactionType.MYSTERY_BOX_COST, "THEME-" + themeId);
+                    Transaction.TransactionType.MYSTERY_BOX_COST, "盲盒消費: " + theme.getName());
         } else {
             // Log free spin usage?
             // Maybe via TransactionService with 0 amount or just skipping it.
@@ -87,7 +88,7 @@ public class MysteryBoxService {
         // 3. Weighted Random Selection
         List<MysteryBoxItem> items = theme.getItems();
         if (items == null || items.isEmpty()) {
-            throw new RuntimeException("此盲盒主題沒有獎品");
+            throw new AppException("此盲盒主題沒有獎品");
         }
 
         int totalWeight = items.stream().mapToInt(MysteryBoxItem::getWeight).sum();
@@ -132,5 +133,34 @@ public class MysteryBoxService {
 
     public List<MysteryBoxTheme> getAllThemes() {
         return themeRepository.findAll();
+    }
+
+    /**
+     * 盲盒試抽（不扣款，不檢查權限）
+     */
+    public MysteryBoxItem drawTrial(Long themeId) {
+        if (themeId == null)
+            throw new AppException("請選擇主題");
+
+        MysteryBoxTheme theme = themeRepository.findById(themeId)
+                .orElseThrow(() -> new AppException("主題不存在"));
+
+        List<MysteryBoxItem> items = theme.getItems();
+        if (items == null || items.isEmpty()) {
+            throw new AppException("該主題暫無獎品");
+        }
+
+        // 簡單的隨機抽選
+        int totalWeight = items.stream().mapToInt(MysteryBoxItem::getWeight).sum();
+        int randomValue = new java.util.Random().nextInt(totalWeight);
+
+        int current = 0;
+        for (MysteryBoxItem item : items) {
+            current += item.getWeight();
+            if (randomValue < current) {
+                return item;
+            }
+        }
+        return items.get(0);
     }
 }

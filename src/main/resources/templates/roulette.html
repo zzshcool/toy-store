@@ -249,6 +249,7 @@
 
             function confirmSpin() {
                 document.getElementById('confirmModal').style.display = 'none';
+                if (window.showMask) window.showMask(); // Call showMask at the start
                 isSpinning = true;
                 document.getElementById('spinBtn').disabled = true;
 
@@ -263,11 +264,13 @@
                                 loadLuckyValue();
                                 // 刷新餘額
                                 if (window.refreshBalance) window.refreshBalance();
+                                if (window.hideMask) window.hideMask(); // Call hideMask after result is shown
                             });
                         } else {
                             alert(response.message || '旋轉失敗');
                             isSpinning = false;
                             document.getElementById('spinBtn').disabled = false;
+                            if (window.hideMask) window.hideMask(); // Call hideMask on error
                         }
                     })
                     .catch(err => {
@@ -275,6 +278,7 @@
                         alert('操作失敗');
                         isSpinning = false;
                         document.getElementById('spinBtn').disabled = false;
+                        if (window.hideMask) window.hideMask(); // Call hideMask on error
                     });
             }
 
@@ -323,6 +327,7 @@
 
             function closeResult() {
                 document.getElementById('resultModal').style.display = 'none';
+                if (window.hideMask) window.hideMask();
             }
         </script>
     </div>

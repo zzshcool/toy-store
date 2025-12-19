@@ -299,6 +299,23 @@
             setInterval(loadMarquee, 30000); // 每 30 秒更新
         });
     </script>
+    <!-- 全域 UI 遮罩 (用於抽獎時鎖定操作) -->
+    <div id="ui-mask"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0); z-index:9000; cursor:not-allowed;">
+    </div>
+
+    <script>
+        function showMask() {
+            document.getElementById('ui-mask').style.display = 'block';
+        }
+        function hideMask() {
+            document.getElementById('ui-mask').style.display = 'none';
+        }
+
+        function toggleMenu() {
+            document.getElementById('navMenu').classList.toggle('active');
+        }
+    </script>
 </body>
 
 </html>

@@ -25,4 +25,13 @@ public class GlobalControllerAdvice {
         // If Templates expect 'currentUser' to be null when not logged in, this is
         // fine.
     }
+
+    @ModelAttribute("adminName")
+    public String getAdminName(HttpServletRequest request) {
+        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
+        if (info != null && TokenService.ROLE_ADMIN.equals(info.getRole())) {
+            return info.getUsername();
+        }
+        return "Admin";
+    }
 }

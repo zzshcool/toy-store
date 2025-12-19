@@ -1,10 +1,11 @@
 package com.toy.store.controller.api;
 
+import com.toy.store.annotation.CurrentUser;
+import com.toy.store.exception.AppException;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.*;
 import com.toy.store.service.IchibanService;
 import com.toy.store.service.TokenService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -65,19 +66,15 @@ public class IchibanApiController {
     public ApiResponse<Map<String, Object>> lockSlot(
             @PathVariable Long id,
             @PathVariable Integer num,
-            HttpServletRequest request) {
+            @CurrentUser TokenService.TokenInfo info) {
 
-        Long memberId = getMemberId(request);
+        Long memberId = getMemberId(info);
         if (memberId == null) {
-            return ApiResponse.error("請先登入");
+            throw new AppException("請先登入");
         }
 
-        try {
-            IchibanSlot slot = ichibanService.lockSlot(id, num, memberId);
-            return ApiResponse.ok(slotToMap(slot), "格子已鎖定，請在3分鐘內完成付款");
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
+        IchibanSlot slot = ichibanService.lockSlot(id, num, memberId);
+        return ApiResponse.ok(slotToMap(slot), "格子已鎖定，請在3分鐘內完成付款");
     }
 
     /**
@@ -87,23 +84,19 @@ public class IchibanApiController {
     public ApiResponse<Map<String, Object>> revealSlot(
             @PathVariable Long id,
             @PathVariable Integer num,
-            HttpServletRequest request) {
+            @CurrentUser TokenService.TokenInfo info) {
 
-        Long memberId = getMemberId(request);
+        Long memberId = getMemberId(info);
         if (memberId == null) {
-            return ApiResponse.error("請先登入");
+            throw new AppException("請先登入");
         }
 
-        try {
-            IchibanSlot slot = ichibanService.revealSlot(id, num, memberId);
-            Map<String, Object> result = slotToMap(slot);
-            if (slot.getPrize() != null) {
-                result.put("prize", prizeToMap(slot.getPrize()));
-            }
-            return ApiResponse.ok(result, "恭喜獲得獎品！");
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
+        IchibanSlot slot = ichibanService.revealSlot(id, num, memberId);
+        Map<String, Object> result = slotToMap(slot);
+        if (slot.getPrize() != null) {
+            result.put("prize", prizeToMap(slot.getPrize()));
         }
+        return ApiResponse.ok(result, "恭喜獲得獎品！");
     }
 
     /**
@@ -114,42 +107,37 @@ public class IchibanApiController {
     public ApiResponse<Map<String, Object>> purchaseSlots(
             @PathVariable Long id,
             @RequestBody Map<String, List<Integer>> body,
-            HttpServletRequest request) {
+            @CurrentUser TokenService.TokenInfo info) {
 
-        Long memberId = getMemberId(request);
+        Long memberId = getMemberId(info);
         if (memberId == null) {
-            return ApiResponse.error("請先登入");
+            throw new AppException("請先登入");
         }
 
         List<Integer> slotNumbers = body.get("slotNumbers");
         if (slotNumbers == null || slotNumbers.isEmpty()) {
-            return ApiResponse.error("請選擇至少一個格子");
+            throw new AppException("請選擇至少一個格子");
         }
 
-        try {
-            IchibanService.PurchaseResult result = ichibanService.purchaseMultipleSlots(id, slotNumbers, memberId);
+        IchibanService.PurchaseResult result = ichibanService.purchaseMultipleSlots(id, slotNumbers, memberId);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("totalCost", result.getTotalCost());
-            response.put("totalShards", result.getTotalShards());
-            response.put("prizes", result.getSlots().stream().map(sr -> {
-                Map<String, Object> m = new HashMap<>();
-                m.put("slotNumber", sr.getSlotNumber());
-                m.put("shards", sr.getShards());
-                if (sr.getPrize() != null) {
-                    m.put("prize", prizeToMap(sr.getPrize()));
-                }
-                return m;
-            }).collect(Collectors.toList()));
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalCost", result.getTotalCost());
+        response.put("totalShards", result.getTotalShards());
+        response.put("prizes", result.getSlots().stream().map(sr -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("slotNumber", sr.getSlotNumber());
+            m.put("shards", sr.getShards());
+            if (sr.getPrize() != null) {
+                m.put("prize", prizeToMap(sr.getPrize()));
+            }
+            return m;
+        }).collect(Collectors.toList()));
 
-            return ApiResponse.ok(response, "購買成功！共抽取 " + slotNumbers.size() + " 格");
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
+        return ApiResponse.ok(response, "購買成功！共抽取 " + slotNumbers.size() + " 格");
     }
 
-    private Long getMemberId(HttpServletRequest request) {
-        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
+    private Long getMemberId(TokenService.TokenInfo info) {
         if (info == null)
             return null;
         return memberRepository.findByUsername(info.getUsername())

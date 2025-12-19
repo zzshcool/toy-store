@@ -197,6 +197,9 @@
                 document.getElementById('confirmModal').style.display = 'none';
                 if (pendingPosition === null) return;
 
+                // 顯示遮罩，防止操作
+                if (window.showMask) window.showMask();
+
                 // 播放挖掘動畫
                 const cell = document.querySelector(`[data-pos="${pendingPosition}"]`);
                 if (cell) {
@@ -215,12 +218,14 @@
                                 if (window.refreshBalance) window.refreshBalance();
                             } else {
                                 alert(response.message || '挖掘失敗');
+                                if (window.hideMask) window.hideMask();
                             }
                             pendingPosition = null;
                         })
                         .catch(err => {
                             console.error('Error:', err);
                             alert('操作失敗');
+                            if (window.hideMask) window.hideMask();
                             pendingPosition = null;
                         });
                 }, 600); // 等待動畫完成
@@ -381,6 +386,8 @@
 
             function closeDigModal() {
                 document.getElementById('digModal').style.display = 'none';
+                // 隱藏遮罩，恢復操作
+                if (window.hideMask) window.hideMask();
             }
         </script>
     </div>

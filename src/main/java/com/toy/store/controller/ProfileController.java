@@ -6,11 +6,11 @@ import com.toy.store.service.TokenService;
 import com.toy.store.repository.MemberRepository;
 import com.toy.store.repository.MemberLevelRepository;
 import com.toy.store.service.CouponService;
+import com.toy.store.annotation.CurrentUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
@@ -27,12 +27,12 @@ public class ProfileController {
     private CouponService couponService;
 
     @GetMapping("/profile")
-    public String profile(HttpServletRequest request, Model model) {
-        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
+    public String profile(@CurrentUser TokenService.TokenInfo info, Model model) {
         if (info == null) {
             return "redirect:/login";
         }
-        Member member = memberRepository.findByUsername(info.getUsername()).orElseThrow();
+        Member member = memberRepository.findByUsername(info.getUsername())
+                .orElseThrow(() -> new RuntimeException("找不到會資料"));
         model.addAttribute("member", member);
         model.addAttribute("coupons", couponService.getMemberCoupons(member.getId()));
 

@@ -1,5 +1,6 @@
 package com.toy.store.service;
 
+import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
 import com.toy.store.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,17 +67,17 @@ public class ShardService {
     @Transactional
     public RedeemResult redeem(Long memberId, Long itemId) {
         RedeemShopItem item = redeemShopRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("商品不存在"));
+                .orElseThrow(() -> new AppException("商品不存在"));
 
         if (!item.hasStock()) {
-            throw new RuntimeException("商品已售罄");
+            throw new AppException("商品已售罄");
         }
 
         MemberLuckyValue luckyValue = luckyValueRepository.findByMemberId(memberId)
-                .orElseThrow(() -> new RuntimeException("會員資料不存在"));
+                .orElseThrow(() -> new AppException("會員資料不存在"));
 
         if (!luckyValue.hasEnoughShards(item.getShardCost())) {
-            throw new RuntimeException("碎片不足，需要 " + item.getShardCost() + " 碎片");
+            throw new AppException("碎片不足，需要 " + item.getShardCost() + " 碎片");
         }
 
         // 扣除碎片

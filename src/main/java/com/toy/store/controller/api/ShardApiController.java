@@ -1,10 +1,12 @@
 package com.toy.store.controller.api;
 
+import com.toy.store.exception.AppException;
+
+import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.*;
 import com.toy.store.service.ShardService;
 import com.toy.store.service.TokenService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,8 +32,8 @@ public class ShardApiController {
      * 取得碎片餘額
      */
     @GetMapping("/shards/balance")
-    public ApiResponse<Map<String, Object>> getBalance(HttpServletRequest request) {
-        Long memberId = getMemberId(request);
+    public ApiResponse<Map<String, Object>> getBalance(@CurrentUser TokenService.TokenInfo info) {
+        Long memberId = getMemberId(info);
         if (memberId == null) {
             return ApiResponse.error("請先登入");
         }
@@ -46,8 +48,8 @@ public class ShardApiController {
      * 取得碎片交易紀錄
      */
     @GetMapping("/shards/transactions")
-    public ApiResponse<List<Map<String, Object>>> getTransactions(HttpServletRequest request) {
-        Long memberId = getMemberId(request);
+    public ApiResponse<List<Map<String, Object>>> getTransactions(@CurrentUser TokenService.TokenInfo info) {
+        Long memberId = getMemberId(info);
         if (memberId == null) {
             return ApiResponse.error("請先登入");
         }
@@ -77,26 +79,21 @@ public class ShardApiController {
     @PostMapping("/redeem-shop/{id}/redeem")
     public ApiResponse<Map<String, Object>> redeem(
             @PathVariable Long id,
-            HttpServletRequest request) {
+            @CurrentUser TokenService.TokenInfo info) {
 
-        Long memberId = getMemberId(request);
+        Long memberId = getMemberId(info);
         if (memberId == null) {
-            return ApiResponse.error("請先登入");
+            throw new AppException("請先登入");
         }
 
-        try {
-            ShardService.RedeemResult result = shardService.redeem(memberId, id);
-            Map<String, Object> response = new HashMap<>();
-            response.put("item", itemToMap(result.getItem()));
-            response.put("remainingBalance", result.getRemainingBalance());
-            return ApiResponse.ok(response, "🎉 兌換成功！");
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
+        ShardService.RedeemResult result = shardService.redeem(memberId, id);
+        Map<String, Object> response = new HashMap<>();
+        response.put("item", itemToMap(result.getItem()));
+        response.put("remainingBalance", result.getRemainingBalance());
+        return ApiResponse.ok(response, "🎉 兌換成功！");
     }
 
-    private Long getMemberId(HttpServletRequest request) {
-        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
+    private Long getMemberId(TokenService.TokenInfo info) {
         if (info == null)
             return null;
         return memberRepository.findByUsername(info.getUsername())

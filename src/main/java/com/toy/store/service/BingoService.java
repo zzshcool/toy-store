@@ -1,5 +1,6 @@
 package com.toy.store.service;
 
+import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
 import com.toy.store.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,22 +15,13 @@ import java.util.List;
  * 處理挖掘、連線檢查等核心邏輯
  */
 @Service
-public class BingoService {
+public class BingoService extends BaseGachaService {
 
     @Autowired
     private BingoGameRepository gameRepository;
 
     @Autowired
     private BingoCellRepository cellRepository;
-
-    @Autowired
-    private GachaRecordRepository recordRepository;
-
-    @Autowired
-    private TransactionService transactionService;
-
-    @Autowired
-    private ShardService shardService;
 
     /**
      * 取得所有進行中的九宮格遊戲
@@ -49,6 +41,8 @@ public class BingoService {
      * 取得遊戲的格子列表
      */
     public List<BingoCell> getCells(Long gameId) {
+        if (gameId == null)
+            return new ArrayList<>();
         return cellRepository.findByGameIdOrderByPositionAsc(gameId);
     }
 
@@ -60,26 +54,25 @@ public class BingoService {
     @Transactional
     public DigResult dig(Long gameId, Integer position, Long memberId) {
         BingoGame game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new RuntimeException("遊戲不存在"));
+                .orElseThrow(() -> new AppException("遊戲不存在"));
 
         BingoCell cell = cellRepository.findByGameIdAndPosition(gameId, position)
-                .orElseThrow(() -> new RuntimeException("格子不存在"));
+                .orElseThrow(() -> new AppException("格子不存在"));
 
         if (cell.getIsRevealed()) {
-            throw new RuntimeException("該格子已被挖掘");
+            throw new AppException("該格子已被挖掘");
         }
 
         // 扣款
-        transactionService.updateWalletBalance(memberId, game.getPricePerDig().negate(),
-                Transaction.TransactionType.MYSTERY_BOX_COST, "BINGO-" + gameId + "-" + position);
+        deductWallet(memberId, game.getPricePerDig(), Transaction.TransactionType.BINGO_COST,
+                "九宮格消費: " + game.getName() + " (Pos: " + position + ")");
 
         // 挖掘格子
         cell.dig(memberId);
         cellRepository.save(cell);
 
         // 產出碎片
-        int shardsEarned = shardService.generateRandomShards();
-        shardService.addGachaShards(memberId, shardsEarned, "BINGO", gameId, "九宮格挖掘獲得");
+        int shardsEarned = processGachaShards(memberId, "BINGO", gameId, "九宮格挖掘獲得");
 
         // 檢查連線
         List<BingoLine> bingoLines = checkBingoLines(gameId, game.getGridSize());
@@ -88,15 +81,11 @@ public class BingoService {
         // 如果有新連線，發放連線獎勵
         if (hasBingo && game.getBingoRewardName() != null) {
             // 記錄連線獎勵
-            GachaRecord bonusRecord = GachaRecord.createBingoRecord(memberId, gameId,
-                    "連線獎勵: " + game.getBingoRewardName(), 0);
-            recordRepository.save(bonusRecord);
+            saveBingoRecord(memberId, gameId, "連線獎勵: " + game.getBingoRewardName(), 0);
         }
 
         // 記錄抽獎
-        GachaRecord record = GachaRecord.createBingoRecord(memberId, gameId,
-                cell.getPrizeName(), shardsEarned);
-        recordRepository.save(record);
+        saveBingoRecord(memberId, gameId, cell.getPrizeName(), shardsEarned);
 
         return new DigResult(cell, shardsEarned, hasBingo, bingoLines,
                 game.getBingoRewardName(), game.getGridSize());

@@ -1,103 +1,151 @@
 <!DOCTYPE html>
-<html th:fragment="html(title, content)" xmlns:repo="http://www.thymeleaf.org">
+<html th:fragment="html(title, content)" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <meta charset="UTF-8">
     <title th:text="${title}">Admin</title>
     <style>
         :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
             --accent-color: #ffb300;
+            --text-light: #ecf0f1;
+            --text-muted: #bdc3c7;
+            --bg-light: #f4f6f9;
+            --danger-color: #e74c3c;
+            --success-color: #27ae60;
+            --sidebar-width: 260px;
         }
 
-        /* Admin Specific Styles */
-        .admin-container {
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            background: var(--bg-light);
+            color: #333;
+        }
+
+        .admin-wrapper {
             display: flex;
             min-height: 100vh;
-            font-family: 'Inter', system-ui, sans-serif;
         }
 
-        .admin-sidebar {
-            width: 250px;
-            background: #2c3e50;
-            color: #ecf0f1;
-            padding: 20px;
-            flex-shrink: 0;
-        }
-
-        .admin-sidebar h2 {
-            font-size: 1.5rem;
-            margin-bottom: 30px;
-            color: var(--accent-color);
-            text-align: center;
-        }
-
-        .admin-menu {
-            list-style: none;
-            padding: 0;
-        }
-
-        .admin-menu li {
-            margin-bottom: 15px;
-        }
-
-        .admin-menu a {
-            color: #bdc3c7;
-            text-decoration: none;
-            font-size: 1.1rem;
-            display: block;
-            padding: 10px;
-            border-radius: 4px;
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--primary-color);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
             transition: all 0.3s;
         }
 
-        .admin-menu a:hover,
-        .admin-menu a.active {
-            background: #34495e;
-            color: #fff;
+        .sidebar-header {
+            padding: 25px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .admin-content {
+        .sidebar-header h2 {
+            margin: 0;
+            color: var(--accent-color);
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+
+        .sidebar-menu {
             flex-grow: 1;
-            padding: 40px;
-            background: #f4f6f9;
+            padding: 20px 0;
+            overflow-y: auto;
         }
 
-        .admin-header {
+        .menu-category {
+            padding: 10px 25px 5px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 25px;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+        }
+
+        .menu-item:hover {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .menu-item.active {
+            background: var(--secondary-color);
+            color: white;
+            border-left-color: var(--accent-color);
+        }
+
+        .menu-item i {
+            margin-right: 12px;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Content Area */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex-grow: 1;
+            padding: 30px;
+            min-height: 100vh;
+        }
+
+        .content-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
             background: white;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
 
-        th,
-        td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
+        .content-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
         }
 
-        .form-control {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Common Components */
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
         }
 
         .btn {
             padding: 8px 16px;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
         }
 
         .btn-primary {
@@ -105,41 +153,144 @@
             color: #000;
         }
 
-        .btn-sm {
-            padding: 4px 8px;
-            font-size: 0.875rem;
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #ddd;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f9fa;
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid #eee;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
         }
     </style>
 </head>
 
 <body>
-    <div class="admin-container">
+    <div class="admin-wrapper">
         <!-- Sidebar -->
-        <div class="admin-sidebar">
-            <h2>TOY SOUL Admin</h2>
-            <ul class="admin-menu">
-                <li><a th:href="@{/admin}">儀表板</a></li>
-                <li><a th:href="@{/}" target="_blank">前往前台</a></li>
-                <li>
-                    <form th:action="@{/admin/logout}" method="post">
-                        <button type="submit"
-                            style="background:none; border:none; color:#e74c3c; cursor:pointer; padding:10px; font-size:1.1rem; width:100%; text-align:left;">登出</button>
-                    </form>
-                </li>
-            </ul>
-        </div>
-
-        <!-- Main Content -->
-        <div class="admin-content">
-            <div class="admin-header">
-                <h1 th:text="${title}">Dashboard</h1>
-                <div>
-                    歡迎, <span th:text="${adminName}">Admin</span>
-                </div>
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>TOY SOUL</h2>
+                <small style="color: var(--text-muted)">管理系統 v2.0</small>
             </div>
 
+            <nav class="sidebar-menu">
+                <div class="menu-category">核心管理</div>
+                <a th:href="@{/admin?tab=overview}" class="menu-item"
+                    th:classappend="${activeTab == 'overview' ? 'active' : ''}">
+                    數據概覽
+                </a>
+                <a th:href="@{/admin?tab=members}" class="menu-item"
+                    th:classappend="${activeTab == 'members' ? 'active' : ''}">
+                    會員等級管理
+                </a>
+                <a th:href="@{/admin?tab=products}" class="menu-item"
+                    th:classappend="${activeTab == 'products' ? 'active' : ''}">
+                    商品與分類管理
+                </a>
+                <a th:href="@{/admin?tab=transactions}" class="menu-item"
+                    th:classappend="${activeTab == 'transactions' ? 'active' : ''}">
+                    交易紀錄查詢
+                </a>
+
+                <div class="menu-category">抽獎系統</div>
+                <a th:href="@{/admin/gacha/ips}" class="menu-item"
+                    th:classappend="${activePage == 'ips' ? 'active' : ''}">
+                    IP 主題管理
+                </a>
+                <a th:href="@{/admin/gacha/ichiban}" class="menu-item"
+                    th:classappend="${activePage == 'ichiban' ? 'active' : ''}">
+                    一番賞管理
+                </a>
+                <a th:href="@{/admin/gacha/roulette}" class="menu-item"
+                    th:classappend="${activePage == 'roulette' ? 'active' : ''}">
+                    幸運轉盤
+                </a>
+                <a th:href="@{/admin/gacha/bingo}" class="menu-item"
+                    th:classappend="${activePage == 'bingo' ? 'active' : ''}">
+                    歡樂九宮格
+                </a>
+                <a th:href="@{/admin/gacha/redeem}" class="menu-item"
+                    th:classappend="${activePage == 'redeem' ? 'active' : ''}">
+                    碎片兌換商店
+                </a>
+
+                <div class="menu-category">行銷與平台</div>
+                <a th:href="@{/admin?tab=coupons}" class="menu-item"
+                    th:classappend="${activeTab == 'coupons' ? 'active' : ''}">
+                    優惠券管理
+                </a>
+                <a th:href="@{/admin?tab=activities}" class="menu-item"
+                    th:classappend="${activeTab == 'activities' ? 'active' : ''}">
+                    活動與廣告
+                </a>
+                <a th:href="@{/admin?tab=platform}" class="menu-item"
+                    th:classappend="${activeTab == 'platform' ? 'active' : ''}">
+                    平台介面設定
+                </a>
+                <a th:href="@{/admin?tab=logs}" class="menu-item"
+                    th:classappend="${activeTab == 'logs' ? 'active' : ''}">
+                    系統審計日誌
+                </a>
+
+                <div class="menu-category">系統操作</div>
+                <a th:href="@{/}" target="_blank" class="menu-item">
+                    前往商場首頁
+                </a>
+                <form th:action="@{/admin/logout}" method="post" id="logoutForm">
+                    <a href="javascript:void(0)" onclick="document.getElementById('logoutForm').submit()"
+                        class="menu-item" style="color: var(--danger-color)">
+                        登出系統
+                    </a>
+                </form>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <div class="breadcrumb">
+                    <span style="color: #666">管理後台 / </span>
+                    <strong th:text="${title}">Dashboard</strong>
+                </div>
+                <div class="user-info">
+                    <span>歡迎, <strong th:text="${adminName}">Admin</strong></span>
+                    <div
+                        style="width: 35px; height: 35px; background: #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        👤
+                    </div>
+                </div>
+            </header>
+
+            <!-- 內容注入點 -->
             <div th:replace="${content}"></div>
-        </div>
+        </main>
     </div>
 </body>
 

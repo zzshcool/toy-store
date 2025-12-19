@@ -1,5 +1,6 @@
 package com.toy.store.service;
 
+import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
 import com.toy.store.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +15,7 @@ import java.util.Random;
  * 處理旋轉、保底機制等核心邏輯
  */
 @Service
-public class RouletteService {
+public class RouletteService extends BaseGachaService {
 
     @Autowired
     private RouletteGameRepository gameRepository;
@@ -26,16 +27,7 @@ public class RouletteService {
     private MemberLuckyValueRepository luckyValueRepository;
 
     @Autowired
-    private GachaRecordRepository recordRepository;
-
-    @Autowired
-    private TransactionService transactionService;
-
-    @Autowired
     private SystemSettingService settingService;
-
-    @Autowired
-    private ShardService shardService;
 
     private final Random random = new Random();
 
@@ -68,11 +60,11 @@ public class RouletteService {
     @Transactional
     public SpinResult spin(Long gameId, Long memberId) {
         RouletteGame game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new RuntimeException("轉盤遊戲不存在"));
+                .orElseThrow(() -> new AppException("轉盤遊戲不存在"));
 
         // 扣款
-        transactionService.updateWalletBalance(memberId, game.getPricePerSpin().negate(),
-                Transaction.TransactionType.MYSTERY_BOX_COST, "ROULETTE-" + gameId);
+        deductWallet(memberId, game.getPricePerSpin(), Transaction.TransactionType.ROULETTE_COST,
+                "轉盤消費: " + game.getName());
 
         // 取得會員幸運值
         MemberLuckyValue luckyValue = getOrCreateLuckyValue(memberId);
@@ -82,7 +74,7 @@ public class RouletteService {
         // 取得獎格列表
         List<RouletteSlot> slots = slotRepository.findByGameIdOrderBySlotOrderAsc(gameId);
         if (slots.isEmpty()) {
-            throw new RuntimeException("轉盤沒有獎格");
+            throw new AppException("轉盤沒有獎格");
         }
 
         // 選擇中獎格子
@@ -117,16 +109,14 @@ public class RouletteService {
                 isFreeSpin = true;
                 break;
             default:
-                // 其他獎品，產出固定碎片
-                shardsEarned = shardService.generateRandomShards();
-                shardService.addGachaShards(memberId, shardsEarned, "ROULETTE", gameId, "轉盤抽獎獲得");
+                // 其他獎品，產出隨機碎片
+                shardsEarned = processGachaShards(memberId, "ROULETTE", gameId, "轉盤抽獎獲得");
                 break;
         }
 
         // 記錄抽獎
-        GachaRecord record = GachaRecord.createRouletteRecord(memberId, gameId,
-                winningSlot.getPrizeName(), shardsEarned, isGuarantee ? 0 : 10, isGuarantee);
-        recordRepository.save(record);
+        saveRouletteRecord(memberId, gameId, winningSlot.getPrizeName(), shardsEarned,
+                isGuarantee ? 0 : 10, isGuarantee);
 
         return new SpinResult(winningSlot, isGuarantee, isFreeSpin, shardsEarned,
                 luckyValue.getLuckyValue(), threshold);

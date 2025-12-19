@@ -1,10 +1,12 @@
 package com.toy.store.controller.api;
 
+import com.toy.store.exception.AppException;
+
+import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.*;
 import com.toy.store.service.BingoService;
 import com.toy.store.service.TokenService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -58,43 +60,38 @@ public class BingoApiController {
     public ApiResponse<Map<String, Object>> dig(
             @PathVariable Long id,
             @PathVariable Integer pos,
-            HttpServletRequest request) {
+            @CurrentUser TokenService.TokenInfo info) {
 
-        Long memberId = getMemberId(request);
+        Long memberId = getMemberId(info);
         if (memberId == null) {
-            return ApiResponse.error("請先登入");
+            throw new AppException("請先登入");
         }
 
-        try {
-            BingoService.DigResult result = bingoService.dig(id, pos, memberId);
-            Map<String, Object> response = new HashMap<>();
-            response.put("cell", cellToMap(result.getCell()));
-            response.put("shardsEarned", result.getShardsEarned());
-            response.put("hasBingo", result.isHasBingo());
-            response.put("gridSize", result.getGridSize());
+        BingoService.DigResult result = bingoService.dig(id, pos, memberId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("cell", cellToMap(result.getCell()));
+        response.put("shardsEarned", result.getShardsEarned());
+        response.put("hasBingo", result.isHasBingo());
+        response.put("gridSize", result.getGridSize());
 
-            if (result.isHasBingo()) {
-                response.put("bingoRewardName", result.getBingoRewardName());
-                response.put("bingoLines", result.getBingoLines().stream()
-                        .map(line -> {
-                            Map<String, Object> lineMap = new HashMap<>();
-                            lineMap.put("type", line.getType().name());
-                            lineMap.put("index", line.getIndex());
-                            return lineMap;
-                        }).collect(Collectors.toList()));
-            }
-
-            String message = result.isHasBingo()
-                    ? "🎉 連線成功！恭喜獲得額外獎勵！"
-                    : "恭喜獲得: " + result.getCell().getPrizeName();
-            return ApiResponse.ok(response, message);
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
+        if (result.isHasBingo()) {
+            response.put("bingoRewardName", result.getBingoRewardName());
+            response.put("bingoLines", result.getBingoLines().stream()
+                    .map(line -> {
+                        Map<String, Object> lineMap = new HashMap<>();
+                        lineMap.put("type", line.getType().name());
+                        lineMap.put("index", line.getIndex());
+                        return lineMap;
+                    }).collect(Collectors.toList()));
         }
+
+        String message = result.isHasBingo()
+                ? "🎉 連線成功！恭喜獲得額外獎勵！"
+                : "恭喜獲得: " + result.getCell().getPrizeName();
+        return ApiResponse.ok(response, message);
     }
 
-    private Long getMemberId(HttpServletRequest request) {
-        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
+    private Long getMemberId(TokenService.TokenInfo info) {
         if (info == null)
             return null;
         return memberRepository.findByUsername(info.getUsername())

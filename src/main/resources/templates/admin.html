@@ -50,7 +50,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="member : ${members}">
+                    <tr th:each="member : ${membersPage.content}">
                         <td th:text="${member.id}">1</td>
                         <td th:text="${member.username}">User</td>
                         <td th:text="${member.platformWalletBalance}">1000</td>
@@ -140,14 +140,11 @@
                         <td th:text="${product.subCategory != null ? product.subCategory : '-'}">Sub</td>
                         <td th:text="${product.price}">100</td>
                         <td th:text="${product.stock}">10</td>
-                        <td style="font-size: 1.2em;">
-                            <a href="#" title="修改名稱">✏️</a>
-                            <a href="#" title="調整價格">💲</a>
-                            <a href="#" title="調整庫存">📦</a>
+                        <td style="display: flex; gap: 5px;">
+                            <button class="btn btn-sm btn-info" title="編輯">編輯</button>
                             <form th:action="@{/admin/products/delete/{id}(id=${product.id})}" method="post"
                                 style="display:inline;" onsubmit="return confirm('確定刪除？');">
-                                <button type="submit" style="background:none;border:none;cursor:pointer;"
-                                    title="刪除">🗑️</button>
+                                <button type="submit" class="btn btn-sm btn-danger" title="刪除">刪除</button>
                             </form>
                         </td>
                     </tr>
@@ -429,7 +426,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="tx : ${transactions}">
+                    <tr th:each="tx : ${transactionsPage.content}">
                         <td th:text="${tx.id}">1</td>
                         <td th:text="${tx.member != null ? tx.member.username : 'Unknown'}">User</td>
                         <td th:text="${tx.type}">PURCHASE</td>

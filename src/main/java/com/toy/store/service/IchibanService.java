@@ -1,5 +1,6 @@
 package com.toy.store.service;
 
+import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
 import com.toy.store.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +15,7 @@ import java.util.List;
  * 處理選號、鎖定、揭曉等核心邏輯
  */
 @Service
-public class IchibanService {
+public class IchibanService extends BaseGachaService {
 
     @Autowired
     private IchibanBoxRepository boxRepository;
@@ -24,15 +25,6 @@ public class IchibanService {
 
     @Autowired
     private IchibanPrizeRepository prizeRepository;
-
-    @Autowired
-    private GachaRecordRepository recordRepository;
-
-    @Autowired
-    private TransactionService transactionService;
-
-    @Autowired
-    private ShardService shardService;
 
     /**
      * 取得所有進行中的一番賞箱體
@@ -61,10 +53,10 @@ public class IchibanService {
     @Transactional
     public IchibanSlot lockSlot(Long boxId, Integer slotNumber, Long memberId) {
         IchibanSlot slot = slotRepository.findByBoxIdAndSlotNumber(boxId, slotNumber)
-                .orElseThrow(() -> new RuntimeException("格子不存在"));
+                .orElseThrow(() -> new AppException("格子不存在"));
 
         if (slot.getStatus() == IchibanSlot.Status.REVEALED) {
-            throw new RuntimeException("該格子已被揭曉");
+            throw new AppException("該格子已被揭曉");
         }
 
         if (slot.getStatus() == IchibanSlot.Status.LOCKED) {
@@ -72,7 +64,7 @@ public class IchibanService {
                 // 鎖定已過期，可以重新鎖定
                 slot.releaseLock();
             } else if (!slot.getLockedByMemberId().equals(memberId)) {
-                throw new RuntimeException("該格子已被其他玩家鎖定");
+                throw new AppException("該格子已被其他玩家鎖定");
             }
             // 如果是同一玩家，刷新鎖定時間
         }
@@ -87,26 +79,26 @@ public class IchibanService {
     @Transactional
     public IchibanSlot revealSlot(Long boxId, Integer slotNumber, Long memberId) {
         IchibanSlot slot = slotRepository.findByBoxIdAndSlotNumber(boxId, slotNumber)
-                .orElseThrow(() -> new RuntimeException("格子不存在"));
+                .orElseThrow(() -> new AppException("格子不存在"));
 
         // 驗證狀態
         if (slot.getStatus() == IchibanSlot.Status.REVEALED) {
-            throw new RuntimeException("該格子已被揭曉");
+            throw new AppException("該格子已被揭曉");
         }
 
         if (slot.getStatus() == IchibanSlot.Status.LOCKED) {
             if (!slot.getLockedByMemberId().equals(memberId)) {
-                throw new RuntimeException("該格子被其他玩家鎖定");
+                throw new AppException("該格子被其他玩家鎖定");
             }
             if (slot.isLockExpired()) {
-                throw new RuntimeException("鎖定已過期，請重新選擇");
+                throw new AppException("鎖定已過期，請重新選擇");
             }
         }
 
         // 取得箱體並扣款
         IchibanBox box = slot.getBox();
-        transactionService.updateWalletBalance(memberId, box.getPricePerDraw().negate(),
-                Transaction.TransactionType.MYSTERY_BOX_COST, "ICHIBAN-" + boxId + "-" + slotNumber);
+        deductWallet(memberId, box.getPricePerDraw(), Transaction.TransactionType.ICHIBAN_COST,
+                "一番賞抽獎: 箱體ID " + boxId + ", 格子號碼 " + slotNumber);
 
         // 揭曉格子
         slot.reveal(memberId);
@@ -120,14 +112,12 @@ public class IchibanService {
         }
 
         // 產出碎片
-        int shards = shardService.generateRandomShards();
-        shardService.addGachaShards(memberId, shards, "ICHIBAN", boxId, "一番賞抽獎獲得");
+        int shards = processGachaShards(memberId, "ICHIBAN", boxId, "一番賞抽獎獲得");
 
         // 記錄抽獎
         String prizeName = slot.getPrize() != null ? slot.getPrize().getName() : "未知獎品";
         String prizeRank = slot.getPrize() != null ? slot.getPrize().getRank().name() : "";
-        GachaRecord record = GachaRecord.createIchibanRecord(memberId, boxId, prizeName, prizeRank, shards);
-        recordRepository.save(record);
+        saveIchibanRecord(memberId, boxId, prizeName, prizeRank, shards);
 
         // 檢查箱體是否售罄
         checkBoxSoldOut(boxId);
@@ -144,17 +134,17 @@ public class IchibanService {
     @Transactional
     public PurchaseResult purchaseMultipleSlots(Long boxId, List<Integer> slotNumbers, Long memberId) {
         if (slotNumbers == null || slotNumbers.isEmpty()) {
-            throw new RuntimeException("請選擇至少一個格子");
+            throw new AppException("請選擇至少一個格子");
         }
         if (slotNumbers.size() > 10) {
-            throw new RuntimeException("單次最多選擇10格");
+            throw new AppException("單次最多選擇10格");
         }
 
         IchibanBox box = boxRepository.findById(boxId)
-                .orElseThrow(() -> new RuntimeException("箱體不存在"));
+                .orElseThrow(() -> new AppException("箱體不存在"));
 
         if (box.getStatus() != IchibanBox.Status.ACTIVE) {
-            throw new RuntimeException("該箱體未開放");
+            throw new AppException("該箱體未開放");
         }
 
         // 1. 驗證並鎖定所有格子
@@ -175,11 +165,10 @@ public class IchibanService {
             lockedSlots.add(slotRepository.save(slot));
         }
 
-        // 2. 計算總價並扣款
-        java.math.BigDecimal totalCost = box.getPricePerDraw()
-                .multiply(new java.math.BigDecimal(slotNumbers.size()));
-        transactionService.updateWalletBalance(memberId, totalCost.negate(),
-                Transaction.TransactionType.MYSTERY_BOX_COST, "ICHIBAN-" + boxId + "-MULTI-" + slotNumbers.size());
+        // 3. 扣款
+        java.math.BigDecimal totalPrice = box.getPricePerDraw().multiply(new java.math.BigDecimal(slotNumbers.size()));
+        deductWallet(memberId, totalPrice, Transaction.TransactionType.ICHIBAN_COST,
+                "一番賞購買: 箱體ID " + boxId + ", 格數: " + slotNumbers.size());
 
         // 3. 依序揭曉
         List<SlotResult> results = new java.util.ArrayList<>();
@@ -197,25 +186,24 @@ public class IchibanService {
             }
 
             // 產出碎片
-            int shards = shardService.generateRandomShards();
+            int shards = processGachaShards(memberId, "ICHIBAN", boxId, "一番賞抽獎獲得");
             totalShards += shards;
 
             // 記錄
             String prizeName = slot.getPrize() != null ? slot.getPrize().getName() : "未知獎品";
             String prizeRank = slot.getPrize() != null ? slot.getPrize().getRank().name() : "";
-            GachaRecord record = GachaRecord.createIchibanRecord(memberId, boxId, prizeName, prizeRank, shards);
-            recordRepository.save(record);
+            saveIchibanRecord(memberId, boxId, prizeName, prizeRank, shards);
 
             results.add(new SlotResult(slot.getSlotNumber(), slot.getPrize(), shards));
         }
 
-        // 添加碎片給會員
-        shardService.addGachaShards(memberId, totalShards, "ICHIBAN", boxId, "一番賞抽獎獲得");
+        // 5. 更新大箱體狀態 (如有需要)
+        boxRepository.save(box);
 
         // 檢查箱體是否售罄
         checkBoxSoldOut(boxId);
 
-        return new PurchaseResult(results, totalCost, totalShards);
+        return new PurchaseResult(results, totalPrice, totalShards);
     }
 
     /**

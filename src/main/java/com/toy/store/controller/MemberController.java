@@ -16,6 +16,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class MemberController {
@@ -140,7 +141,7 @@ public class MemberController {
             @RequestParam String nickname,
             @RequestParam String email,
             @RequestParam String phone,
-            Model model) {
+            RedirectAttributes redirectAttributes) {
         TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
         if (user == null)
             return "redirect:/login";
@@ -151,10 +152,9 @@ public class MemberController {
             member.setEmail(email);
             member.setPhone(phone);
             memberRepository.save(member);
-            model.addAttribute("success", "個人資料已更新");
-            model.addAttribute("member", member);
+            redirectAttributes.addFlashAttribute("success", "個人資料已更新");
         }
-        return "profile";
+        return "redirect:/profile";
     }
 
     @GetMapping("/topup")

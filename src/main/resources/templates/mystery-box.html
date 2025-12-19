@@ -53,10 +53,16 @@
                 </div>
 
                 <!-- 按鈕 -->
-                <button id="drawBtn" class="btn-gacha" onclick="startDraw()"
-                    style="width: 200px; margin-top: 30px; font-size: 1.3rem;">
-                    🎲 投幣轉蛋！
-                </button>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 30px;">
+                    <button id="drawBtn" class="btn-gacha" onclick="startDraw()"
+                        style="width: 220px; font-size: 1.3rem;">
+                        🎲 投幣轉蛋！
+                    </button>
+                    <button id="trialBtn" class="btn btn-outline" onclick="startTrial()"
+                        style="width: 150px; color: #fff; border-color: rgba(255,255,255,0.3); font-size: 0.9rem;">
+                        🧪 免費試抽
+                    </button>
+                </div>
                 <p id="drawPrice" style="color: #aaa; margin-top: 15px;">消費 $<span>100</span></p>
 
                 <button class="btn btn-outline" onclick="closeGacha()"
@@ -69,6 +75,9 @@
         <!-- 結果彈窗 -->
         <div id="resultModal" class="prize-reveal-overlay" style="display: none;">
             <div class="prize-card" style="max-width: 400px;">
+                <div id="trialBadge"
+                    style="display: none; background: #666; color: white; padding: 2px 10px; border-radius: 10px; font-size: 0.8rem; margin-bottom: 10px;">
+                    試抽體驗</div>
                 <h2 style="margin-bottom: 20px;">🎉 恭喜獲得！</h2>
                 <div id="resultContent">
                     <h3 id="prizeNameResult"
@@ -76,7 +85,10 @@
                     <p id="prizeWeightResult" style="color: #666;">稀有度：<span>10</span></p>
                     <p id="prizeValueResult" style="color: #666;">價值：<span>$100</span></p>
                 </div>
-                <button class="btn-gacha" onclick="closeResult()" style="margin-top: 20px;">太棒了！再抽一次</button>
+                <div id="trialAction" style="display: none; margin-top: 15px; font-size: 0.9rem; color: #666;">
+                    喜歡這個獎品嗎？登入後即可正式抽取！
+                </div>
+                <button class="btn-gacha" onclick="closeResultModal()" style="margin-top: 20px;">太棒了！再抽一次</button>
             </div>
         </div>
 
@@ -107,22 +119,17 @@
             let selectedTheme = null;
 
             function selectTheme(card) {
-                const currentUser = [[${ currentUser != null}]];
-            if (!currentUser) {
-                window.location.href = '/login';
-                return;
-            }
+                selectedTheme = {
+                    id: card.dataset.id,
+                    price: card.dataset.price,
+                    name: card.dataset.name
+                };
 
-            selectedTheme = {
-                id: card.dataset.id,
-                price: card.dataset.price,
-                name: card.dataset.name
-            };
-
-            document.getElementById('selectedThemeName').textContent = selectedTheme.name;
-            document.getElementById('drawPrice').querySelector('span').textContent = selectedTheme.price;
-            document.querySelector('.container.section').style.display = 'none';
-            document.getElementById('gachaSection').style.display = 'block';
+                document.getElementById('selectedThemeName').textContent = selectedTheme.name;
+                document.getElementById('drawPrice').querySelector('span').textContent = selectedTheme.price;
+                document.querySelector('.container.section').style.display = 'none';
+                document.getElementById('gachaSection').style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
 
             function closeGacha() {
@@ -133,21 +140,43 @@
 
             function startDraw() {
                 if (!selectedTheme) return;
-                // 顯示確認模態框
-                document.getElementById('confirmPrice').textContent = selectedTheme.price;
-                document.getElementById('confirmModal').style.display = 'flex';
+
+                // 檢查是否登入
+                const currentUser = [[${ currentUser != null}]];
+            if (!currentUser) {
+                if (confirm('正式抽獎需要先登入，是否前往登入頁面？\n(您也可以先點擊「免費試抽」體驗)')) {
+                    window.location.href = '/login';
+                }
+                return;
+            }
+
+            // 顯示確認模態框
+            document.getElementById('confirmPrice').textContent = selectedTheme.price;
+            document.getElementById('confirmModal').style.display = 'flex';
+            }
+
+            function startTrial() {
+                if (!selectedTheme) return;
+                confirmDraw(true);
             }
 
             function cancelConfirm() {
                 document.getElementById('confirmModal').style.display = 'none';
             }
 
-            function confirmDraw() {
+            function confirmDraw(isTrial = false) {
                 document.getElementById('confirmModal').style.display = 'none';
 
                 const btn = document.getElementById('drawBtn');
+                const trialBtn = document.getElementById('trialBtn');
                 btn.disabled = true;
-                btn.textContent = '轉動中...';
+                if (trialBtn) trialBtn.disabled = true;
+
+                const originalBtnText = btn.textContent;
+                btn.textContent = isTrial ? '試抽中...' : '轉動中...';
+
+                // 顯示遮罩
+                if (window.showMask) window.showMask();
 
                 const capsule = document.getElementById('capsule');
                 const idleMachine = document.getElementById('idleMachine');
@@ -156,47 +185,48 @@
                 capsule.style.display = 'block';
                 capsule.style.animation = 'capsule-shake 0.3s ease-in-out infinite';
 
-                // 使用 AJAX 取代 form submit
+                const body = 'themeId=' + selectedTheme.id + (isTrial ? '&isTrial=true' : '');
+
                 fetch('/mystery-box/draw', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'themeId=' + selectedTheme.id
+                    body: body
                 })
-                    .then(response => response.text())
+                    .then(response => {
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                            return;
+                        }
+                        return response.text();
+                    })
                     .then(html => {
+                        if (!html) return;
+
                         // 解析返回的 HTML 取得結果
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(html, 'text/html');
-
-                        // 找出是否有獎品結果
-                        const wonItemScript = doc.querySelector('script');
-                        let prizeName = '神秘獎品';
-                        let prizeWeight = '?';
-                        let prizeValue = '?';
 
                         // 嘗試從返回頁面提取獎品資訊
                         const prizeNameEl = doc.getElementById('prizeNameResult');
                         const prizeWeightEl = doc.getElementById('prizeWeightResult');
                         const prizeValueEl = doc.getElementById('prizeValueResult');
 
-                        if (prizeNameEl) prizeName = prizeNameEl.textContent;
-                        if (prizeWeightEl) prizeWeight = prizeWeightEl.querySelector('span')?.textContent || '?';
-                        if (prizeValueEl) prizeValue = prizeValueEl.querySelector('span')?.textContent || '?';
+                        let prizeName = prizeNameEl ? prizeNameEl.textContent : '未知獎品';
+                        let prizeWeight = prizeWeightEl ? prizeWeightEl.querySelector('span')?.textContent || '?' : '?';
+                        let prizeValue = prizeValueEl ? prizeValueEl.querySelector('span')?.textContent || '?' : '?';
 
                         // 播放開獎動畫
                         setTimeout(() => {
                             capsule.style.animation = 'capsule-open 0.5s ease forwards';
 
                             setTimeout(() => {
-                                // 播放音效
                                 playWinSound();
-                                // 產生彩色碎片
                                 spawnConfetti();
-                                // 顯示結果
-                                showAjaxResult(prizeName, prizeWeight, prizeValue);
+                                showAjaxResult(prizeName, prizeWeight, prizeValue, isTrial);
 
                                 btn.disabled = false;
-                                btn.textContent = '🎲 投幣轉蛋！';
+                                if (trialBtn) trialBtn.disabled = false;
+                                btn.textContent = originalBtnText;
                                 capsule.style.display = 'none';
                                 capsule.style.animation = '';
                                 idleMachine.style.display = 'flex';
@@ -205,11 +235,13 @@
                     })
                     .catch(err => {
                         console.error('Error:', err);
-                        alert('抽獎失敗，請重試');
+                        alert('服務異常，請稍後重試');
                         btn.disabled = false;
-                        btn.textContent = '🎲 投幣轉蛋！';
+                        if (trialBtn) trialBtn.disabled = false;
+                        btn.textContent = originalBtnText;
                         capsule.style.display = 'none';
                         idleMachine.style.display = 'flex';
+                        if (window.hideMask) window.hideMask();
                     });
             }
 
@@ -261,23 +293,25 @@
                 document.getElementById('resultModal').style.display = 'flex';
             }
 
-            function closeResult() {
+            function closeResultModal() {
                 document.getElementById('resultModal').style.display = 'none';
+                if (window.hideMask) window.hideMask();
+                location.reload();
             }
 
             // 檢查是否有中獎結果
             document.addEventListener('DOMContentLoaded', function () {
-                const wonItem = [[${ wonItem != null}]];
-            if (wonItem) {
-                const name = '[[${wonItem?.name}]]';
-                const weight = '[[${wonItem?.weight}]]';
-                const value = '[[${wonItem?.estimatedValue}]]';
+                const wonItem = /*[[${wonItem != null}]]*/ false;
+                if (wonItem) {
+                    const name = '[[${wonItem?.name}]]';
+                    const weight = '[[${wonItem?.weight}]]';
+                    const value = '[[${wonItem?.estimatedValue}]]';
 
-                document.getElementById('prizeNameResult').textContent = name;
-                document.getElementById('prizeWeightResult').querySelector('span').textContent = weight;
-                document.getElementById('prizeValueResult').querySelector('span').textContent = '$' + value;
-                document.getElementById('resultModal').style.display = 'flex';
-            }
+                    document.getElementById('prizeNameResult').textContent = name;
+                    document.getElementById('prizeWeightResult').querySelector('span').textContent = weight;
+                    document.getElementById('prizeValueResult').querySelector('span').textContent = '$' + value;
+                    document.getElementById('resultModal').style.display = 'flex';
+                }
             });
         </script>
     </div>

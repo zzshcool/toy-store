@@ -7,11 +7,11 @@ import com.toy.store.repository.MemberRepository;
 import com.toy.store.repository.TransactionRepository;
 import com.toy.store.repository.GachaRecordRepository;
 import com.toy.store.service.TokenService;
+import com.toy.store.annotation.CurrentUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
@@ -34,13 +34,13 @@ public class RecordController {
      * 交易紀錄頁面
      */
     @GetMapping("/transactions")
-    public String transactions(HttpServletRequest request, Model model) {
-        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
+    public String transactions(@CurrentUser TokenService.TokenInfo info, Model model) {
         if (info == null) {
             return "redirect:/login";
         }
 
-        Member member = memberRepository.findByUsername(info.getUsername()).orElseThrow();
+        Member member = memberRepository.findByUsername(info.getUsername())
+                .orElseThrow(() -> new RuntimeException("找不到會資料"));
         List<Transaction> transactions = transactionRepository.findByMemberIdOrderByTimestampDesc(member.getId());
 
         model.addAttribute("transactions", transactions);
@@ -52,13 +52,13 @@ public class RecordController {
      * 抽獎紀錄頁面
      */
     @GetMapping("/gacha-history")
-    public String gachaHistory(HttpServletRequest request, Model model) {
-        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
+    public String gachaHistory(@CurrentUser TokenService.TokenInfo info, Model model) {
         if (info == null) {
             return "redirect:/login";
         }
 
-        Member member = memberRepository.findByUsername(info.getUsername()).orElseThrow();
+        Member member = memberRepository.findByUsername(info.getUsername())
+                .orElseThrow(() -> new RuntimeException("找不到會資料"));
         List<GachaRecord> records = gachaRecordRepository.findByMemberIdOrderByCreatedAtDesc(member.getId());
 
         model.addAttribute("records", records);

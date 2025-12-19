@@ -1,10 +1,12 @@
 package com.toy.store.controller.api;
 
+import com.toy.store.exception.AppException;
+
+import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.*;
 import com.toy.store.service.RouletteService;
 import com.toy.store.service.TokenService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -57,40 +59,33 @@ public class RouletteApiController {
     @PostMapping("/{id}/spin")
     public ApiResponse<Map<String, Object>> spin(
             @PathVariable Long id,
-            HttpServletRequest request) {
+            @CurrentUser TokenService.TokenInfo info) {
 
-        Long memberId = getMemberId(request);
+        Long memberId = getMemberId(info);
         if (memberId == null) {
-            return ApiResponse.error("請先登入");
+            throw new AppException("請先登入");
         }
 
-        try {
-            RouletteService.SpinResult result = rouletteService.spin(id, memberId);
-            Map<String, Object> response = new HashMap<>();
-            response.put("slot", slotToMap(result.getSlot()));
-            response.put("isGuarantee", result.isGuarantee());
-            response.put("isFreeSpin", result.isFreeSpin());
-            response.put("shardsEarned", result.getShardsEarned());
-            response.put("currentLuckyValue", result.getCurrentLuckyValue());
-            response.put("luckyThreshold", result.getLuckyThreshold());
-            response.put("luckyPercentage", result.getLuckyPercentage());
+        RouletteService.SpinResult result = rouletteService.spin(id, memberId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("slot", slotToMap(result.getSlot()));
+        response.put("isGuarantee", result.isGuarantee());
+        response.put("isFreeSpin", result.isFreeSpin());
+        response.put("shardsEarned", result.getShardsEarned());
+        response.put("currentLuckyValue", result.getCurrentLuckyValue());
+        response.put("luckyThreshold", result.getLuckyThreshold());
+        response.put("luckyPercentage", result.getLuckyPercentage());
 
-            String message = result.isGuarantee() ? "🎉 保底觸發！恭喜獲得大獎！" : "恭喜獲得獎品！";
-            if (result.isFreeSpin()) {
-                message = "🎁 再來一次！";
-            }
-            return ApiResponse.ok(response, message);
-        } catch (Exception e) {
-            return ApiResponse.error(e.getMessage());
-        }
+        String message = result.isGuarantee() ? "✨ 保底觸發！獲得大獎！" : "旋轉完成！";
+        return ApiResponse.ok(response, message);
     }
 
     /**
      * 取得會員幸運值
      */
     @GetMapping("/lucky-value")
-    public ApiResponse<Map<String, Object>> getLuckyValue(HttpServletRequest request) {
-        Long memberId = getMemberId(request);
+    public ApiResponse<Map<String, Object>> getLuckyValue(@CurrentUser TokenService.TokenInfo info) {
+        Long memberId = getMemberId(info);
         if (memberId == null) {
             return ApiResponse.error("請先登入");
         }
@@ -102,8 +97,7 @@ public class RouletteApiController {
         return ApiResponse.ok(result);
     }
 
-    private Long getMemberId(HttpServletRequest request) {
-        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
+    private Long getMemberId(TokenService.TokenInfo info) {
         if (info == null)
             return null;
         return memberRepository.findByUsername(info.getUsername())

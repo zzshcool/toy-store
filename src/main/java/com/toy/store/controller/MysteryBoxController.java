@@ -1,11 +1,13 @@
 package com.toy.store.controller;
 
+import com.toy.store.annotation.CurrentUser;
 import com.toy.store.model.Member;
+import com.toy.store.model.MemberActionLog;
 import com.toy.store.model.MysteryBoxItem;
+import com.toy.store.repository.MemberActionLogRepository;
 import com.toy.store.repository.MemberRepository;
 import com.toy.store.service.MysteryBoxService;
 import com.toy.store.service.TokenService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,7 +22,7 @@ public class MysteryBoxController {
     private MysteryBoxService mysteryBoxService;
 
     @Autowired
-    private com.toy.store.repository.MemberActionLogRepository memberActionLogRepository;
+    private MemberActionLogRepository memberActionLogRepository;
 
     @Autowired
     private MemberRepository memberRepository;
@@ -32,30 +34,33 @@ public class MysteryBoxController {
     }
 
     @PostMapping("/draw")
-    public String drawBox(HttpServletRequest request,
+    public String drawBox(@CurrentUser TokenService.TokenInfo info,
             @RequestParam Long themeId,
             @RequestParam(required = false) Long couponId,
+            @RequestParam(required = false, defaultValue = "false") boolean isTrial,
             RedirectAttributes redirectAttributes) {
 
-        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
+        if (isTrial) {
+            MysteryBoxItem item = mysteryBoxService.drawTrial(themeId);
+            redirectAttributes.addFlashAttribute("wonItem", item);
+            redirectAttributes.addFlashAttribute("isTrial", true);
+            return "redirect:/mystery-box";
+        }
+
         if (info == null)
             return "redirect:/login";
         Member member = memberRepository.findByUsername(info.getUsername()).orElse(null);
         if (member == null)
             return "redirect:/login";
 
-        try {
-            MysteryBoxItem item = mysteryBoxService.drawBox(member.getId(), themeId, couponId);
-            redirectAttributes.addFlashAttribute("wonItem", item);
+        MysteryBoxItem item = mysteryBoxService.drawBox(member.getId(), themeId, couponId);
+        redirectAttributes.addFlashAttribute("wonItem", item);
 
-            // Log Action
-            memberActionLogRepository.save(new com.toy.store.model.MemberActionLog(
-                    member.getId(), member.getUsername(), "DRAW_BOX",
-                    "Won item: " + item.getName() + " (Theme ID: " + themeId + ")", true));
+        // Log Action
+        memberActionLogRepository.save(new MemberActionLog(
+                member.getId(), member.getUsername(), "DRAW_BOX",
+                "Won item: " + item.getName() + " (Theme ID: " + themeId + ")", true));
 
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "抽獎失敗：" + e.getMessage());
-        }
         return "redirect:/mystery-box";
     }
 }

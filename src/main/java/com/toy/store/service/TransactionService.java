@@ -1,5 +1,6 @@
 package com.toy.store.service;
 
+import com.toy.store.exception.AppException;
 import com.toy.store.model.Member;
 import com.toy.store.model.Transaction;
 import com.toy.store.repository.MemberRepository;
@@ -34,13 +35,13 @@ public class TransactionService {
     @Transactional
     public void updateWalletBalance(Long memberId, BigDecimal amount, Transaction.TransactionType type, String refId) {
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new RuntimeException("Member not found"));
+                .orElseThrow(() -> new AppException("會員不存在"));
 
         BigDecimal newBalance = member.getPlatformWalletBalance().add(amount);
 
         // Check for sufficient funds if subtracting
         if (amount.compareTo(BigDecimal.ZERO) < 0 && newBalance.compareTo(BigDecimal.ZERO) < 0) {
-            throw new RuntimeException("餘額不足，無法完成操作");
+            throw new AppException("餘額不足，無法完成操作");
         }
 
         if (type == Transaction.TransactionType.DEPOSIT) {

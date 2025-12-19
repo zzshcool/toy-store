@@ -55,6 +55,7 @@ public class GachaAdminController {
 
     @GetMapping("/ips")
     public String listIps(Model model) {
+        model.addAttribute("activePage", "ips");
         model.addAttribute("ips", ipRepository.findAllByOrderByCreatedAtDesc());
         model.addAttribute("newIp", new GachaIp());
         return "admin/gacha-ips";
@@ -90,6 +91,7 @@ public class GachaAdminController {
 
     @GetMapping("/ichiban")
     public String listIchibanBoxes(Model model) {
+        model.addAttribute("activePage", "ichiban");
         model.addAttribute("boxes", boxRepository.findAllByOrderByCreatedAtDesc());
         model.addAttribute("ips", ipRepository.findByStatus(GachaIp.Status.ACTIVE));
         return "admin/gacha-ichiban";
@@ -127,6 +129,7 @@ public class GachaAdminController {
         if (box == null)
             return "redirect:/admin/gacha/ichiban";
 
+        model.addAttribute("activePage", "ichiban");
         model.addAttribute("box", box);
         model.addAttribute("prizes", prizeRepository.findByBoxIdOrderBySortOrderAsc(id));
         model.addAttribute("ranks", IchibanPrize.Rank.values());
@@ -193,6 +196,7 @@ public class GachaAdminController {
 
     @GetMapping("/roulette")
     public String listRouletteGames(Model model) {
+        model.addAttribute("activePage", "roulette");
         model.addAttribute("games", rouletteGameRepository.findAllByOrderByCreatedAtDesc());
         model.addAttribute("ips", ipRepository.findByStatus(GachaIp.Status.ACTIVE));
         return "admin/gacha-roulette";
@@ -233,6 +237,7 @@ public class GachaAdminController {
         List<RouletteSlot> slots = rouletteSlotRepository.findByGameIdOrderBySlotOrderAsc(id);
         int totalWeight = slots.stream().mapToInt(RouletteSlot::getWeight).sum();
 
+        model.addAttribute("activePage", "roulette");
         model.addAttribute("game", game);
         model.addAttribute("slots", slots);
         model.addAttribute("totalWeight", totalWeight);
@@ -304,6 +309,7 @@ public class GachaAdminController {
 
     @GetMapping("/bingo")
     public String listBingoGames(Model model) {
+        model.addAttribute("activePage", "bingo");
         model.addAttribute("games", bingoGameRepository.findAllByOrderByCreatedAtDesc());
         model.addAttribute("ips", ipRepository.findByStatus(GachaIp.Status.ACTIVE));
         return "admin/gacha-bingo";
@@ -351,6 +357,7 @@ public class GachaAdminController {
             cellMap.put(cell.getPosition(), cell);
         }
 
+        model.addAttribute("activePage", "bingo");
         model.addAttribute("game", game);
         model.addAttribute("cells", cells);
         model.addAttribute("cellMap", cellMap);
@@ -445,6 +452,7 @@ public class GachaAdminController {
 
     @GetMapping("/settings")
     public String systemSettings(Model model) {
+        model.addAttribute("activePage", "settings");
         model.addAttribute("settings", settingService.getAllSettings());
         return "admin/gacha-settings";
     }
@@ -462,6 +470,7 @@ public class GachaAdminController {
 
     @GetMapping("/redeem")
     public String listRedeemItems(Model model) {
+        model.addAttribute("activePage", "redeem");
         model.addAttribute("items", redeemShopRepository.findAllByOrderBySortOrderAsc());
         model.addAttribute("itemTypes", RedeemShopItem.ItemType.values());
         return "admin/gacha-redeem";
