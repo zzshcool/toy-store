@@ -15,9 +15,9 @@ WORKDIR /app
 
 COPY --from=builder /app/target/*.jar app.jar
 
-EXPOSE 7788
+EXPOSE 8080
 
-ENV PORT=7788
-ENV JAVA_OPTS="-Xmx512m -Xms256m"
+ENV PORT=8080
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar --server.port=${PORT}"]

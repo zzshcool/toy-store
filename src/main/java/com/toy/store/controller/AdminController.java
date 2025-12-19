@@ -299,7 +299,7 @@ public class AdminController {
             @RequestParam String imageUrl, @RequestParam(required = false) String linkUrl,
             @CurrentUser TokenService.TokenInfo info) {
 
-        Map<String, Object> response = new org.springframework.util.LinkedHashMap<>();
+        Map<String, Object> response = new java.util.LinkedHashMap<>();
         try {
             com.toy.store.model.CarouselSlide saved = adminService.createCarouselSlide(imageUrl, linkUrl,
                     info != null ? info.getUsername() : "System");
@@ -317,7 +317,7 @@ public class AdminController {
     @ResponseBody
     public org.springframework.http.ResponseEntity<Map<String, Object>> deleteCarouselSlide(
             @PathVariable Long id, @CurrentUser TokenService.TokenInfo info) {
-        Map<String, Object> response = new org.springframework.util.LinkedHashMap<>();
+        Map<String, Object> response = new java.util.LinkedHashMap<>();
         try {
             adminService.deleteCarouselSlide(id, info != null ? info.getUsername() : "System");
             response.put("success", true);
