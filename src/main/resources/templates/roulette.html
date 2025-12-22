@@ -30,6 +30,12 @@
 
             <!-- 轉盤遊戲區域 -->
             <div id="rouletteGame" style="display: none;">
+                <!-- 試抽提示橫幅 -->
+                <div id="trialModeBanner"
+                    style="display: none; background: #667eea; color: white; padding: 10px; text-align: center; border-radius: 10px; margin-bottom: 20px; font-weight: bold; animation: pulse 2s infinite;">
+                    ✨ 目前為試抽模式，結果不列入紀錄。立即登入贏取真品！
+                </div>
+
                 <div style="text-align: center; margin-bottom: 20px;">
                     <h3 id="gameName" style="margin-bottom: 5px;">轉盤名稱</h3>
                     <p style="color: var(--text-secondary);">
@@ -51,8 +57,68 @@
                     <button id="spinBtn" class="btn-gacha" onclick="spin()">開始旋轉</button>
                     <button class="btn btn-outline" onclick="backToList()" style="margin-left: 15px;">返回</button>
                 </div>
+
+                <!-- 獎項清單 -->
+                <div style="background: white; border-radius: 20px; padding: 30px; margin-top: 40px;">
+                    <h4 style="margin-bottom: 20px;">🎁 轉盤獎項一覽</h4>
+                    <div id="prizeList" class="grid"
+                        style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">
+                        <!-- 由 JS 動態生成 -->
+                    </div>
+                </div>
             </div>
         </div>
+
+        <style>
+            .not-logged-in {
+                filter: grayscale(0.7);
+                opacity: 0.8;
+                position: relative;
+            }
+
+            .not-logged-in::after {
+                content: '🔒 登入後可抽獎';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 5px 15px;
+                border-radius: 20px;
+                z-index: 10;
+            }
+
+            .prize-item {
+                text-align: center;
+                border: 1px solid #eee;
+                padding: 15px;
+                border-radius: 12px;
+            }
+
+            .prize-badge {
+                font-size: 0.75rem;
+                padding: 2px 8px;
+                border-radius: 10px;
+                margin-bottom: 8px;
+                display: inline-block;
+            }
+
+            .badge-jackpot {
+                background: #fee2e2;
+                color: #ef4444;
+            }
+
+            .badge-rare {
+                background: #fef3c7;
+                color: #d97706;
+            }
+
+            .badge-normal {
+                background: #f1f5f9;
+                color: #64748b;
+            }
+        </style>
 
         <!-- 結果彈窗 -->
         <div id="resultModal" class="prize-reveal-overlay" style="display: none;">
@@ -147,15 +213,19 @@
             }
 
             function renderGameList(games) {
+                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
                 const html = games.map(game => `
                     <div class="card" style="cursor: pointer;" onclick="selectGame(${game.id})">
                         <div class="img-placeholder" style="background: linear-gradient(145deg, #e74c3c, #f39c12); border-radius: 50%; margin: 20px auto; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center;">
                             <span style="color: white; font-size: 4rem;">🎡</span>
                         </div>
                         <div style="padding: 20px; text-align: center;">
-                            <span style="background: var(--gacha-gold); color: #333; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">
-                                ${game.ipName}
-                            </span>
+                            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 5px;">
+                                <span style="background: var(--gacha-gold); color: #333; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">
+                                    ${game.ipName}
+                                </span>
+                                ${!isLoggedIn ? '<span style="color: #667eea; font-size: 0.75rem; font-weight: bold;">✨ 試抽模式</span>' : ''}
+                            </div>
                             <h3 style="margin: 10px 0;">${game.name}</h3>
                             <p style="color: var(--accent-color); font-weight: bold; font-size: 1.3rem;">$${game.pricePerSpin} / 次</p>
                             <p style="color: #666; font-size: 0.9rem;">${game.totalSlots} 個獎格</p>
@@ -163,6 +233,11 @@
                     </div>
                 `).join('');
                 document.getElementById('gameList').innerHTML = html;
+            }
+
+            function promptLogin() {
+                alert('請先登入會員以進行抽獎！');
+                window.location.href = '/login';
             }
 
             function selectGame(gameId) {
@@ -188,8 +263,26 @@
                             document.getElementById('spinPrice').textContent = game.pricePerSpin;
                             wheelSlots = game.slots || [];
                             drawWheel(wheelSlots);
+                            renderPrizeList(wheelSlots);
                         }
                     });
+            }
+
+            function renderPrizeList(slots) {
+                const html = slots.map(slot => {
+                    let badgeClass = 'badge-normal';
+                    if (slot.slotType === 'JACKPOT') badgeClass = 'badge-jackpot';
+                    if (slot.slotType === 'RARE') badgeClass = 'badge-rare';
+
+                    return `
+                        <div class="prize-item">
+                            <div class="prize-badge ${badgeClass}">${slot.slotType}</div>
+                            <div style="font-weight: bold; margin-bottom: 5px;">${slot.prizeName}</div>
+                            <div style="font-size: 0.85rem; color: #666;">${slot.prizeDescription || ''}</div>
+                        </div>
+                    `;
+                }).join('');
+                document.getElementById('prizeList').innerHTML = html;
             }
 
             function drawWheel(slots) {
@@ -237,9 +330,15 @@
 
             function spin() {
                 if (isSpinning || !currentGameId) return;
+                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
+
                 // 顯示確認模態框
                 currentSpinPrice = document.getElementById('spinPrice').textContent;
                 document.getElementById('confirmPrice').textContent = currentSpinPrice;
+
+                const modalTitle = document.querySelector('#confirmModal h3');
+                modalTitle.textContent = isLoggedIn ? '確認旋轉' : '🎡 進入試抽體驗';
+
                 document.getElementById('confirmModal').style.display = 'flex';
             }
 
@@ -248,6 +347,12 @@
             }
 
             function confirmSpin() {
+                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
+                if (!isLoggedIn) {
+                    simulateTrialSpin();
+                    return;
+                }
+
                 document.getElementById('confirmModal').style.display = 'none';
                 if (window.showMask) window.showMask(); // Call showMask at the start
                 isSpinning = true;
@@ -280,6 +385,29 @@
                         document.getElementById('spinBtn').disabled = false;
                         if (window.hideMask) window.hideMask(); // Call hideMask on error
                     });
+            }
+
+            function simulateTrialSpin() {
+                document.getElementById('confirmModal').style.display = 'none';
+                if (window.showMask) window.showMask();
+                isSpinning = true;
+                document.getElementById('spinBtn').disabled = true;
+
+                // 隨機選一個索引
+                const slotIndex = Math.floor(Math.random() * wheelSlots.length);
+                const resultSlot = wheelSlots[slotIndex];
+
+                animateWheel(slotIndex, () => {
+                    const trialResult = {
+                        isTrial: true,
+                        slot: resultSlot,
+                        shardsEarned: Math.floor(Math.random() * 100),
+                        isGuarantee: false,
+                        isFreeSpin: false
+                    };
+                    showResult(trialResult, "試抽成功");
+                    if (window.hideMask) window.hideMask();
+                });
             }
 
             function animateWheel(targetIndex, callback) {

@@ -34,7 +34,7 @@ public class Transaction {
     private String referenceId; // e.g., Order ID or Mystery Box ID
 
     public enum TransactionType {
-        DEPOSIT, WITHDRAW, PURCHASE, PRIZE_INCOME, MYSTERY_BOX_COST,
+        DEPOSIT, WITHDRAW, PURCHASE, PRIZE_INCOME, GACHA_COST,
         ICHIBAN_COST, ROULETTE_COST, BINGO_COST, REFUND
     }
 }

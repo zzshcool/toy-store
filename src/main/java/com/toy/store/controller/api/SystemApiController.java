@@ -31,7 +31,7 @@ public class SystemApiController {
         settings.put("rouletteEnabled", settingService.isRouletteEnabled());
         settings.put("bingoEnabled", settingService.isBingoEnabled());
         settings.put("redeemEnabled", settingService.isRedeemEnabled());
-        settings.put("mysteryBoxEnabled", settingService.isMysteryBoxEnabled());
+        settings.put("gachaEnabled", settingService.isGachaEnabled());
         // 遊戲參數
         settings.put("luckyThreshold", settingService.getLuckyThreshold());
         settings.put("shardMin", settingService.getIntSetting(SystemSetting.GACHA_SHARD_MIN, 10));

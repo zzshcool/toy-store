@@ -31,7 +31,7 @@ public class SystemSettingService {
         createIfNotExists(SystemSetting.MODULE_ROULETTE_ENABLED, "true", "轉盤功能開關");
         createIfNotExists(SystemSetting.MODULE_BINGO_ENABLED, "true", "九宮格功能開關");
         createIfNotExists(SystemSetting.MODULE_REDEEM_ENABLED, "true", "碎片兌換功能開關");
-        createIfNotExists(SystemSetting.MODULE_MYSTERYBOX_ENABLED, "true", "盲盒功能開關");
+        createIfNotExists(SystemSetting.MODULE_GACHA_ENABLED, "true", "扭蛋功能開關");
 
         // 遊戲參數預設值
         createIfNotExists(SystemSetting.GACHA_LUCKY_THRESHOLD, "1000", "保底觸發門檻");
@@ -126,8 +126,8 @@ public class SystemSettingService {
         return getBooleanSetting(SystemSetting.MODULE_REDEEM_ENABLED);
     }
 
-    public boolean isMysteryBoxEnabled() {
-        return getBooleanSetting(SystemSetting.MODULE_MYSTERYBOX_ENABLED);
+    public boolean isGachaEnabled() {
+        return getBooleanSetting(SystemSetting.MODULE_GACHA_ENABLED);
     }
 
     public int getLuckyThreshold() {

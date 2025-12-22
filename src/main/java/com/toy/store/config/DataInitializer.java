@@ -22,7 +22,7 @@ public class DataInitializer implements CommandLineRunner {
     private com.toy.store.repository.ProductRepository productRepository;
 
     @Autowired
-    private com.toy.store.repository.MysteryBoxThemeRepository mysteryBoxThemeRepository;
+    private com.toy.store.repository.GachaThemeRepository gachaThemeRepository;
 
     @Autowired
     private com.toy.store.repository.AdminUserRepository adminUserRepository;
@@ -108,14 +108,14 @@ public class DataInitializer implements CommandLineRunner {
             categoryEntity = categoryRepository.save(categoryEntity);
         }
 
-        // 2. Create Mystery Box Theme
-        com.toy.store.model.MysteryBoxTheme theme = mysteryBoxThemeRepository.findByName(seriesName);
+        // 2. Create Gacha Theme
+        com.toy.store.model.GachaTheme theme = gachaThemeRepository.findByName(seriesName);
         if (theme == null) {
-            theme = new com.toy.store.model.MysteryBoxTheme();
+            theme = new com.toy.store.model.GachaTheme();
             theme.setName(seriesName);
-            theme.setDescription(seriesName + " 專屬盲盒，內含鑰匙圈、毛巾與稀有公仔！");
+            theme.setDescription(seriesName + " 專屬扭蛋，內含鑰匙圈、毛巾與稀有公仔！");
             theme.setPrice(new BigDecimal("100.00"));
-            theme = mysteryBoxThemeRepository.save(theme);
+            theme = gachaThemeRepository.save(theme);
         }
 
         for (String subSeries : subSeriesList) {
@@ -132,10 +132,10 @@ public class DataInitializer implements CommandLineRunner {
             createProduct(subSeries + " 毛巾", new BigDecimal("50.00"), 100, seriesName, subSeries);
             createProduct(subSeries + " 系列公仔", new BigDecimal("350.00"), 5, seriesName, subSeries);
 
-            // 4. Create Mystery Box Items (Lottery)
-            createMysteryBoxItem(theme, subSeries + " 鑰匙圈", new BigDecimal("50.00"), 20);
-            createMysteryBoxItem(theme, subSeries + " 毛巾", new BigDecimal("50.00"), 20);
-            createMysteryBoxItem(theme, subSeries + " 系列公仔", new BigDecimal("350.00"), 1);
+            // 4. Create Gacha Items (Lottery)
+            createGachaItem(theme, subSeries + " 鑰匙圈", new BigDecimal("50.00"), 20);
+            createGachaItem(theme, subSeries + " 毛巾", new BigDecimal("50.00"), 20);
+            createGachaItem(theme, subSeries + " 系列公仔", new BigDecimal("350.00"), 1);
         }
     }
 
@@ -152,7 +152,7 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
-    private void createMysteryBoxItem(com.toy.store.model.MysteryBoxTheme theme, String name, BigDecimal value,
+    private void createGachaItem(com.toy.store.model.GachaTheme theme, String name, BigDecimal value,
             int weight) {
         if (theme.getItems() == null) {
             theme.setItems(new java.util.ArrayList<>());
@@ -161,13 +161,13 @@ public class DataInitializer implements CommandLineRunner {
         // Check if item already exists
         boolean exists = theme.getItems().stream().anyMatch(i -> i.getName().equals(name));
         if (!exists) {
-            com.toy.store.model.MysteryBoxItem item = new com.toy.store.model.MysteryBoxItem();
+            com.toy.store.model.GachaItem item = new com.toy.store.model.GachaItem();
             item.setTheme(theme);
             item.setName(name);
             item.setEstimatedValue(value);
             item.setWeight(weight);
             theme.getItems().add(item);
-            mysteryBoxThemeRepository.save(theme);
+            gachaThemeRepository.save(theme);
         }
     }
 

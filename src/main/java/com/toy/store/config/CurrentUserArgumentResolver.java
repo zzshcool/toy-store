@@ -8,6 +8,8 @@ import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
+import org.springframework.lang.Nullable;
+import org.springframework.lang.NonNull;
 
 /**
  * @CurrentUser 註解的參數解析器
@@ -17,17 +19,17 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolver {
 
     @Override
-    public boolean supportsParameter(MethodParameter parameter) {
+    public boolean supportsParameter(@NonNull MethodParameter parameter) {
         return parameter.hasParameterAnnotation(CurrentUser.class) &&
                 parameter.getParameterType().equals(TokenService.TokenInfo.class);
     }
 
     @Override
-    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
-            NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
+    public Object resolveArgument(@NonNull MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+            @NonNull NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
         HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
         if (request != null) {
-            return request.getAttribute("currentUser");
+            return request.getAttribute("authenticatedUserToken");
         }
         return null;
     }

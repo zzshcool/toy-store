@@ -34,8 +34,8 @@
                 <li th:if="${@systemSettingService.isRedeemEnabled()}">
                     <a th:href="@{/redeem-shop}" class="nav-link">💎 兌換</a>
                 </li>
-                <li th:if="${@systemSettingService.isMysteryBoxEnabled()}">
-                    <a th:href="@{/mystery-box}" class="nav-link">🎁 盲盒</a>
+                <li th:if="${@systemSettingService.isGachaEnabled()}">
+                    <a th:href="@{/gacha}" class="nav-link">🎁 扭蛋</a>
                 </li>
 
                 <li th:if="${currentUser != null}"

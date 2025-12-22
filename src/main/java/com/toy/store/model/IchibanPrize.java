@@ -58,6 +58,7 @@ public class IchibanPrize {
         F("F賞", 6),
         G("G賞", 7),
         H("H賞", 8),
+        I("I賞", 9),
         LAST("LAST賞", 99);
 
         private final String displayName;

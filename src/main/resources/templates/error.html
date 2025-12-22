@@ -92,7 +92,7 @@
         <div class="error-details" th:if="${exception != null}">
             <strong>錯誤詳情:</strong><br>
             <span th:text="${exception.getClass().getName()}">Exception class</span>:
-            <span th:text="${exception.message}">Message</span>
+            <span th:text="${exception?.message ?: '無詳細錯誤資料'}">Message</span>
         </div>
 
         <a href="/" class="btn">回首頁</a>

@@ -37,6 +37,9 @@
         <div th:if="${param.error}" class="alert alert-error">
             帳號或密碼錯誤。
         </div>
+        <div th:if="${param.captcha_error}" class="alert alert-error">
+            驗證碼不正確。
+        </div>
         <div th:if="${param.logout}" class="alert alert-success">
             您已成功登出。
         </div>
@@ -49,6 +52,18 @@
             <div class="form-group">
                 <label>密碼</label>
                 <input type="password" name="password" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+                <label>驗證碼</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" name="captcha" class="form-control" required placeholder="請輸入右側文字"
+                        style="flex-grow: 1;" autocomplete="off" />
+                    <img th:src="@{/api/captcha}" alt="captcha" id="captchaImg"
+                        onclick="this.src='/api/captcha?t=' + new Date().getTime()"
+                        style="cursor: pointer; border: 1px solid #ddd; border-radius: 4px; height: 38px;"
+                        title="點擊刷新" />
+                </div>
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">登入</button>
         </form>

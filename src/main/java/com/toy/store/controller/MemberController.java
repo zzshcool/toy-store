@@ -4,6 +4,7 @@ import com.toy.store.dto.SignupRequest;
 import com.toy.store.model.Member;
 import com.toy.store.model.Transaction;
 import com.toy.store.repository.MemberRepository;
+import com.toy.store.service.EmailVerificationService;
 import com.toy.store.service.TokenService;
 import com.toy.store.service.TransactionService;
 import jakarta.servlet.http.Cookie;
@@ -33,14 +34,27 @@ public class MemberController {
     @Autowired
     private TransactionService transactionService;
 
+    @Autowired
+    private EmailVerificationService emailVerificationService;
+
     @GetMapping("/login")
     public String loginPage() {
         return "login";
     }
 
     @PostMapping("/login")
-    public String loginSubmit(@RequestParam String username, @RequestParam String password,
-            HttpServletResponse response, Model model) {
+    public String loginSubmit(@RequestParam String username,
+            @RequestParam String password,
+            @RequestParam String captcha,
+            HttpServletResponse response,
+            Model model,
+            jakarta.servlet.http.HttpSession session) {
+
+        // 驗證碼校驗
+        String sessionCaptcha = (String) session.getAttribute("captcha");
+        if (sessionCaptcha == null || !sessionCaptcha.equalsIgnoreCase(captcha)) {
+            return "redirect:/login?captcha_error";
+        }
 
         java.util.Optional<Member> memberOpt = memberRepository.findByUsername(username);
         if (memberOpt.isPresent()) {
@@ -72,7 +86,7 @@ public class MemberController {
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if ("AUTH_TOKEN".equals(cookie.getName())) {
-                    tokenService.invalidateToken(cookie.getValue());
+                    tokenService.invalidateMemberToken(cookie.getValue());
                     cookie.setMaxAge(0);
                     cookie.setPath("/");
                     cookie.setValue(null);
@@ -95,7 +109,7 @@ public class MemberController {
 
     @PostMapping("/register")
     public String registerUser(@Valid @ModelAttribute("signupRequest") SignupRequest signUpRequest,
-            BindingResult bindingResult, Model model) {
+            BindingResult bindingResult, Model model, jakarta.servlet.http.HttpSession session) {
         if (bindingResult.hasErrors()) {
             return "register";
         }
@@ -110,11 +124,34 @@ public class MemberController {
             return "register";
         }
 
+        // 驗證碼校驗
+        String sessionCaptcha = (String) session.getAttribute("captcha");
+        if (sessionCaptcha == null || !sessionCaptcha.equalsIgnoreCase(signUpRequest.getCaptcha())) {
+            model.addAttribute("error", "錯誤: 驗證碼不正確！");
+            return "register";
+        }
+
+        // 條款同意校驗
+        if (!signUpRequest.isAgreedTerms()) {
+            model.addAttribute("error", "錯誤: 您必須同意會員條款與隱私權政策才能註冊！");
+            return "register";
+        }
+
+        // Email 驗證狀態校驗
+        if (!emailVerificationService.isEmailVerified(signUpRequest.getEmail(), session)) {
+            model.addAttribute("error", "錯誤: 您的 Email 尚未通過驗證！");
+            return "register";
+        }
+
         // Create new user's account
         Member member = new Member();
         member.setUsername(signUpRequest.getUsername());
         member.setEmail(signUpRequest.getEmail());
         member.setPhone(signUpRequest.getPhone());
+        member.setRealName(signUpRequest.getRealName());
+        member.setAddress(signUpRequest.getAddress());
+        member.setGender(signUpRequest.getGender());
+        member.setBirthday(signUpRequest.getBirthday());
         member.setPassword(encoder.encode(signUpRequest.getPassword()));
         member.setRole(Member.Role.USER);
         member.setPlatformWalletBalance(java.math.BigDecimal.ZERO);
@@ -141,25 +178,34 @@ public class MemberController {
             @RequestParam String nickname,
             @RequestParam String email,
             @RequestParam String phone,
+            @RequestParam String realName,
+            @RequestParam(required = false) String address,
+            @RequestParam(required = false) String gender,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate birthday,
             RedirectAttributes redirectAttributes) {
-        TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
-        if (user == null)
+        TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("authenticatedUserToken");
+        if (user == null) {
             return "redirect:/login";
+        }
 
         Member member = memberRepository.findByUsername(user.getUsername()).orElse(null);
         if (member != null) {
             member.setNickname(nickname);
             member.setEmail(email);
             member.setPhone(phone);
+            member.setRealName(realName);
+            member.setAddress(address);
+            member.setGender(gender);
+            member.setBirthday(birthday);
             memberRepository.save(member);
-            redirectAttributes.addFlashAttribute("success", "個人資料已更新");
+            redirectAttributes.addFlashAttribute("success", "資料更新成功！");
         }
         return "redirect:/profile";
     }
 
     @GetMapping("/topup")
     public String topupPage(HttpServletRequest request, Model model) {
-        TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
+        TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("authenticatedUserToken");
         if (user == null)
             return "redirect:/login";
 
@@ -173,7 +219,7 @@ public class MemberController {
             @RequestParam java.math.BigDecimal amount,
             @RequestParam String paymentMethod,
             Model model) {
-        TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
+        TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("authenticatedUserToken");
         if (user == null)
             return "redirect:/login";
 
@@ -187,10 +233,41 @@ public class MemberController {
                     "TOPUP-" + paymentMethod);
 
             // 重新載入會員資料
-            member = memberRepository.findById(member.getId()).orElseThrow();
+            Long memberId = java.util.Objects.requireNonNull(member.getId());
+            member = memberRepository.findById(memberId).orElseThrow();
             model.addAttribute("success", "儲值成功！(" + paymentMethod + ")");
             model.addAttribute("member", member);
         }
         return "topup";
+    }
+
+    @PostMapping("/api/register/send-code")
+    @ResponseBody
+    public java.util.Map<String, Object> sendVerifyCode(@RequestParam String email,
+            jakarta.servlet.http.HttpSession session) {
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+
+        if (memberRepository.existsByEmail(email)) {
+            response.put("success", false);
+            response.put("message", "此 Email 已被註冊！");
+            return response;
+        }
+
+        emailVerificationService.generateAndSaveCode(email, session);
+        response.put("success", true);
+        response.put("message", "驗證碼已發送至您的 Email (請查看後台日誌)");
+        return response;
+    }
+
+    @PostMapping("/api/register/verify-code")
+    @ResponseBody
+    public java.util.Map<String, Object> verifyCode(@RequestParam String email, @RequestParam String code,
+            jakarta.servlet.http.HttpSession session) {
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        boolean isValid = emailVerificationService.verifyCode(email, code, session);
+
+        response.put("success", isValid);
+        response.put("message", isValid ? "Email 驗證成功！" : "驗證碼錯誤或已過期");
+        return response;
     }
 }

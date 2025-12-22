@@ -27,4 +27,19 @@ public class SignupRequest {
     @NotBlank
     @Size(min = 6, max = 40)
     private String password;
+
+    private String captcha;
+
+    private boolean agreedTerms;
+
+    @NotBlank(message = "姓名不能為空")
+    @Size(max = 50)
+    private String realName;
+
+    private String address;
+
+    private String gender;
+
+    @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+    private java.time.LocalDate birthday;
 }

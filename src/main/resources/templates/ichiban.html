@@ -21,6 +21,12 @@
 
             <!-- 選號區域（選擇箱體後顯示） -->
             <div id="slotSection" style="display: none;">
+                <!-- 試抽提示橫幅 -->
+                <div id="trialModeBanner"
+                    style="display: none; background: #6c5ce7; color: white; padding: 10px; text-align: center; border-radius: 10px; margin-bottom: 20px; font-weight: bold; animation: pulse 2s infinite;">
+                    ✨ 目前為試抽模式，結果不列入紀錄。立即登入參與正式抽獎！
+                </div>
+
                 <div
                     style="background: linear-gradient(145deg, #1a1a2e, #16213e); border-radius: 20px; padding: 30px; margin-bottom: 30px;">
                     <div
@@ -53,7 +59,7 @@
                         <div style="display: flex; gap: 10px;">
                             <button class="btn btn-outline" onclick="clearSelection()"
                                 style="color: white; border-color: white;">清除選擇</button>
-                            <button class="btn-gacha" onclick="confirmPurchase()"
+                            <button id="purchaseBtnTrigger" class="btn-gacha" onclick="confirmPurchase()"
                                 style="background: #ffd700; color: #333;">確認購買</button>
                         </div>
                     </div>
@@ -157,25 +163,34 @@
 
             // 渲染箱體列表
             function renderBoxList(boxes) {
+                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
                 const html = boxes.map(box => `
                     <div class="card" style="cursor: pointer;" onclick="selectBox(${box.id}, ${box.pricePerDraw})">
                         <div class="img-placeholder" style="background: linear-gradient(145deg, #667eea, #764ba2);">
                             <span style="color: white; font-size: 3rem;">🎁</span>
                         </div>
                         <div style="padding: 20px;">
-                            <span style="background: var(--gacha-gold); color: #333; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">
-                                ${box.ipName}
-                            </span>
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <span style="background: var(--gacha-gold); color: #333; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">
+                                    ${box.ipName}
+                                </span>
+                                ${!isLoggedIn ? '<span style="color: #6c5ce7; font-size: 0.75rem; font-weight: bold;">✨ 試抽模式</span>' : ''}
+                            </div>
                             <h3 style="margin: 10px 0;">${box.name}</h3>
                             <p style="color: var(--text-secondary); font-size: 0.9rem;">${box.description || ''}</p>
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
                                 <span style="color: var(--accent-color); font-weight: bold; font-size: 1.2rem;">$${box.pricePerDraw}</span>
-                                <span style="color: #666; font-size: 0.9rem;">${box.totalSlots} 格</span>
+                                <span style="color: #666; font-size: 0.9rem;">剩餘 ${box.remainingSlots} / ${box.totalSlots}</span>
                             </div>
                         </div>
                     </div>
                 `).join('');
                 document.getElementById('boxList').innerHTML = html;
+            }
+
+            function promptLogin() {
+                alert('請先登入會員以進行抽獎！');
+                window.location.href = '/login';
             }
 
             // 選擇箱體
@@ -184,6 +199,10 @@
                 pricePerDraw = price;
                 selectedSlots = [];
                 updateCartBar();
+
+                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
+                document.getElementById('trialModeBanner').style.display = isLoggedIn ? 'none' : 'block';
+
                 document.getElementById('boxList').style.display = 'none';
                 document.getElementById('slotSection').style.display = 'block';
                 loadBoxDetails(boxId);
@@ -206,10 +225,29 @@
                 ]).then(([boxRes, slotsRes]) => {
                     if (boxRes.success) {
                         const box = boxRes.data;
+                        currentBoxData = box; // 暫存以便試抽使用
                         document.getElementById('selectedBoxName').textContent = box.name;
                         document.getElementById('selectedBoxDesc').textContent = box.description || '';
                         document.getElementById('pricePerDraw').textContent = box.pricePerDraw;
                         pricePerDraw = parseFloat(box.pricePerDraw);
+
+                        // 渲染獎品一覽
+                        if (box.prizes) {
+                            const prizeHtml = box.prizes.map(p => {
+                                const isSoldOut = p.remainingQuantity === 0;
+                                return `
+                                    <div class="prize-item ${isSoldOut ? 'sold-out' : ''}" style="text-align: center; border: 1px solid #eee; padding: 10px; border-radius: 10px; position: relative; opacity: ${isSoldOut ? '0.5' : '1'}">
+                                        <div style="font-size: 1.5rem; background: #eee; border-radius: 5px; margin-bottom: 5px;">🎁</div>
+                                        <div style="font-weight: bold; font-size: 0.9rem;">${p.rankDisplay}賞</div>
+                                        <div style="font-size: 0.8rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name}</div>
+                                        <div style="font-size: 0.75rem; color: #999; margin-top: 5px;">
+                                            ${isSoldOut ? '<span style="color: #e74c3c;">已抽完</span>' : `剩餘 ${p.remainingQuantity} / ${p.totalQuantity}`}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                            document.getElementById('prizeList').innerHTML = prizeHtml;
+                        }
                     }
                     if (slotsRes.success) {
                         renderSlots(slotsRes.data);
@@ -272,11 +310,23 @@
             // 更新購物車列
             function updateCartBar() {
                 const cartBar = document.getElementById('cartBar');
+                const purchaseBtn = document.getElementById('purchaseBtnTrigger');
+                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
                 const count = selectedSlots.length;
                 const total = count * pricePerDraw;
 
                 document.getElementById('selectedCount').textContent = count;
                 document.getElementById('totalPrice').textContent = '$' + total;
+
+                if (!isLoggedIn) {
+                    purchaseBtn.textContent = '試抽體驗 (不扣點)';
+                    purchaseBtn.style.background = '#6c5ce7';
+                    purchaseBtn.style.color = 'white';
+                } else {
+                    purchaseBtn.textContent = '確認購買';
+                    purchaseBtn.style.background = '#ffd700';
+                    purchaseBtn.style.color = '#333';
+                }
 
                 cartBar.style.display = count > 0 ? 'flex' : 'none';
             }
@@ -299,29 +349,87 @@
                     return;
                 }
 
-                // 顯示遮罩
-                if (window.showMask) window.showMask();
-
-                const slotGrid = document.getElementById('slotGrid');
-                slotGrid.classList.add('loading-reveal');
-
+                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
                 const count = selectedSlots.length;
                 const total = count * pricePerDraw;
                 const sortedSlots = [...selectedSlots].sort((a, b) => a - b);
 
-                document.getElementById('confirmCount').textContent = count;
-                document.getElementById('confirmSlots').textContent = '格子編號：' + sortedSlots.map(n => String(n).padStart(2, '0')).join(', ');
-                document.getElementById('confirmTotal').textContent = total;
+                document.getElementById('confirmSlotsCount').textContent = count;
+                document.getElementById('confirmPricePerDraw').textContent = pricePerDraw;
+                document.getElementById('confirmTotalCost').textContent = '$' + total;
+
+                const modalTitle = document.querySelector('#purchaseModal h3');
+                const purchaseBtn = document.getElementById('purchaseBtn');
+
+                if (!isLoggedIn) {
+                    modalTitle.textContent = '🎈 試抽體驗 (模擬)';
+                    purchaseBtn.textContent = '開始試抽';
+                    purchaseBtn.style.background = '#6c5ce7';
+                } else {
+                    modalTitle.textContent = '確認購買';
+                    purchaseBtn.textContent = '確認購買';
+                    purchaseBtn.style.background = '#ffd700';
+                }
+
                 document.getElementById('purchaseModal').style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                if (window.showMask) window.showMask();
             }
 
             // 關閉購買確認彈窗
             function closePurchaseModal() {
                 document.getElementById('purchaseModal').style.display = 'none';
+                document.body.style.overflow = 'auto';
+                if (window.hideMask) window.hideMask();
             }
 
-            // 執行購買
+            // 模擬試抽邏輯
+            function simulateTrialPurchase() {
+                closePurchaseModal();
+                if (window.showMask) window.showMask();
+
+                const prizes = [];
+                let totalShards = 0;
+                const pool = currentBoxData.prizes || [];
+
+                selectedSlots.forEach(num => {
+                    // 隨機從獎池挑一個 (模擬隨機性，不影響真實庫存)
+                    const randomPrize = pool[Math.floor(Math.random() * pool.length)];
+                    prizes.push({
+                        slotNumber: num,
+                        prize: randomPrize,
+                        shards: Math.floor(Math.random() * 50) + 10 // 隨機虛擬碎片
+                    });
+                    totalShards += prizes[prizes.length - 1].shards;
+                });
+
+                const simulatedData = {
+                    success: true,
+                    isTrial: true,
+                    data: {
+                        prizes: prizes,
+                        totalShards: totalShards,
+                        totalCost: selectedSlots.length * pricePerDraw
+                    }
+                };
+
+                // 稍微延遲模擬網路請求
+                setTimeout(() => {
+                    showResultModal(simulatedData.data);
+                    selectedSlots = [];
+                    updateCartBar();
+                }, 500);
+            }
+
+            // 執行購買 (含試抽模擬)
             function executePurchase() {
+                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
+
+                if (!isLoggedIn) {
+                    simulateTrialPurchase();
+                    return;
+                }
+
                 const btn = document.getElementById('purchaseBtn');
                 btn.disabled = true;
                 btn.textContent = '處理中...';
@@ -490,30 +598,49 @@
                 revealNext();
             }
 
-            // 顯示最終總結
+            // 顯示最終總結 (增加試抽導引)
             function showFinalSummary(data) {
                 const prizes = data.prizes || [];
-                const html = prizes.map(item => {
+                const isTrial = data.totalCost > 0 && !data.id; // 簡單判斷是否為試抽
+
+                let resultHtml = `
+                    <div id="trialWatermark" style="${isTrial ? 'display: block;' : 'display: none;'} background: #6c5ce7; color: white; padding: 5px; border-radius: 5px; margin-bottom: 15px; font-size: 0.9rem;">
+                        ⚡ 這是試抽模式，快登入贏取真品吧！
+                    </div>
+                `;
+
+                resultHtml += prizes.map(item => {
                     const prize = item.prize;
                     return `
-                        <div style="background: linear-gradient(145deg, #f8f9fa, #e9ecef); border-radius: 15px; padding: 20px; width: 150px;">
+                        <div style="background: linear-gradient(145deg, #f8f9fa, #e9ecef); border-radius: 15px; padding: 20px; width: 150px; position: relative; overflow: hidden;">
                             <div style="font-size: 1.2rem; font-weight: bold; color: #333; margin-bottom: 10px;">
                                 #${String(item.slotNumber).padStart(2, '0')}
                             </div>
                             ${prize ? `
                                 <div style="background: var(--gacha-gold); color: #333; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; display: inline-block; margin-bottom: 8px;">
-                                    ${prize.rankDisplay}
+                                    ${prize.rankDisplay}賞
                                 </div>
-                                <div style="font-weight: bold; color: #333;">${prize.name}</div>
+                                <div style="font-weight: bold; color: #333; height: 40px; overflow: hidden;">${prize.name}</div>
                             ` : '<div style="color: #999;">未知獎品</div>'}
                             <div style="color: #6c5ce7; font-size: 0.9rem; margin-top: 5px;">+${item.shards} 碎片</div>
                         </div>
                     `;
                 }).join('');
 
-                document.getElementById('prizeResults').innerHTML = html;
+                document.getElementById('prizeResults').innerHTML = resultHtml;
                 document.getElementById('totalShardsResult').textContent = data.totalShards;
                 document.getElementById('totalCostResult').textContent = data.totalCost;
+
+                // 修改彈窗按鈕
+                const summaryBtn = document.querySelector('#resultModal .btn-gacha');
+                if (isTrial) {
+                    summaryBtn.innerHTML = '✨ 立即登入抽真品';
+                    summaryBtn.onclick = () => window.location.href = '/login';
+                } else {
+                    summaryBtn.innerHTML = '太棒了！';
+                    summaryBtn.onclick = closeResultModal;
+                }
+
                 document.getElementById('resultModal').style.display = 'block';
             }
 
@@ -580,6 +707,32 @@
             }, 10000);
         </script>
     </div>
+    <style>
+        .not-logged-in {
+            filter: grayscale(0.7);
+            opacity: 0.8;
+            position: relative;
+        }
+
+        .not-logged-in::after {
+            content: '🔒 登入後可抽獎';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .sold-out {
+            background-color: #f8f9fa;
+        }
+    </style>
 </body>
 
 </html>

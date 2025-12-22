@@ -33,7 +33,7 @@ public class AdminService {
         private MemberActionLogRepository memberActionLogRepository;
 
         @Autowired
-        private MysteryBoxThemeRepository mysteryBoxThemeRepository;
+        private GachaThemeRepository gachaThemeRepository;
 
         @Autowired
         private ProductService productService;
@@ -78,7 +78,7 @@ public class AdminService {
         private SubCategoryRepository subCategoryRepository;
 
         @Autowired
-        private MysteryBoxItemRepository mysteryBoxItemRepository;
+        private GachaItemRepository gachaItemRepository;
 
         @Autowired
         private ActivityRepository activityRepository;
@@ -118,7 +118,7 @@ public class AdminService {
 
                 // Static / Unpaginated Data
                 data.put("products", productService.findAll(Pageable.unpaged()).getContent());
-                data.put("mysteryBoxThemes", mysteryBoxThemeRepository.findAll());
+                data.put("gachaThemes", gachaThemeRepository.findAll());
                 data.put("categories", categoryRepository.findAll());
                 data.put("memberLevels", memberLevelRepository.findAllByOrderBySortOrderAsc());
                 data.put("coupons", couponRepository.findAll());
@@ -257,8 +257,8 @@ public class AdminService {
         }
 
         @Transactional
-        public void createTheme(MysteryBoxTheme theme, String adminName) {
-                mysteryBoxThemeRepository.save(theme);
+        public void createTheme(GachaTheme theme, String adminName) {
+                gachaThemeRepository.save(theme);
                 adminActionLogRepository.save(new AdminActionLog(adminName, "CREATE_THEME",
                                 "Theme: " + theme.getName(), ""));
         }
@@ -267,11 +267,11 @@ public class AdminService {
         public void updateTheme(Long id, String name, BigDecimal price, String adminName) {
                 if (id == null)
                         throw new AppException("ID 不能為空 (ID cannot be null)");
-                MysteryBoxTheme theme = mysteryBoxThemeRepository.findById(id)
+                GachaTheme theme = gachaThemeRepository.findById(id)
                                 .orElseThrow(() -> new AppException("找不到主題 (Theme not found)"));
                 theme.setName(name);
                 theme.setPrice(price);
-                mysteryBoxThemeRepository.save(theme);
+                gachaThemeRepository.save(theme);
 
                 adminActionLogRepository.save(new AdminActionLog(adminName, "UPDATE_THEME",
                                 "Theme: " + name + " (ID: " + id + ")", ""));
@@ -281,30 +281,45 @@ public class AdminService {
         public void deleteTheme(Long id, String adminName) {
                 if (id == null)
                         throw new AppException("ID 不能為空 (ID cannot be null)");
-                mysteryBoxThemeRepository.deleteById(id);
+                gachaThemeRepository.deleteById(id);
                 adminActionLogRepository.save(new AdminActionLog(adminName, "DELETE_THEME",
                                 "Theme ID: " + id, ""));
         }
 
         @Transactional
-        public void createMysteryBoxItem(Long themeId, MysteryBoxItem item, String adminName) {
+        public void createGachaItem(Long themeId, GachaItem item, String adminName) {
                 if (themeId == null)
                         throw new AppException("主題 ID 不能為空 (Theme ID cannot be null)");
-                MysteryBoxTheme theme = mysteryBoxThemeRepository.findById(themeId)
+                GachaTheme theme = gachaThemeRepository.findById(themeId)
                                 .orElseThrow(() -> new AppException("找不到主題 (Theme not found)"));
                 item.setTheme(theme);
-                mysteryBoxItemRepository.save(item);
-                adminActionLogRepository.save(new AdminActionLog(adminName, "CREATE_MYSTERY_BOX_ITEM",
+                gachaItemRepository.save(item);
+                adminActionLogRepository.save(new AdminActionLog(adminName, "CREATE_GACHA_ITEM",
                                 "Item: " + item.getName() + " in " + theme.getName(), ""));
         }
 
         @Transactional
-        public void deleteMysteryBoxItem(Long id, String adminName) {
+        public void deleteGachaItem(Long id, String adminName) {
                 if (id == null)
                         throw new AppException("ID 不能為空 (ID cannot be null)");
-                mysteryBoxItemRepository.deleteById(id);
-                adminActionLogRepository.save(new AdminActionLog(adminName, "DELETE_MYSTERY_BOX_ITEM",
+                gachaItemRepository.deleteById(id);
+                adminActionLogRepository.save(new AdminActionLog(adminName, "DELETE_GACHA_ITEM",
                                 "Item ID: " + id, ""));
+        }
+
+        @Transactional
+        public void updateGachaItem(Long id, String name, BigDecimal estimatedValue, Integer weight, String adminName) {
+                if (id == null)
+                        throw new AppException("ID 不能為空 (ID cannot be null)");
+                GachaItem item = gachaItemRepository.findById(id)
+                                .orElseThrow(() -> new AppException("找不到獎項 (Item not found)"));
+                item.setName(name);
+                item.setEstimatedValue(estimatedValue);
+                item.setWeight(weight);
+                gachaItemRepository.save(item);
+
+                adminActionLogRepository.save(new AdminActionLog(adminName, "UPDATE_GACHA_ITEM",
+                                "Item: " + name + " (ID: " + id + ")", ""));
         }
 
         @Transactional

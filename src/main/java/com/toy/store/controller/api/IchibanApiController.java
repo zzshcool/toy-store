@@ -155,6 +155,16 @@ public class IchibanApiController {
         map.put("totalSlots", box.getTotalSlots());
         map.put("status", box.getStatus().name());
         map.put("ipName", box.getIpName());
+
+        if (box.getPrizes() != null) {
+            map.put("prizes", box.getPrizes().stream().map(this::prizeToMap).collect(Collectors.toList()));
+        }
+
+        // 計算剩餘格子
+        int remainingSlots = (int) box.getSlots().stream().filter(s -> s.getStatus() == IchibanSlot.Status.AVAILABLE)
+                .count();
+        map.put("remainingSlots", remainingSlots);
+
         return map;
     }
 
@@ -176,6 +186,8 @@ public class IchibanApiController {
         map.put("rankDisplay", prize.getRank().getDisplayName());
         map.put("imageUrl", prize.getImageUrl());
         map.put("estimatedValue", prize.getEstimatedValue());
+        map.put("totalQuantity", prize.getTotalQuantity());
+        map.put("remainingQuantity", prize.getRemainingQuantity());
         return map;
     }
 }

@@ -55,6 +55,10 @@ public class RedeemShopItem {
 
     public enum ItemType {
         S_RANK("S賞"),
+        A_RANK("A賞"),
+        B_RANK("B賞"),
+        C_RANK("C賞"),
+        D_RANK("D賞"),
         HIDDEN("隱藏款"),
         SPECIAL("特別款"),
         PRIZE("一般獎品");

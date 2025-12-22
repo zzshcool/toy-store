@@ -49,7 +49,7 @@ public class GachaRecord {
         ICHIBAN("一番賞"),
         ROULETTE("轉盤"),
         BINGO("九宮格"),
-        MYSTERY_BOX("盲盒");
+        GACHA("扭蛋");
 
         private final String displayName;
 

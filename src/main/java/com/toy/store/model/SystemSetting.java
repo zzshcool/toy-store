@@ -40,7 +40,7 @@ public class SystemSetting {
     public static final String MODULE_ROULETTE_ENABLED = "module.roulette.enabled";
     public static final String MODULE_BINGO_ENABLED = "module.bingo.enabled";
     public static final String MODULE_REDEEM_ENABLED = "module.redeem.enabled";
-    public static final String MODULE_MYSTERYBOX_ENABLED = "module.mysterybox.enabled";
+    public static final String MODULE_GACHA_ENABLED = "module.gacha.enabled";
     public static final String GACHA_LUCKY_THRESHOLD = "gacha.lucky.threshold";
     public static final String GACHA_SHARD_MIN = "gacha.shard.min";
     public static final String GACHA_SHARD_MAX = "gacha.shard.max";

@@ -35,38 +35,58 @@
             style="display: none; padding: 60px 0; background: linear-gradient(180deg, #1a1a2e, #16213e); text-align: center;">
             <h3 id="selectedThemeName" style="color: white; margin-bottom: 30px;">主題名稱</h3>
 
-            <!-- 扭蛋機 -->
-            <div class="gacha-machine" style="position: relative; width: 280px; margin: 0 auto;">
-                <!-- 扭蛋出口 -->
-                <div id="capsuleContainer"
-                    style="height: 220px; display: flex; align-items: center; justify-content: center;">
-                    <div class="gacha-capsule" id="capsule" style="display: none;">
-                        <div class="top">
-                            <div class="shine"></div>
+            <!-- 專業擬真扭蛋機 -->
+            <div class="gacha-machine-wrap">
+                <!-- 透明球艙 -->
+                <div class="gacha-head">
+                    <div class="gacha-dome"></div>
+                    <div class="gacha-balls-pool">
+                        <!-- 裝飾用小球 -->
+                        <div class="ball-mini" style="--bg: #ff6b6b"></div>
+                        <div class="ball-mini" style="--bg: #4ecdc4"></div>
+                        <div class="ball-mini" style="--bg: #ffd93d"></div>
+                        <div class="ball-mini" style="--bg: #6c5ce7"></div>
+                        <div class="ball-mini" style="--bg: #ff6b6b"></div>
+                        <div class="ball-mini" style="--bg: #4ecdc4"></div>
+                        <div class="ball-mini" style="--bg: #ffd93d"></div>
+                        <div class="ball-mini" style="--bg: #6c5ce7"></div>
+                        <div class="ball-mini" style="--bg: #ff6b6b"></div>
+                        <div class="ball-mini" style="--bg: #4ecdc4"></div>
+                    </div>
+                </div>
+
+                <!-- 控制區與手把 -->
+                <div class="gacha-control">
+                    <div class="gacha-handle-outer" onclick="startDraw()">
+                        <div id="gachaHandle" class="gacha-handle"></div>
+                    </div>
+                    <p style="color: white; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">轉動手把開始</p>
+
+                    <div class="gacha-exit">
+                        <div id="capsuleExit" style="position: relative; top: -40px; display: none;">
+                            <div class="gacha-capsule" id="capsule">
+                                <div class="top">
+                                    <div class="shine"></div>
+                                </div>
+                                <div class="bottom"></div>
+                            </div>
                         </div>
-                        <div class="bottom"></div>
-                    </div>
-                    <div id="idleMachine"
-                        style="width: 150px; height: 150px; background: linear-gradient(145deg, #333, #555); border-radius: 20px; display: flex; align-items: center; justify-content: center;">
-                        <span style="font-size: 4rem;">❓</span>
                     </div>
                 </div>
+            </div>
 
-                <!-- 按鈕 -->
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 30px;">
-                    <button id="drawBtn" class="btn-gacha" onclick="startDraw()"
-                        style="width: 220px; font-size: 1.3rem;">
-                        🎲 投幣轉蛋！
-                    </button>
-                    <button id="trialBtn" class="btn btn-outline" onclick="startTrial()"
-                        style="width: 150px; color: #fff; border-color: rgba(255,255,255,0.3); font-size: 0.9rem;">
-                        🧪 免費試抽
-                    </button>
-                </div>
-                <p id="drawPrice" style="color: #aaa; margin-top: 15px;">消費 $<span>100</span></p>
-
+            <!-- 下方按鈕 (輔助) -->
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 30px;">
+                <button id="drawBtn" class="btn-gacha" onclick="startDraw()" style="width: 220px; font-size: 1.3rem;">
+                    🎲 投幣轉蛋！
+                </button>
+                <button id="trialBtn" class="btn btn-outline" onclick="startTrial()"
+                    style="width: 150px; color: #fff; border-color: rgba(255,255,255,0.3); font-size: 0.9rem;">
+                    🧪 免費試抽
+                </button>
+                <p id="drawPrice" style="color: #aaa; margin-top: 5px;">消費 $<span>100</span></p>
                 <button class="btn btn-outline" onclick="closeGacha()"
-                    style="color: white; border-color: white; margin-top: 20px;">
+                    style="color: white; border-color: white; margin-top: 10px;">
                     ← 返回選擇
                 </button>
             </div>
@@ -141,18 +161,18 @@
             function startDraw() {
                 if (!selectedTheme) return;
 
-                // 檢查是否登入
-                const currentUser = [[${ currentUser != null}]];
-            if (!currentUser) {
-                if (confirm('正式抽獎需要先登入，是否前往登入頁面？\n(您也可以先點擊「免費試抽」體驗)')) {
-                    window.location.href = '/login';
+                // 檢查是否登入 (使用 Thymeleaf 安全內聯)
+                const currentUser = /*[[${currentUser != null}]]*/ false;
+                if (!currentUser) {
+                    if (confirm('正式抽獎需要先登入，是否前往登入頁面？\n(您也可以先點擊「免費試抽」體驗)')) {
+                        window.location.href = '/login';
+                    }
+                    return;
                 }
-                return;
-            }
 
-            // 顯示確認模態框
-            document.getElementById('confirmPrice').textContent = selectedTheme.price;
-            document.getElementById('confirmModal').style.display = 'flex';
+                // 顯示確認模態框
+                document.getElementById('confirmPrice').textContent = selectedTheme.price;
+                document.getElementById('confirmModal').style.display = 'flex';
             }
 
             function startTrial() {
@@ -169,80 +189,83 @@
 
                 const btn = document.getElementById('drawBtn');
                 const trialBtn = document.getElementById('trialBtn');
-                btn.disabled = true;
+                const handle = document.getElementById('gachaHandle');
+                const capsuleExit = document.getElementById('capsuleExit');
+                const capsule = document.getElementById('capsule');
+
+                if (btn) btn.disabled = true;
                 if (trialBtn) trialBtn.disabled = true;
 
-                const originalBtnText = btn.textContent;
-                btn.textContent = isTrial ? '試抽中...' : '轉動中...';
+                // 1. 旋轉手把
+                handle.classList.add('rotating');
+                playHandleSound();
 
-                // 顯示遮罩
+                // 顯示全域遮罩
                 if (window.showMask) window.showMask();
 
-                const capsule = document.getElementById('capsule');
-                const idleMachine = document.getElementById('idleMachine');
+                setTimeout(() => {
+                    handle.classList.remove('rotating');
 
-                idleMachine.style.display = 'none';
-                capsule.style.display = 'block';
-                capsule.style.animation = 'capsule-shake 0.3s ease-in-out infinite';
+                    // 2. 扭蛋掉落
+                    capsuleExit.style.display = 'block';
+                    capsule.classList.add('capsule-pro');
 
-                const body = 'themeId=' + selectedTheme.id + (isTrial ? '&isTrial=true' : '');
-
-                fetch('/mystery-box/draw', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: body
-                })
-                    .then(response => {
-                        if (response.redirected) {
-                            window.location.href = response.url;
-                            return;
-                        }
-                        return response.text();
+                    // 非同步請求結果
+                    const body = 'themeId=' + selectedTheme.id + (isTrial ? '&isTrial=true' : '');
+                    fetch('/gacha/draw', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: body
                     })
-                    .then(html => {
-                        if (!html) return;
+                        .then(response => response.json())
+                        .then(data => {
+                            if (!data.success) {
+                                alert(data.message || '抽獎失敗');
+                                if (window.hideMask) window.hideMask();
+                                location.reload();
+                                return;
+                            }
 
-                        // 解析返回的 HTML 取得結果
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html');
+                            const item = data.wonItem;
+                            const prizeName = item.name || '未知獎品';
+                            const prizeWeight = item.weight || '?';
+                            const prizeValue = item.estimatedValue || '?';
 
-                        // 嘗試從返回頁面提取獎品資訊
-                        const prizeNameEl = doc.getElementById('prizeNameResult');
-                        const prizeWeightEl = doc.getElementById('prizeWeightResult');
-                        const prizeValueEl = doc.getElementById('prizeValueResult');
-
-                        let prizeName = prizeNameEl ? prizeNameEl.textContent : '未知獎品';
-                        let prizeWeight = prizeWeightEl ? prizeWeightEl.querySelector('span')?.textContent || '?' : '?';
-                        let prizeValue = prizeValueEl ? prizeValueEl.querySelector('span')?.textContent || '?' : '?';
-
-                        // 播放開獎動畫
-                        setTimeout(() => {
-                            capsule.style.animation = 'capsule-open 0.5s ease forwards';
-
+                            // 3. 延時開殼並顯示結果
                             setTimeout(() => {
                                 playWinSound();
                                 spawnConfetti();
                                 showAjaxResult(prizeName, prizeWeight, prizeValue, isTrial);
 
-                                btn.disabled = false;
+                                // 重置狀態
+                                if (btn) btn.disabled = false;
                                 if (trialBtn) trialBtn.disabled = false;
-                                btn.textContent = originalBtnText;
-                                capsule.style.display = 'none';
-                                capsule.style.animation = '';
-                                idleMachine.style.display = 'flex';
-                            }, 500);
-                        }, 1500);
-                    })
-                    .catch(err => {
-                        console.error('Error:', err);
-                        alert('服務異常，請稍後重試');
-                        btn.disabled = false;
-                        if (trialBtn) trialBtn.disabled = false;
-                        btn.textContent = originalBtnText;
-                        capsule.style.display = 'none';
-                        idleMachine.style.display = 'flex';
-                        if (window.hideMask) window.hideMask();
-                    });
+                                capsuleExit.style.display = 'none';
+                                capsule.classList.remove('capsule-pro');
+                            }, 2000); // 掉落動畫結束後再過一會開獎
+                        })
+                        .catch(err => {
+                            console.error('Error:', err);
+                            alert('網路異常或系統錯誤，請確認餘額後重試');
+                            if (window.hideMask) window.hideMask();
+                        });
+
+                }, 800); // 手把轉完一圈的時間
+            }
+
+            function playHandleSound() {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const g = ctx.createGain();
+                    osc.connect(g); g.connect(ctx.destination);
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.2);
+                    g.gain.setValueAtTime(0.1, ctx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+                    osc.start(); osc.stop(ctx.currentTime + 0.2);
+                } catch (e) { }
             }
 
             // 播放中獎音效
@@ -258,12 +281,13 @@
                     oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
                     oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.15);
                     oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.3);
+                    oscillator.frequency.setValueAtTime(1046, audioContext.currentTime + 0.45);
 
                     gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.7);
 
                     oscillator.start(audioContext.currentTime);
-                    oscillator.stop(audioContext.currentTime + 0.5);
+                    oscillator.stop(audioContext.currentTime + 0.7);
                 } catch (e) { }
             }
 
@@ -274,22 +298,26 @@
                 document.body.appendChild(container);
 
                 const colors = ['#ff6b6b', '#ffd93d', '#6c5ce7', '#00cec9', '#fd79a8', '#55efc4'];
-                for (let i = 0; i < 50; i++) {
+                for (let i = 0; i < 60; i++) {
                     const piece = document.createElement('div');
                     piece.className = 'confetti-piece';
                     piece.style.left = Math.random() * 100 + '%';
                     piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    piece.style.width = (Math.random() * 10 + 5) + 'px';
+                    piece.style.height = piece.style.width;
+                    piece.style.animationDuration = (Math.random() * 2 + 2) + 's';
                     piece.style.animationDelay = Math.random() * 0.5 + 's';
                     container.appendChild(piece);
                 }
                 setTimeout(() => container.remove(), 4000);
             }
 
-            // 顯示 AJAX 結果
-            function showAjaxResult(name, weight, value) {
+            function showAjaxResult(name, weight, value, isTrial) {
                 document.getElementById('prizeNameResult').textContent = name;
                 document.getElementById('prizeWeightResult').querySelector('span').textContent = weight;
                 document.getElementById('prizeValueResult').querySelector('span').textContent = value;
+                document.getElementById('trialBadge').style.display = isTrial ? 'inline-block' : 'none';
+                document.getElementById('trialAction').style.display = isTrial ? 'block' : 'none';
                 document.getElementById('resultModal').style.display = 'flex';
             }
 
@@ -299,18 +327,11 @@
                 location.reload();
             }
 
-            // 檢查是否有中獎結果
+            // 初始數據檢查
             document.addEventListener('DOMContentLoaded', function () {
-                const wonItem = /*[[${wonItem != null}]]*/ false;
-                if (wonItem) {
-                    const name = '[[${wonItem?.name}]]';
-                    const weight = '[[${wonItem?.weight}]]';
-                    const value = '[[${wonItem?.estimatedValue}]]';
-
-                    document.getElementById('prizeNameResult').textContent = name;
-                    document.getElementById('prizeWeightResult').querySelector('span').textContent = weight;
-                    document.getElementById('prizeValueResult').querySelector('span').textContent = '$' + value;
-                    document.getElementById('resultModal').style.display = 'flex';
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has('error')) {
+                    console.log('Error found in URL');
                 }
             });
         </script>

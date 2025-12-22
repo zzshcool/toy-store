@@ -1,418 +1,183 @@
--- =====================================================
--- 抽獎系統初始化測試資料
--- 六大 IP：洛克人、獵人、七龍珠、進擊的巨人、鋼之鍊金術師、天竺鼠車車
--- =====================================================
+-- =============================================================================
+-- 【資深後端工程師：最終重構 - 顯式 ID 與 確定性資料種子】
+-- 1. 確定性 (Determinism)：硬編碼 Primary Key ID，確保開發環境數據完全可預測且易於除錯。
+-- 2. 邏輯耦合：依賴顯式 ID 進行父子關聯，徹底解決自增 ID 偏移與函式相容性問題。
+-- 3. 工程實務：符合「不要強制依賴物理外鍵自增」的手法，方便數據跨環境遷移。
+-- 4. 模組化結構：依 IP 系列分組展示資料。
+-- =============================================================================
 
--- 清除舊資料（僅開發環境使用）
--- DELETE FROM ichiban_slots;
--- DELETE FROM ichiban_prizes;
--- DELETE FROM ichiban_boxes;
--- DELETE FROM roulette_slots;
--- DELETE FROM roulette_games;
--- DELETE FROM bingo_cells;
--- DELETE FROM bingo_games;
--- DELETE FROM gacha_ips;
+-- ########## 0. 環境重置 ##########
+DELETE FROM ichiban_slots;
+DELETE FROM ichiban_prizes;
+DELETE FROM ichiban_boxes;
+DELETE FROM roulette_slots;
+DELETE FROM roulette_games;
+DELETE FROM bingo_cells;
+DELETE FROM bingo_games;
+DELETE FROM gacha_ips;
+DELETE FROM redeem_shop_items;
 
--- =====================================================
--- 1. IP 主題
--- =====================================================
-MERGE INTO gacha_ips (name, description, image_url, status, created_at) KEY(name) VALUES 
-('洛克人', 'Mega Man 經典遊戲系列，藍色機器人英雄的冒險故事', '/images/ip/rockman.jpg', 'ACTIVE', NOW()),
-('獵人', 'Hunter × Hunter 獵人執照的考驗之旅', '/images/ip/hunter.jpg', 'ACTIVE', NOW()),
-('七龍珠', 'Dragon Ball 集齊七顆龍珠實現願望', '/images/ip/dragonball.jpg', 'ACTIVE', NOW()),
-('進擊的巨人', 'Attack on Titan 人類與巨人的生存戰鬥', '/images/ip/aot.jpg', 'ACTIVE', NOW()),
-('鋼之鍊金術師', 'Fullmetal Alchemist 等價交換的煉金術世界', '/images/ip/fma.jpg', 'ACTIVE', NOW()),
-('天竺鼠車車', 'PUI PUI Molcar 可愛的毛茸茸車車冒險', '/images/ip/molcar.jpg', 'ACTIVE', NOW()),
-('神奇寶貝', 'Pokémon 與寶可夢一起成為最強訓練家', '/images/ip/pokemon.jpg', 'ACTIVE', NOW()),
-('鏈鋸人', 'Chainsaw Man 電次與惡魔的血腥戰鬥', '/images/ip/chainsawman.jpg', 'ACTIVE', NOW()),
-('BLEACH死神', 'BLEACH 黑崎一護與死神代理的覺醒', '/images/ip/bleach.jpg', 'ACTIVE', NOW()),
-('美少女戰士', 'Sailor Moon 月野兔與水手服戰士的正義', '/images/ip/sailormoon.jpg', 'ACTIVE', NOW()),
-('灌籃高手', 'SLAM DUNK 櫻木花道的籃球夢想', '/images/ip/slamdunk.jpg', 'ACTIVE', NOW()),
-('鬼滅之刃', 'Demon Slayer 炭治郎與禰豆子的復仇之旅', '/images/ip/kimetsu.jpg', 'ACTIVE', NOW()),
-('超人力霸王', 'Ultraman 光之巨人守護地球的使命', '/images/ip/ultraman.jpg', 'ACTIVE', NOW()),
-('櫻桃小丸子', 'Chibi Maruko-chan 小丸子的日常生活故事', '/images/ip/maruko.jpg', 'ACTIVE', NOW()),
-('死亡筆記本', 'Death Note 夜神月與L的智慧對決', '/images/ip/deathnote.jpg', 'ACTIVE', NOW()),
-('銀魂', 'Gintama 坂田銀時的萬事屋搞笑日常', '/images/ip/gintama.jpg', 'ACTIVE', NOW()),
-('新網球王子', 'The Prince of Tennis 越前龍馬的網球之路', '/images/ip/tenipuri.jpg', 'ACTIVE', NOW()),
-('庫洛魔法使', 'Cardcaptor Sakura 小櫻收集庫洛牌的冒險', '/images/ip/cardcaptor.jpg', 'ACTIVE', NOW()),
-('ONE PIECE航海王', 'ONE PIECE 魯夫與夥伴們的海賊王之夢', '/images/ip/onepiece.jpg', 'ACTIVE', NOW()),
-('JoJo的奇妙冒險', 'JoJo''s Bizarre Adventure 喬斯達家族的替身之戰', '/images/ip/jojo.jpg', 'ACTIVE', NOW());
+-- ########## 1. IP 主題 (ID 1-20) ##########
+INSERT INTO gacha_ips (id, name, description, image_url, status, created_at) VALUES 
+(1, '洛克人', 'Mega Man 經典英雄系列', '/images/ip/rockman.jpg', 'ACTIVE', NOW()),
+(2, '獵人', 'Hunter × Hunter 念能力冒險', '/images/ip/hunter.jpg', 'ACTIVE', NOW()),
+(3, '七龍珠', 'Dragon Ball 傳奇戰鬥', '/images/ip/dragonball.jpg', 'ACTIVE', NOW()),
+(4, '進擊的巨人', 'Attack on Titan 調查兵團', '/images/ip/aot.jpg', 'ACTIVE', NOW()),
+(5, '鋼之鍊金術師', 'Fullmetal Alchemist 等價交換', '/images/ip/fma.jpg', 'ACTIVE', NOW()),
+(6, '天竺鼠車車', 'PUI PUI Molcar 療癒小車', '/images/ip/molcar.jpg', 'ACTIVE', NOW()),
+(7, '神奇寶貝', 'Pokémon 成為大師', '/images/ip/pokemon.jpg', 'ACTIVE', NOW()),
+(8, '鏈鋸人', 'Chainsaw Man 惡魔獵人', '/images/ip/chainsawman.jpg', 'ACTIVE', NOW()),
+(9, 'BLEACH死神', 'BLEACH 卍解釋放', '/images/ip/bleach.jpg', 'ACTIVE', NOW()),
+(10, '美少女戰士', 'Sailor Moon 正義化身', '/images/ip/sailormoon.jpg', 'ACTIVE', NOW()),
+(11, '灌籃高手', 'SLAM DUNK 全國大賽', '/images/ip/slamdunk.jpg', 'ACTIVE', NOW()),
+(12, '鬼滅之刃', 'Demon Slayer 復仇之旅', '/images/ip/kimetsu.jpg', 'ACTIVE', NOW()),
+(13, '超人力霸王', 'Ultraman 守護地球', '/images/ip/ultra.jpg', 'ACTIVE', NOW()),
+(14, '櫻桃小丸子', 'Chibi Maruko-chan', '/images/ip/maruko.jpg', 'ACTIVE', NOW()),
+(15, '死亡筆記本', 'Death Note 智慧對決', '/images/ip/deathnote.jpg', 'ACTIVE', NOW()),
+(16, '銀魂', 'Gintama 萬事屋日常', '/images/ip/gintama.jpg', 'ACTIVE', NOW()),
+(17, '新網球王子', 'Prince of Tennis', '/images/ip/tenipuri.jpg', 'ACTIVE', NOW()),
+(18, '庫洛魔法使', 'Cardcaptor Sakura', '/images/ip/cardcaptor.jpg', 'ACTIVE', NOW()),
+(19, 'ONE PIECE航海王', '和之國大章節', '/images/ip/onepiece.jpg', 'ACTIVE', NOW()),
+(20, 'JoJo的奇妙冒險', '黃金之風', '/images/ip/jojo.jpg', 'ACTIVE', NOW());
 
--- =====================================================
--- 2. 一番賞箱體 (每個 IP 一個)
--- =====================================================
-INSERT INTO ichiban_boxes (ip_id, name, description, image_url, price_per_draw, max_slots, total_slots, status, created_at) VALUES 
-(1, '洛克人一番賞 Vol.1', '經典藍色轟炸機系列首發！限量公仔與周邊商品', '/images/ichiban/rockman1.jpg', 680, 80, 20, 'ACTIVE', NOW()),
-(2, '獵人一番賞 貪婪之島篇', '小傑與奇犽的冒險，稀有念能力系周邊', '/images/ichiban/hunter1.jpg', 750, 80, 25, 'ACTIVE', NOW()),
-(3, '七龍珠一番賞 賽亞人篇', '悟空變身超級賽亞人經典場景復刻', '/images/ichiban/db1.jpg', 800, 80, 20, 'ACTIVE', NOW()),
-(4, '進擊的巨人一番賞 最終季', '艾連與調查兵團最終決戰紀念', '/images/ichiban/aot1.jpg', 720, 80, 20, 'ACTIVE', NOW()),
-(5, '鋼之鍊金術師一番賞', '艾力克兄弟的等價交換之旅', '/images/ichiban/fma1.jpg', 700, 80, 20, 'ACTIVE', NOW()),
-(6, '天竺鼠車車一番賞 PUI PUI篇', '毛茸茸的車車大集合', '/images/ichiban/molcar1.jpg', 580, 80, 16, 'ACTIVE', NOW()),
-(7, '神奇寶貝一番賞 寶可夢大師', '皮卡丘與傳說寶可夢限定周邊', '/images/ichiban/pokemon1.jpg', 750, 80, 20, 'ACTIVE', NOW()),
-(8, '鏈鋸人一番賞 惡魔獵人', '電次與瑪奇瑪的血腥戰鬥紀念', '/images/ichiban/csm1.jpg', 780, 80, 20, 'ACTIVE', NOW()),
-(9, 'BLEACH死神一番賞 卍解篇', '黑崎一護與隊長們的卍解場景', '/images/ichiban/bleach1.jpg', 720, 80, 20, 'ACTIVE', NOW()),
-(10, '美少女戰士一番賞 水晶篇', '月野兔與水手戰士華麗變身', '/images/ichiban/sailor1.jpg', 700, 80, 20, 'ACTIVE', NOW()),
-(11, '灌籃高手一番賞 全國大賽', '湘北籃球隊熱血對決', '/images/ichiban/slam1.jpg', 750, 80, 20, 'ACTIVE', NOW()),
-(12, '鬼滅之刃一番賞 無限列車', '炭治郎與煉獄杏壽郎的戰鬥', '/images/ichiban/kimetsu1.jpg', 800, 80, 20, 'ACTIVE', NOW()),
-(13, '超人力霸王一番賞 光之巨人', '初代奧特曼與怪獸對決', '/images/ichiban/ultra1.jpg', 680, 80, 20, 'ACTIVE', NOW()),
-(14, '櫻桃小丸子一番賞 日常篇', '小丸子與班上同學的歡樂時光', '/images/ichiban/maruko1.jpg', 550, 80, 16, 'ACTIVE', NOW()),
-(15, '死亡筆記本一番賞 對決篇', '夜神月與L的智慧之戰', '/images/ichiban/dn1.jpg', 720, 80, 20, 'ACTIVE', NOW()),
-(16, '銀魂一番賞 萬事屋篇', '銀時與神樂新八的搞笑日常', '/images/ichiban/gintama1.jpg', 700, 80, 20, 'ACTIVE', NOW()),
-(17, '新網球王子一番賞 U-17', '越前龍馬與世界強豪對決', '/images/ichiban/tenipuri1.jpg', 680, 80, 20, 'ACTIVE', NOW()),
-(18, '庫洛魔法使一番賞 封印篇', '小櫻收集庫洛牌的冒險', '/images/ichiban/ccs1.jpg', 700, 80, 20, 'ACTIVE', NOW()),
-(19, 'ONE PIECE航海王一番賞 和之國', '魯夫與四皇的頂上決戰', '/images/ichiban/op1.jpg', 850, 80, 25, 'ACTIVE', NOW()),
-(20, 'JoJo的奇妙冒險一番賞 黃金之風', '喬魯諾與護衛隊的替身之戰', '/images/ichiban/jojo1.jpg', 780, 80, 20, 'ACTIVE', NOW());
+-- ########## 2. 一番賞箱體 (ID 1-20，與 IP ID 對應) ##########
+INSERT INTO ichiban_boxes (id, ip_id, name, description, image_url, price_per_draw, max_slots, total_slots, status, created_at) VALUES 
+(1, 1, '洛克人一番賞', '經典藍色轟炸機', '/images/ichiban/rockman1.jpg', 680, 80, 80, 'ACTIVE', NOW()),
+(2, 2, '獵人一番賞', '貪婪之島限定', '/images/ichiban/hunter1.jpg', 750, 80, 80, 'ACTIVE', NOW()),
+(3, 3, '七龍珠一番賞', '賽亞人傳奇', '/images/ichiban/db1.jpg', 800, 80, 80, 'ACTIVE', NOW()),
+(4, 4, '進擊的巨人一番賞', '最終季紀念', '/images/ichiban/aot1.jpg', 720, 80, 80, 'ACTIVE', NOW()),
+(5, 5, '鋼之鍊金術師一番賞', '鍊成陣大賞', '/images/ichiban/fma1.jpg', 700, 80, 80, 'ACTIVE', NOW()),
+(6, 6, '天竺鼠車車一番賞', 'PUI PUI篇', '/images/ichiban/molcar1.jpg', 580, 80, 80, 'ACTIVE', NOW()),
+(7, 7, '神奇寶貝一番賞', '寶可夢大師', '/images/ichiban/pokemon1.jpg', 750, 80, 80, 'ACTIVE', NOW()),
+(8, 8, '鏈鋸人一番賞', '惡魔獵人大賞', '/images/ichiban/csm1.jpg', 780, 80, 80, 'ACTIVE', NOW()),
+(9, 9, 'BLEACH死神一番賞', '卍解篇收藏', '/images/ichiban/bleach1.jpg', 720, 80, 80, 'ACTIVE', NOW()),
+(10, 10, '美少女戰士一番賞', '水晶篇限定', '/images/ichiban/sailor1.jpg', 700, 80, 80, 'ACTIVE', NOW()),
+(11, 11, '灌籃高手一番賞', '全國大賽熱血', '/images/ichiban/slam1.jpg', 750, 80, 80, 'ACTIVE', NOW()),
+(12, 12, '鬼滅之刃一番賞', '無限列車紀念', '/images/ichiban/kimetsu1.jpg', 800, 80, 80, 'ACTIVE', NOW()),
+(13, 13, '超人力霸王一番賞', '光之巨人再現', '/images/ichiban/ultra1.jpg', 680, 80, 80, 'ACTIVE', NOW()),
+(14, 14, '櫻桃小丸子一番賞', '日常溫馨系列', '/images/ichiban/maruko1.jpg', 550, 80, 80, 'ACTIVE', NOW()),
+(15, 15, '死亡筆記本一番賞', '對決篇收藏', '/images/ichiban/dn1.jpg', 720, 80, 80, 'ACTIVE', NOW()),
+(16, 16, '銀魂一番賞', '萬事屋精選', '/images/ichiban/gintama1.jpg', 700, 80, 80, 'ACTIVE', NOW()),
+(17, 17, '新網球王子一番賞', '王子之路', '/images/ichiban/tenipuri1.jpg', 680, 80, 80, 'ACTIVE', NOW()),
+(18, 18, '庫洛魔法使一番賞', '庫洛牌典藏', '/images/ichiban/ccs1.jpg', 700, 80, 80, 'ACTIVE', NOW()),
+(19, 19, 'ONE PIECE航海王一番賞', '和之國篇大賞', '/images/ichiban/op1.jpg', 850, 80, 80, 'ACTIVE', NOW()),
+(20, 20, 'JoJo的奇妙冒險一番賞', '黃金之風紀念', '/images/ichiban/jojo1.jpg', 780, 80, 80, 'ACTIVE', NOW());
 
--- =====================================================
--- 3. 一番賞獎品 (洛克人 - ID=1)
--- =====================================================
-INSERT INTO ichiban_prizes (box_id, rank, name, description, image_url, estimated_value, total_quantity, remaining_quantity, sort_order) VALUES 
-(1, 'A', '洛克人 1/6 限量公仔', '限量精緻可動公仔，高度約25cm', '/images/prize/rm_a.jpg', 2500, 1, 1, 1),
-(1, 'B', '萊特博士 Q版公仔', '可愛Q版造型，附研究室配件', '/images/prize/rm_b.jpg', 1200, 2, 2, 2),
-(1, 'C', '洛克人 壓克力立牌組', '經典造型立牌三入組', '/images/prize/rm_c.jpg', 500, 3, 3, 3),
-(1, 'D', '洛克人 馬克杯', 'E罐造型馬克杯', '/images/prize/rm_d.jpg', 300, 4, 4, 4),
-(1, 'E', '洛克人 資料夾組', '文具周邊五件組', '/images/prize/rm_e.jpg', 150, 8, 8, 5),
-(1, 'LAST', '洛克人 簽名板', '藤原得郎老師親筆簽名板', '/images/prize/rm_last.jpg', 3000, 1, 1, 99);
+-- ########## 3. 一番賞獎品 (ID 顯式定址: 10 * (box_id-1) + offset) ##########
+-- 為熱門 IP 提供特化獎項名稱
+INSERT INTO ichiban_prizes (id, box_id, rank, name, description, image_url, estimated_value, total_quantity, remaining_quantity, sort_order) VALUES
+-- IP 1: 洛克人 (Rockman)
+(1, 1, 'A', '洛克人 X 1/12 比例可動公仔 (艾克斯)', '精細塗裝，含多種手口更換件', '/images/prize/rockman_a.jpg', 2800, 1, 1, 1),
+(2, 1, 'B', '洛克人 Zero 經典紅色裝甲模型', '動漫忠實還原，Z噴氣配件', '/images/prize/rockman_b.jpg', 2200, 2, 2, 2),
+(3, 1, 'C', '洛克人系列 亞克力立牌 (全6種)', '精美透明亞克力，可組合展示', '/images/prize/rockman_c.jpg', 450, 5, 5, 3),
+(9, 1, 'I', '洛克人經典 E 罐 造型馬克杯', '極具辨識度的回血道具造型', '/images/prize/rockman_i.jpg', 350, 15, 15, 9),
+(10, 1, 'LAST', 'LAST賞 洛克人 35 週年金色紀念公仔', '全金屬質感噴塗，收藏首選', '/images/prize/rockman_last.jpg', 5000, 1, 1, 10),
 
--- 獵人獎品 (ID=2)
-INSERT INTO ichiban_prizes (box_id, rank, name, description, image_url, estimated_value, total_quantity, remaining_quantity, sort_order) VALUES 
-(2, 'A', '小傑 念能力發動公仔', 'じゃじゃん拳場景重現', '/images/prize/hxh_a.jpg', 2800, 1, 1, 1),
-(2, 'B', '奇犽 電擊造型公仔', '電光mode造型', '/images/prize/hxh_b.jpg', 1500, 2, 2, 2),
-(2, 'C', '獵人執照 複製品', '1:1精緻複製品', '/images/prize/hxh_c.jpg', 800, 4, 4, 3),
-(2, 'D', '揍敵客家族 掛畫', 'A3尺寸精美掛畫', '/images/prize/hxh_d.jpg', 400, 6, 6, 4),
-(2, 'E', '貪婪之島卡片組', '稀有卡片10張組', '/images/prize/hxh_e.jpg', 200, 10, 10, 5),
-(2, 'LAST', '團長 西索對決場景', '限定版雙人組公仔', '/images/prize/hxh_last.jpg', 4000, 1, 1, 99);
+-- IP 19: 航海王 (One Piece)
+(181, 19, 'A', '魯夫 尼卡形態 「解放之鼓」公仔', '震撼的太陽神姿態，帶有透明雲霧特效', '/images/prize/op_a.jpg', 3500, 1, 1, 1),
+(182, 19, 'B', '索隆 三刀流奧義 「九山八海」場景模型', '極限動態雕刻，氣勢驚人', '/images/prize/op_b.jpg', 3000, 2, 2, 2),
+(183, 19, 'C', '香吉士 魔神風腳 模型', '腿部透明發光特件', '/images/prize/op_c.jpg', 2500, 3, 3, 3),
+(190, 19, 'LAST', 'LAST賞 羅傑與白鬍子 世紀之對戰景品', '兩大傳奇決鬥場景復刻', '/images/prize/op_last.jpg', 8000, 1, 1, 10),
 
--- 七龍珠獎品 (ID=3)
-INSERT INTO ichiban_prizes (box_id, rank, name, description, image_url, estimated_value, total_quantity, remaining_quantity, sort_order) VALUES 
-(3, 'A', '悟空 超級賽亞人公仔', '經典變身場景', '/images/prize/db_a.jpg', 3000, 1, 1, 1),
-(3, 'B', '達爾 王子公仔', '驕傲的賽亞人王子', '/images/prize/db_b.jpg', 1600, 2, 2, 2),
-(3, 'C', '七顆龍珠 水晶球組', '透明水晶材質', '/images/prize/db_c.jpg', 1000, 3, 3, 3),
-(3, 'D', '筋斗雲 造型燈', 'LED夜燈', '/images/prize/db_d.jpg', 500, 5, 5, 4),
-(3, 'E', '龜仙人 周邊組', '墨鏡+龜仙流道服', '/images/prize/db_e.jpg', 250, 7, 7, 5),
-(3, 'LAST', '神龍 限定公仔', '可發光神龍', '/images/prize/db_last.jpg', 5000, 1, 1, 99);
+-- 其餘 IP 使用迴圈生成高品質通用名稱 (略)
+-- 為節省空間，其餘獎項將根據 IP 名稱 + 特化字尾生成
+(11, 2, 'A', '獵人 奇犽 神速形態限定模型', '雷光特效環繞', '/images/prize/hunter_a.jpg', 2600, 1, 1, 1),
+(21, 3, 'A', '七龍珠 孫悟空 自在極意功 雕塑', '銀髮閃耀，氣場爆裂', '/images/prize/db_a.jpg', 3200, 1, 1, 1),
+(111, 12, 'A', '鬼滅之刃 煉獄杏壽郎 炎之呼吸公仔', '大哥沒有輸！華麗火焰效果', '/images/prize/kimetsu_a.jpg', 3000, 1, 1, 1);
 
--- 進擊的巨人獎品 (ID=4)
-INSERT INTO ichiban_prizes (box_id, rank, name, description, image_url, estimated_value, total_quantity, remaining_quantity, sort_order) VALUES 
-(4, 'A', '艾連 始祖巨人公仔', '最終決戰造型', '/images/prize/aot_a.jpg', 2800, 1, 1, 1),
-(4, 'B', '兵長 立體機動裝置', '1/6比例複製品', '/images/prize/aot_b.jpg', 1500, 2, 2, 2),
-(4, 'C', '調查兵團披風', '可穿戴複製品', '/images/prize/aot_c.jpg', 800, 3, 3, 3),
-(4, 'D', '三笠 壓克力掛畫', 'A2尺寸', '/images/prize/aot_d.jpg', 400, 5, 5, 4),
-(4, 'E', '超大型巨人 徽章組', '精密金屬徽章', '/images/prize/aot_e.jpg', 200, 7, 7, 5),
-(4, 'LAST', '始祖尤彌爾 限定公仔', '限量版', '/images/prize/aot_last.jpg', 4500, 1, 1, 99);
+-- 補全其餘 150+ 獎項 (使用更具商業感的生成方式)
+INSERT INTO ichiban_prizes (id, box_id, rank, name, description, image_url, estimated_value, total_quantity, remaining_quantity, sort_order)
+SELECT 
+    (b.id - 1) * 10 + r.idx, 
+    b.id, r.rnk, 
+    CASE 
+        WHEN r.idx=1 THEN CONCAT(gi.name, ' 官方限定比例模型 (A賞)')
+        WHEN r.idx=2 THEN CONCAT(gi.name, ' 角色經典場景公仔 (B賞)')
+        WHEN r.idx=3 THEN CONCAT(gi.name, ' 限量精選版模型 (C賞)')
+        WHEN r.rnk='LAST' THEN CONCAT('LAST賞 ', gi.name, ' 終極限量隱藏版')
+        ELSE CONCAT(gi.name, ' ', r.disp)
+    END,
+    '精選角色週邊，官方正版授權', 
+    CONCAT('/images/prize/generic_', r.idx, '.jpg'), 
+    CASE WHEN r.idx=1 THEN 2500 WHEN r.idx=10 THEN 4500 ELSE 150 END,
+    CASE WHEN r.idx=1 OR r.idx=10 THEN 1 ELSE 15 END,
+    CASE WHEN r.idx=1 OR r.idx=10 THEN 1 ELSE 15 END,
+    r.idx
+FROM ichiban_boxes b
+JOIN gacha_ips gi ON gi.id = b.ip_id
+CROSS JOIN (
+    SELECT 1 as idx, 'A' as rnk, 'A賞 特大公仔' as disp UNION ALL
+    SELECT 2, 'B', 'B賞 限量模型' UNION ALL
+    SELECT 3, 'C', 'C賞 造型立牌' UNION ALL
+    SELECT 4, 'D', 'D賞 實用馬克杯' UNION ALL
+    SELECT 5, 'E', 'E賞 限定貼紙組' UNION ALL
+    SELECT 6, 'F', 'F賞 收藏色紙' UNION ALL
+    SELECT 7, 'G', 'G賞 造型吊飾' UNION ALL
+    SELECT 8, 'H', 'H賞 迷你手帕' UNION ALL
+    SELECT 9, 'I', 'I賞 紀念磁鐵' UNION ALL
+    SELECT 10, 'LAST', 'LAST賞 隱藏紀念品'
+) r
+-- 避免與上面手動插入的 ID 衝突
+WHERE NOT EXISTS (SELECT 1 FROM ichiban_prizes p2 WHERE p2.id = (b.id - 1) * 10 + r.idx);
 
--- 鋼之鍊金術師獎品 (ID=5)
-INSERT INTO ichiban_prizes (box_id, rank, name, description, image_url, estimated_value, total_quantity, remaining_quantity, sort_order) VALUES 
-(5, 'A', '愛德華 鋼鍊手臂公仔', '可動機械手臂', '/images/prize/fma_a.jpg', 2600, 1, 1, 1),
-(5, 'B', '阿爾馮斯 鎧甲公仔', '可開蓋', '/images/prize/fma_b.jpg', 1400, 2, 2, 2),
-(5, 'C', '國家鍊金術師銀懷錶', '精密複製品', '/images/prize/fma_c.jpg', 900, 3, 3, 3),
-(5, 'D', '鍊成陣 地毯', '圓形地毯', '/images/prize/fma_d.jpg', 500, 5, 5, 4),
-(5, 'E', '火焰鍊金術士 周邊組', '馬斯坦主題周邊', '/images/prize/fma_e.jpg', 250, 7, 7, 5),
-(5, 'LAST', '賢者之石 LED燈', '發光特效', '/images/prize/fma_last.jpg', 3500, 1, 1, 99);
+-- ########## 4. 一番賞格子 (80 格) ##########
+INSERT INTO ichiban_slots (box_id, slot_number, prize_id, status)
+SELECT 
+    b.id, s.x, 
+    (b.id - 1) * 10 + 
+    CASE 
+        WHEN s.x = 1 THEN 1 -- A賞 (1)
+        WHEN s.x BETWEEN 2 AND 3 THEN 2 -- B賞 (2)
+        WHEN s.x BETWEEN 4 AND 6 THEN 3 -- C賞 (3)
+        WHEN s.x BETWEEN 7 AND 12 THEN 4 -- D賞 (6)
+        WHEN s.x BETWEEN 13 AND 20 THEN 5 -- E賞 (8)
+        WHEN s.x BETWEEN 21 AND 35 THEN 6 -- F賞 (15)
+        WHEN s.x BETWEEN 36 AND 50 THEN 7 -- G賞 (15)
+        WHEN s.x BETWEEN 51 AND 65 THEN 8 -- H賞 (15)
+        WHEN s.x BETWEEN 66 AND 79 THEN 9 -- I賞 (14)
+        ELSE 10 -- LAST (1)
+    END, 
+    'AVAILABLE'
+FROM ichiban_boxes b
+CROSS JOIN SYSTEM_RANGE(1, 80) s;
 
--- 天竺鼠車車獎品 (ID=6)
-INSERT INTO ichiban_prizes (box_id, rank, name, description, image_url, estimated_value, total_quantity, remaining_quantity, sort_order) VALUES 
-(6, 'A', '馬鈴薯 大型絨毛娃娃', '40cm超大尺寸', '/images/prize/mc_a.jpg', 1800, 1, 1, 1),
-(6, 'B', '西羅摩 絨毛娃娃', '30cm中型', '/images/prize/mc_b.jpg', 1000, 2, 2, 2),
-(6, 'C', '車車 造型抱枕', '超柔軟材質', '/images/prize/mc_c.jpg', 500, 3, 3, 3),
-(6, 'D', '車車 馬克杯組', '三入陶瓷杯', '/images/prize/mc_d.jpg', 350, 4, 4, 4),
-(6, 'E', '車車 貼紙組', '50張精美貼紙', '/images/prize/mc_e.jpg', 150, 5, 5, 5),
-(6, 'LAST', '車車樂園 場景組', '可停車場景', '/images/prize/mc_last.jpg', 2500, 1, 1, 99);
+-- ########## 5. 轉盤與九宮格特化獎項 ##########
+INSERT INTO roulette_games (id, ip_id, name, description, image_url, price_per_spin, max_slots, total_slots, status, created_at)
+SELECT id, id, CONCAT(name, ' 極速轉盤'), '最高有機率獲得 1000 碎片！', '/images/roulette/generic.jpg', 150, 25, 8, 'ACTIVE', NOW() FROM gacha_ips;
 
--- =====================================================
--- 3.5 一番賞格子 (根據獎品數量建立)
--- =====================================================
--- 洛克人箱體 (box_id=1, 共 19 格: 1+2+3+4+8+1)
-INSERT INTO ichiban_slots (box_id, slot_number, prize_id, status) VALUES 
-(1, 1, 1, 'AVAILABLE'), -- A賞
-(1, 2, 2, 'AVAILABLE'), (1, 3, 2, 'AVAILABLE'), -- B賞 x2
-(1, 4, 3, 'AVAILABLE'), (1, 5, 3, 'AVAILABLE'), (1, 6, 3, 'AVAILABLE'), -- C賞 x3
-(1, 7, 4, 'AVAILABLE'), (1, 8, 4, 'AVAILABLE'), (1, 9, 4, 'AVAILABLE'), (1, 10, 4, 'AVAILABLE'), -- D賞 x4
-(1, 11, 5, 'AVAILABLE'), (1, 12, 5, 'AVAILABLE'), (1, 13, 5, 'AVAILABLE'), (1, 14, 5, 'AVAILABLE'),
-(1, 15, 5, 'AVAILABLE'), (1, 16, 5, 'AVAILABLE'), (1, 17, 5, 'AVAILABLE'), (1, 18, 5, 'AVAILABLE'), -- E賞 x8
-(1, 19, 6, 'AVAILABLE'), -- LAST賞
-(1, 20, 5, 'AVAILABLE'); -- 補充
+INSERT INTO roulette_slots (game_id, slot_order, slot_type, prize_name, prize_description, weight, shard_amount, color)
+SELECT g.id, s.idx, 
+    CASE WHEN s.idx = 1 THEN 'RARE' ELSE 'NORMAL' END,
+    CASE WHEN s.idx = 1 THEN CONCAT(i.name, ' 官方限量徽章') ELSE '10 碎片' END,
+    '精美小物', 
+    CASE WHEN s.idx = 1 THEN 5 ELSE 30 END,
+    CASE WHEN s.idx = 1 THEN 100 ELSE 10 END,
+    CASE WHEN s.idx = 1 THEN '#FFD700' ELSE '#4ECDC4' END
+FROM roulette_games g
+JOIN gacha_ips i ON i.id = g.ip_id
+CROSS JOIN (SELECT 1 as idx UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8) s;
 
--- 獵人箱體 (box_id=2, 共 24 格)
-INSERT INTO ichiban_slots (box_id, slot_number, prize_id, status) VALUES 
-(2, 1, 7, 'AVAILABLE'), -- A賞
-(2, 2, 8, 'AVAILABLE'), (2, 3, 8, 'AVAILABLE'), -- B賞 x2
-(2, 4, 9, 'AVAILABLE'), (2, 5, 9, 'AVAILABLE'), (2, 6, 9, 'AVAILABLE'), (2, 7, 9, 'AVAILABLE'), -- C賞 x4
-(2, 8, 10, 'AVAILABLE'), (2, 9, 10, 'AVAILABLE'), (2, 10, 10, 'AVAILABLE'), (2, 11, 10, 'AVAILABLE'), (2, 12, 10, 'AVAILABLE'), (2, 13, 10, 'AVAILABLE'), -- D賞 x6
-(2, 14, 11, 'AVAILABLE'), (2, 15, 11, 'AVAILABLE'), (2, 16, 11, 'AVAILABLE'), (2, 17, 11, 'AVAILABLE'), (2, 18, 11, 'AVAILABLE'),
-(2, 19, 11, 'AVAILABLE'), (2, 20, 11, 'AVAILABLE'), (2, 21, 11, 'AVAILABLE'), (2, 22, 11, 'AVAILABLE'), (2, 23, 11, 'AVAILABLE'), -- E賞 x10
-(2, 24, 12, 'AVAILABLE'), (2, 25, 11, 'AVAILABLE'); -- LAST賞 + 補充
+INSERT INTO bingo_games (id, ip_id, name, description, image_url, price_per_dig, grid_size, status, bingo_reward_name, bingo_reward_image_url, bingo_reward_value, created_at)
+SELECT id, id, CONCAT(name, ' 驚喜九宮格'), '挖開格子，收集相同角色連線！', '/images/bingo/generic.jpg', 120, 3, 'ACTIVE', '聖杯級神祕大禮包', '/images/reward/bingo.jpg', 1200, NOW() FROM gacha_ips;
 
--- 七龍珠箱體 (box_id=3, 共 19 格)
-INSERT INTO ichiban_slots (box_id, slot_number, prize_id, status) VALUES 
-(3, 1, 13, 'AVAILABLE'),
-(3, 2, 14, 'AVAILABLE'), (3, 3, 14, 'AVAILABLE'),
-(3, 4, 15, 'AVAILABLE'), (3, 5, 15, 'AVAILABLE'), (3, 6, 15, 'AVAILABLE'),
-(3, 7, 16, 'AVAILABLE'), (3, 8, 16, 'AVAILABLE'), (3, 9, 16, 'AVAILABLE'), (3, 10, 16, 'AVAILABLE'), (3, 11, 16, 'AVAILABLE'),
-(3, 12, 17, 'AVAILABLE'), (3, 13, 17, 'AVAILABLE'), (3, 14, 17, 'AVAILABLE'), (3, 15, 17, 'AVAILABLE'), (3, 16, 17, 'AVAILABLE'), (3, 17, 17, 'AVAILABLE'), (3, 18, 17, 'AVAILABLE'),
-(3, 19, 18, 'AVAILABLE'), (3, 20, 17, 'AVAILABLE');
+INSERT INTO bingo_cells (game_id, position, row_num, col_num, prize_name, prize_description, is_revealed)
+SELECT g.id, s.x, (s.x-1)/3, (s.x-1)%3, '隱藏碎片', '20 碎片', FALSE FROM bingo_games g CROSS JOIN SYSTEM_RANGE(1, 9) s;
 
--- 進擊的巨人箱體 (box_id=4, 共 19 格)
-INSERT INTO ichiban_slots (box_id, slot_number, prize_id, status) VALUES 
-(4, 1, 19, 'AVAILABLE'),
-(4, 2, 20, 'AVAILABLE'), (4, 3, 20, 'AVAILABLE'),
-(4, 4, 21, 'AVAILABLE'), (4, 5, 21, 'AVAILABLE'), (4, 6, 21, 'AVAILABLE'),
-(4, 7, 22, 'AVAILABLE'), (4, 8, 22, 'AVAILABLE'), (4, 9, 22, 'AVAILABLE'), (4, 10, 22, 'AVAILABLE'), (4, 11, 22, 'AVAILABLE'),
-(4, 12, 23, 'AVAILABLE'), (4, 13, 23, 'AVAILABLE'), (4, 14, 23, 'AVAILABLE'), (4, 15, 23, 'AVAILABLE'), (4, 16, 23, 'AVAILABLE'), (4, 17, 23, 'AVAILABLE'), (4, 18, 23, 'AVAILABLE'),
-(4, 19, 24, 'AVAILABLE'), (4, 20, 23, 'AVAILABLE');
+-- ########## 6. 兌換商店階梯級商品 (ID 1-10) ##########
+INSERT INTO redeem_shop_items (id, name, description, image_url, shard_cost, estimated_value, stock, total_stock, item_type, status, sort_order, created_at) VALUES 
+(1, '【神話級】1:4 超大魯夫 尼卡形態公仔', '全球限量 5 件，附防偽證書', '/images/redeem/nika.jpg', 50000, 25000, 5, 5, 'S_RANK', 'ACTIVE', 1, NOW()),
+(2, '【傳說級】PG 級 獨角獸鋼彈 最終決戰版', '精細組裝模型，包含全金屬套件', '/images/redeem/unicorn.jpg', 35000, 15000, 10, 10, 'A_RANK', 'ACTIVE', 2, NOW()),
+(3, '【史詩級】三幻神 金屬卡片套裝', '高質感純金屬材質，情懷滿分', '/images/redeem/godcards.jpg', 20000, 8000, 20, 20, 'B_RANK', 'ACTIVE', 3, NOW()),
+(4, '【稀有級】精靈寶可夢 大師球級 抱枕', '軟綿質感，巨大的 80cm 尺寸', '/images/redeem/ball.jpg', 8000, 2500, 50, 50, 'C_RANK', 'ACTIVE', 4, NOW()),
+(5, '【普通級】全 IP 角色 隨機色紙一張', '入門級收藏，有機率抽中限量版', '/images/redeem/paper.jpg', 500, 150, 1000, 1000, 'D_RANK', 'ACTIVE', 5, NOW());
 
--- 鋼之鍊金術師箱體 (box_id=5, 共 19 格)
-INSERT INTO ichiban_slots (box_id, slot_number, prize_id, status) VALUES 
-(5, 1, 25, 'AVAILABLE'),
-(5, 2, 26, 'AVAILABLE'), (5, 3, 26, 'AVAILABLE'),
-(5, 4, 27, 'AVAILABLE'), (5, 5, 27, 'AVAILABLE'), (5, 6, 27, 'AVAILABLE'),
-(5, 7, 28, 'AVAILABLE'), (5, 8, 28, 'AVAILABLE'), (5, 9, 28, 'AVAILABLE'), (5, 10, 28, 'AVAILABLE'), (5, 11, 28, 'AVAILABLE'),
-(5, 12, 29, 'AVAILABLE'), (5, 13, 29, 'AVAILABLE'), (5, 14, 29, 'AVAILABLE'), (5, 15, 29, 'AVAILABLE'), (5, 16, 29, 'AVAILABLE'), (5, 17, 29, 'AVAILABLE'), (5, 18, 29, 'AVAILABLE'),
-(5, 19, 30, 'AVAILABLE'), (5, 20, 29, 'AVAILABLE');
-
--- 天竺鼠車車箱體 (box_id=6, 共 16 格)
-INSERT INTO ichiban_slots (box_id, slot_number, prize_id, status) VALUES 
-(6, 1, 31, 'AVAILABLE'),
-(6, 2, 32, 'AVAILABLE'), (6, 3, 32, 'AVAILABLE'),
-(6, 4, 33, 'AVAILABLE'), (6, 5, 33, 'AVAILABLE'), (6, 6, 33, 'AVAILABLE'),
-(6, 7, 34, 'AVAILABLE'), (6, 8, 34, 'AVAILABLE'), (6, 9, 34, 'AVAILABLE'), (6, 10, 34, 'AVAILABLE'),
-(6, 11, 35, 'AVAILABLE'), (6, 12, 35, 'AVAILABLE'), (6, 13, 35, 'AVAILABLE'), (6, 14, 35, 'AVAILABLE'), (6, 15, 35, 'AVAILABLE'),
-(6, 16, 36, 'AVAILABLE');
-
--- =====================================================
--- 4. 轉盤遊戲 (每個 IP 一個)
--- =====================================================
-INSERT INTO roulette_games (ip_id, name, description, image_url, price_per_spin, max_slots, total_slots, status, created_at) VALUES 
-(1, '洛克人幸運轉盤', '轉動E罐，獲取能量！', '/images/roulette/rm.jpg', 100, 25, 8, 'ACTIVE', NOW()),
-(2, '獵人念能力轉盤', '測試你的念能力系別！', '/images/roulette/hxh.jpg', 120, 25, 8, 'ACTIVE', NOW()),
-(3, '七龍珠許願轉盤', '向神龍許願吧！', '/images/roulette/db.jpg', 150, 25, 10, 'ACTIVE', NOW()),
-(4, '進擊巨人命運轉盤', '你是調查兵團還是...', '/images/roulette/aot.jpg', 100, 25, 8, 'ACTIVE', NOW()),
-(5, '鍊金術轉盤', '等價交換的法則！', '/images/roulette/fma.jpg', 100, 25, 8, 'ACTIVE', NOW()),
-(6, '車車幸運輪', 'PUI PUI 毛茸茸驚喜！', '/images/roulette/mc.jpg', 80, 25, 8, 'ACTIVE', NOW()),
-(7, '寶可夢大師轉盤', '捕捉你的命運寶可夢！', '/images/roulette/pokemon.jpg', 120, 25, 8, 'ACTIVE', NOW()),
-(8, '鏈鋸人惡魔轉盤', '與惡魔簽訂契約！', '/images/roulette/csm.jpg', 130, 25, 8, 'ACTIVE', NOW()),
-(9, '死神卍解轉盤', '解放你的斬魄刀！', '/images/roulette/bleach.jpg', 110, 25, 8, 'ACTIVE', NOW()),
-(10, '水晶變身轉盤', '以月亮之名！', '/images/roulette/sailor.jpg', 100, 25, 8, 'ACTIVE', NOW()),
-(11, '籃球高手轉盤', '全國大賽開始！', '/images/roulette/slam.jpg', 120, 25, 8, 'ACTIVE', NOW()),
-(12, '鬼滅之刃呼吸轉盤', '全集中呼吸！', '/images/roulette/kimetsu.jpg', 140, 25, 8, 'ACTIVE', NOW()),
-(13, '光之巨人轉盤', '變身奧特曼！', '/images/roulette/ultra.jpg', 100, 25, 8, 'ACTIVE', NOW()),
-(14, '小丸子日常轉盤', '今天發生什麼事？', '/images/roulette/maruko.jpg', 70, 25, 8, 'ACTIVE', NOW()),
-(15, '死亡筆記轉盤', '寫下你的命運！', '/images/roulette/dn.jpg', 120, 25, 8, 'ACTIVE', NOW()),
-(16, '萬事屋轉盤', '今天接什麼委託？', '/images/roulette/gintama.jpg', 100, 25, 8, 'ACTIVE', NOW()),
-(17, '網球王子轉盤', '使用必殺技！', '/images/roulette/tenipuri.jpg', 100, 25, 8, 'ACTIVE', NOW()),
-(18, '庫洛牌轉盤', '封印解除！', '/images/roulette/ccs.jpg', 100, 25, 8, 'ACTIVE', NOW()),
-(19, '海賊王冒險轉盤', '尋找ONE PIECE！', '/images/roulette/op.jpg', 150, 25, 10, 'ACTIVE', NOW()),
-(20, 'JoJo替身轉盤', '覺醒你的替身！', '/images/roulette/jojo.jpg', 130, 25, 8, 'ACTIVE', NOW());
-
--- =====================================================
--- 5. 轉盤獎格 (洛克人 - game_id=1)
--- =====================================================
-INSERT INTO roulette_slots (game_id, slot_order, slot_type, prize_name, prize_description, weight, shard_amount, color) VALUES 
--- 洛克人轉盤
-(1, 1, 'JACKPOT', '洛克人公仔', '大獎！Q版公仔', 5, NULL, '#FF0000'),
-(1, 2, 'RARE', '萊特博士周邊', '稀有周邊禮包', 8, NULL, '#FF6600'),
-(1, 3, 'NORMAL', '洛克人徽章', '精美金屬徽章', 20, NULL, '#4ECDC4'),
-(1, 4, 'SHARD', '100碎片', '碎片獎勵', 25, 100, '#AAAAAA'),
-(1, 5, 'NORMAL', 'E罐貼紙', '經典貼紙組', 22, NULL, '#FFD93D'),
-(1, 6, 'FREE_SPIN', '再來一次', '免費再轉', 10, NULL, '#00FF00'),
-(1, 7, 'SHARD', '50碎片', '碎片獎勵', 30, 50, '#CCCCCC'),
-(1, 8, 'NORMAL', '洛克人明信片', '精美明信片', 25, NULL, '#6C5CE7'),
--- 獵人轉盤 (game_id=2)
-(2, 1, 'JACKPOT', '小傑公仔', '念能力發動版', 4, NULL, '#FF0000'),
-(2, 2, 'RARE', '獵人執照複製', '限定複製品', 6, NULL, '#FF6600'),
-(2, 3, 'NORMAL', '貪婪之島卡片', '稀有卡片', 18, NULL, '#4ECDC4'),
-(2, 4, 'SHARD', '120碎片', '碎片獎勵', 22, 120, '#AAAAAA'),
-(2, 5, 'NORMAL', '揍敵客徽章', '家族徽章', 20, NULL, '#FFD93D'),
-(2, 6, 'FREE_SPIN', '再來一次', '免費再轉', 8, NULL, '#00FF00'),
-(2, 7, 'SHARD', '60碎片', '碎片獎勵', 28, 60, '#CCCCCC'),
-(2, 8, 'NORMAL', '幻影旅團明信片', '團員明信片', 22, NULL, '#6C5CE7'),
--- 七龍珠轉盤 (game_id=3) 10格
-(3, 1, 'JACKPOT', '悟空公仔', '超級賽亞人', 3, NULL, '#FF0000'),
-(3, 2, 'JACKPOT', '達爾公仔', '王子造型', 3, NULL, '#FF0000'),
-(3, 3, 'RARE', '龍珠水晶球', '單顆龍珠', 8, NULL, '#FF6600'),
-(3, 4, 'NORMAL', '筋斗雲小物', '造型周邊', 15, NULL, '#4ECDC4'),
-(3, 5, 'SHARD', '150碎片', '碎片獎勵', 18, 150, '#AAAAAA'),
-(3, 6, 'NORMAL', '龜仙人墨鏡', '造型墨鏡', 15, NULL, '#FFD93D'),
-(3, 7, 'FREE_SPIN', '再來一次', '免費再轉', 8, NULL, '#00FF00'),
-(3, 8, 'SHARD', '80碎片', '碎片獎勵', 22, 80, '#CCCCCC'),
-(3, 9, 'NORMAL', '膠囊公司周邊', '布瑪科技', 18, NULL, '#6C5CE7'),
-(3, 10, 'NORMAL', '仙豆造型糖', '恢復體力！', 20, NULL, '#27AE60'),
--- 進擊巨人轉盤 (game_id=4)
-(4, 1, 'JACKPOT', '兵長公仔', '人類最強', 5, NULL, '#FF0000'),
-(4, 2, 'RARE', '立體機動裝置', '迷你複製', 7, NULL, '#FF6600'),
-(4, 3, 'NORMAL', '調查兵團徽章', '自由之翼', 20, NULL, '#4ECDC4'),
-(4, 4, 'SHARD', '100碎片', '碎片獎勵', 24, 100, '#AAAAAA'),
-(4, 5, 'NORMAL', '瑪利亞之壁模型', '迷你場景', 18, NULL, '#FFD93D'),
-(4, 6, 'FREE_SPIN', '再來一次', '免費再轉', 10, NULL, '#00FF00'),
-(4, 7, 'SHARD', '50碎片', '碎片獎勵', 28, 50, '#CCCCCC'),
-(4, 8, 'NORMAL', '巨人明信片', '九大巨人', 22, NULL, '#6C5CE7'),
--- 鋼之鍊金術師轉盤 (game_id=5)
-(5, 1, 'JACKPOT', '愛德華公仔', '鋼之鍊金術師', 5, NULL, '#FF0000'),
-(5, 2, 'RARE', '國家鍊金術師懷錶', '迷你版', 8, NULL, '#FF6600'),
-(5, 3, 'NORMAL', '鍊成陣杯墊', '可發動？', 20, NULL, '#4ECDC4'),
-(5, 4, 'SHARD', '100碎片', '碎片獎勵', 25, 100, '#AAAAAA'),
-(5, 5, 'NORMAL', '合成獸周邊', '妮娜...', 18, NULL, '#FFD93D'),
-(5, 6, 'FREE_SPIN', '再來一次', '免費再轉', 10, NULL, '#00FF00'),
-(5, 7, 'SHARD', '50碎片', '碎片獎勵', 30, 50, '#CCCCCC'),
-(5, 8, 'NORMAL', '火焰明信片', '馬斯坦大佐', 22, NULL, '#6C5CE7'),
--- 天竺鼠車車轉盤 (game_id=6)
-(6, 1, 'JACKPOT', '馬鈴薯絨毛', '大型娃娃', 6, NULL, '#FF0000'),
-(6, 2, 'RARE', '西羅摩鑰匙圈', '可愛吊飾', 10, NULL, '#FF6600'),
-(6, 3, 'NORMAL', '車車貼紙', '可愛貼紙', 22, NULL, '#4ECDC4'),
-(6, 4, 'SHARD', '80碎片', '碎片獎勵', 25, 80, '#AAAAAA'),
-(6, 5, 'NORMAL', '車車徽章', 'PUI PUI', 20, NULL, '#FFD93D'),
-(6, 6, 'FREE_SPIN', '再來一次', '免費再轉', 12, NULL, '#00FF00'),
-(6, 7, 'SHARD', '40碎片', '碎片獎勵', 28, 40, '#CCCCCC'),
-(6, 8, 'NORMAL', '車車明信片', '全員集合', 22, NULL, '#6C5CE7');
-
--- =====================================================
--- 6. 九宮格遊戲 (每個 IP 一個)
--- =====================================================
-INSERT INTO bingo_games (ip_id, name, description, image_url, price_per_dig, grid_size, status, bingo_reward_name, bingo_reward_image_url, bingo_reward_value, created_at) VALUES 
-(1, '洛克人挖寶九宮格', '挖掘E罐找寶藏！', '/images/bingo/rm.jpg', 80, 3, 'ACTIVE', '洛克人海報套組', '/images/bingo/rm_bingo.jpg', 600, NOW()),
-(2, '獵人念能力九宮格', '發掘你的念能力！', '/images/bingo/hxh.jpg', 100, 3, 'ACTIVE', '念能力系圖鑑', '/images/bingo/hxh_bingo.jpg', 800, NOW()),
-(3, '七龍珠尋寶九宮格', '找出龍珠所在！', '/images/bingo/db.jpg', 120, 4, 'ACTIVE', '龍珠雷達複製品', '/images/bingo/db_bingo.jpg', 1200, NOW()),
-(4, '進擊的巨人地下室', '發現真相！', '/images/bingo/aot.jpg', 100, 3, 'ACTIVE', '艾爾迪亞歷史書', '/images/bingo/aot_bingo.jpg', 900, NOW()),
-(5, '鋼之鍊金術師真理之門', '等價交換！', '/images/bingo/fma.jpg', 100, 3, 'ACTIVE', '真理之門模型', '/images/bingo/fma_bingo.jpg', 1000, NOW()),
-(6, '天竺鼠車車停車場', 'PUI PUI 找找看！', '/images/bingo/mc.jpg', 60, 3, 'ACTIVE', '車車停車場玩具', '/images/bingo/mc_bingo.jpg', 500, NOW()),
-(7, '寶可夢草叢探險', '誰在草叢裡？', '/images/bingo/pokemon.jpg', 90, 3, 'ACTIVE', '精靈球收納盒', '/images/bingo/pokemon_bingo.jpg', 700, NOW()),
-(8, '鏈鋸人契約九宮格', '與惡魔簽約！', '/images/bingo/csm.jpg', 110, 3, 'ACTIVE', '波奇塔抱枕', '/images/bingo/csm_bingo.jpg', 900, NOW()),
-(9, '死神尸魂界探索', '尋找隊長室！', '/images/bingo/bleach.jpg', 100, 3, 'ACTIVE', '隊長羽織複製品', '/images/bingo/bleach_bingo.jpg', 850, NOW()),
-(10, '水手服戰士月亮宮殿', '找到銀水晶！', '/images/bingo/sailor.jpg', 90, 3, 'ACTIVE', '變身胸針複製品', '/images/bingo/sailor_bingo.jpg', 750, NOW()),
-(11, '湘北體育館挖寶', '熱血籃球場！', '/images/bingo/slam.jpg', 100, 3, 'ACTIVE', '湘北隊服複製品', '/images/bingo/slam_bingo.jpg', 800, NOW()),
-(12, '鬼殺隊訓練場', '全集中呼吸！', '/images/bingo/kimetsu.jpg', 120, 3, 'ACTIVE', '日輪刀模型', '/images/bingo/kimetsu_bingo.jpg', 1100, NOW()),
-(13, '科特隊基地探索', '發現怪獸！', '/images/bingo/ultra.jpg', 80, 3, 'ACTIVE', '奧特曼面具', '/images/bingo/ultra_bingo.jpg', 650, NOW()),
-(14, '小丸子家尋寶', '找到日記！', '/images/bingo/maruko.jpg', 50, 3, 'ACTIVE', '小丸子日記本', '/images/bingo/maruko_bingo.jpg', 400, NOW()),
-(15, '死亡筆記推理', '誰是基拉？', '/images/bingo/dn.jpg', 100, 3, 'ACTIVE', '死亡筆記複製品', '/images/bingo/dn_bingo.jpg', 850, NOW()),
-(16, '萬事屋委託任務', '今天的委託！', '/images/bingo/gintama.jpg', 90, 3, 'ACTIVE', '木刀洞爺湖複製品', '/images/bingo/gintama_bingo.jpg', 700, NOW()),
-(17, '青學網球場', '黃金單打！', '/images/bingo/tenipuri.jpg', 90, 3, 'ACTIVE', '網球拍複製品', '/images/bingo/tenipuri_bingo.jpg', 700, NOW()),
-(18, '庫洛牌收集', '找到所有牌！', '/images/bingo/ccs.jpg', 90, 3, 'ACTIVE', '封印之杖複製品', '/images/bingo/ccs_bingo.jpg', 750, NOW()),
-(19, '偉大航路探險', '尋找寶藏！', '/images/bingo/op.jpg', 130, 4, 'ACTIVE', '草帽限定版', '/images/bingo/op_bingo.jpg', 1300, NOW()),
-(20, 'JoJo替身覺醒', '發現替身能力！', '/images/bingo/jojo.jpg', 110, 3, 'ACTIVE', '石之面具複製品', '/images/bingo/jojo_bingo.jpg', 900, NOW());
-
--- =====================================================
--- 7. 九宮格格子 (洛克人 3x3 - game_id=1)
--- =====================================================
-INSERT INTO bingo_cells (game_id, position, row_num, col_num, prize_name, prize_description, is_revealed) VALUES 
--- 洛克人 3x3
-(1, 1, 0, 0, '洛克人貼紙', '經典貼紙', FALSE),
-(1, 2, 0, 1, 'E罐能量', '回復道具', FALSE),
-(1, 3, 0, 2, '洛克人徽章', '金屬徽章', FALSE),
-(1, 4, 1, 0, '萊特博士卡片', '收藏卡', FALSE),
-(1, 5, 1, 1, '洛克人鑰匙圈', '壓克力吊飾', FALSE),
-(1, 6, 1, 2, '蓋乃博士書籤', '書籤套組', FALSE),
-(1, 7, 2, 0, '萊姆馬克杯', 'Q版杯', FALSE),
-(1, 8, 2, 1, '威利博士筆', '造型原子筆', FALSE),
-(1, 9, 2, 2, '洛克人手機殼', '透明手機殼', FALSE),
--- 獵人 3x3 (game_id=2)
-(2, 1, 0, 0, '小傑貼紙', '念能力', FALSE),
-(2, 2, 0, 1, '奇犽徽章', '電光', FALSE),
-(2, 3, 0, 2, '酷拉皮卡卡片', '收藏卡', FALSE),
-(2, 4, 1, 0, '雷歐力書籤', '醫學書籤', FALSE),
-(2, 5, 1, 1, '獵人執照吊飾', '迷你執照', FALSE),
-(2, 6, 1, 2, '西索撲克牌', '魔術師', FALSE),
-(2, 7, 2, 0, '伊爾謎針', '變裝道具', FALSE),
-(2, 8, 2, 1, '團長十字架', '幻影旅團', FALSE),
-(2, 9, 2, 2, '金鑰匙圈', '小傑的父親', FALSE),
--- 七龍珠 4x4 (game_id=3)
-(3, 1, 0, 0, '悟空貼紙', '龜派氣功', FALSE),
-(3, 2, 0, 1, '達爾徽章', '王子', FALSE),
-(3, 3, 0, 2, '悟飯卡片', '學者', FALSE),
-(3, 4, 0, 3, '特南克斯書籤', '未來戰士', FALSE),
-(3, 5, 1, 0, '比克吊飾', '地球人', FALSE),
-(3, 6, 1, 1, '布瑪周邊', '膠囊公司', FALSE),
-(3, 7, 1, 2, '克林鑰匙圈', '地球最強', FALSE),
-(3, 8, 1, 3, '龜仙人墨鏡', '武天老師', FALSE),
-(3, 9, 2, 0, '弗利沙筆', '宇宙帝王', FALSE),
-(3, 10, 2, 1, '賽魯杯墊', '完全體', FALSE),
-(3, 11, 2, 2, '普烏貼紙', '魔人', FALSE),
-(3, 12, 2, 3, '比魯斯周邊', '破壞神', FALSE),
-(3, 13, 3, 0, '維斯吊飾', '天使', FALSE),
-(3, 14, 3, 1, '全王徽章', '全能', FALSE),
-(3, 15, 3, 2, '神龍願望卡', '許願', FALSE),
-(3, 16, 3, 3, '仙豆保存袋', '回復', FALSE),
--- 進擊巨人 3x3 (game_id=4)
-(4, 1, 0, 0, '艾連貼紙', '進擊的', FALSE),
-(4, 2, 0, 1, '三笠徽章', '阿卡曼', FALSE),
-(4, 3, 0, 2, '阿爾敏卡片', '超大型', FALSE),
-(4, 4, 1, 0, '兵長書籤', '最強', FALSE),
-(4, 5, 1, 1, '韓吉吊飾', '調查兵團', FALSE),
-(4, 6, 1, 2, '艾爾文筆', '團長', FALSE),
-(4, 7, 2, 0, '萊納杯墊', '鎧之巨人', FALSE),
-(4, 8, 2, 1, '貝爾托特周邊', '超大型', FALSE),
-(4, 9, 2, 2, '尤彌爾鑰匙圈', '始祖', FALSE),
--- 鋼之鍊金術師 3x3 (game_id=5)
-(5, 1, 0, 0, '愛德華貼紙', '鋼之', FALSE),
-(5, 2, 0, 1, '阿爾馮斯徽章', '鎧甲', FALSE),
-(5, 3, 0, 2, '溫莉卡片', '機械師', FALSE),
-(5, 4, 1, 0, '馬斯坦書籤', '火焰', FALSE),
-(5, 5, 1, 1, '霍克愛吊飾', '鷹眼', FALSE),
-(5, 6, 1, 2, '阿姆斯特朗筆', '肌肉', FALSE),
-(5, 7, 2, 0, '恩維杯墊', '嫉妒', FALSE),
-(5, 8, 2, 1, '拉絲特周邊', '色欲', FALSE),
-(5, 9, 2, 2, '父親大人鑰匙圈', '燒瓶', FALSE),
--- 天竺鼠車車 3x3 (game_id=6)
-(6, 1, 0, 0, '馬鈴薯貼紙', 'PUI PUI', FALSE),
-(6, 2, 0, 1, '西羅摩徽章', '白色', FALSE),
-(6, 3, 0, 2, '阿比卡片', '棕色', FALSE),
-(6, 4, 1, 0, '泰迪書籤', '灰色', FALSE),
-(6, 5, 1, 1, '救護車車吊飾', '嗶嗶', FALSE),
-(6, 6, 1, 2, '警察車車筆', '逮捕', FALSE),
-(6, 7, 2, 0, '殭屍車車杯墊', '可怕', FALSE),
-(6, 8, 2, 1, '車車駕駛周邊', '人類', FALSE),
-(6, 9, 2, 2, '紅蘿蔔鑰匙圈', '零食', FALSE);
-
--- =====================================================
--- 灌籃高手 一番賞獎品 (box_id=11)
--- =====================================================
-INSERT INTO ichiban_prizes (box_id, rank, name, description, image_url, estimated_value, total_quantity, remaining_quantity, sort_order) VALUES 
-(11, 'A', '櫻木花道 灌籃姿態公仔', '經典灌籃場景1/6比例可動公仔', '/images/prize/slam_a.jpg', 3000, 1, 1, 1),
-(11, 'B', '流川楓 運球公仔', '天才球員帥氣造型', '/images/prize/slam_b.jpg', 1800, 2, 2, 2),
-(11, 'C', '湘北隊服 複製品', '10號球衣官方授權複製', '/images/prize/slam_c.jpg', 1000, 3, 3, 3),
-(11, 'D', '安西教練 名言掛畫', '放棄的話比賽就結束了', '/images/prize/slam_d.jpg', 500, 5, 5, 4),
-(11, 'E', '湘北五虎 壓克力立牌', '五人組合立牌', '/images/prize/slam_e.jpg', 250, 7, 7, 5),
-(11, 'LAST', '櫻木花道 vs 流川楓 對決場景', '限量雙人組公仔', '/images/prize/slam_last.jpg', 5000, 1, 1, 99);
-
--- 灌籃高手 一番賞格子 (box_id=11, 共 19 格)
-INSERT INTO ichiban_slots (box_id, slot_number, prize_id, status) VALUES 
-(11, 1, 37, 'AVAILABLE'),
-(11, 2, 38, 'AVAILABLE'), (11, 3, 38, 'AVAILABLE'),
-(11, 4, 39, 'AVAILABLE'), (11, 5, 39, 'AVAILABLE'), (11, 6, 39, 'AVAILABLE'),
-(11, 7, 40, 'AVAILABLE'), (11, 8, 40, 'AVAILABLE'), (11, 9, 40, 'AVAILABLE'), (11, 10, 40, 'AVAILABLE'), (11, 11, 40, 'AVAILABLE'),
-(11, 12, 41, 'AVAILABLE'), (11, 13, 41, 'AVAILABLE'), (11, 14, 41, 'AVAILABLE'), (11, 15, 41, 'AVAILABLE'), (11, 16, 41, 'AVAILABLE'), (11, 17, 41, 'AVAILABLE'), (11, 18, 41, 'AVAILABLE'),
-(11, 19, 42, 'AVAILABLE'), (11, 20, 41, 'AVAILABLE');
-
--- 灌籃高手 轉盤獎格 (game_id=11)
-INSERT INTO roulette_slots (game_id, slot_order, slot_type, prize_name, prize_description, weight, shard_amount, color) VALUES 
-(11, 1, 'JACKPOT', '櫻木公仔', '天才籃球員！', 5, NULL, '#FF0000'),
-(11, 2, 'RARE', '流川楓周邊', '天才對決', 8, NULL, '#FF6600'),
-(11, 3, 'NORMAL', '三井壽徽章', '安西教練我想打籃球', 20, NULL, '#4ECDC4'),
-(11, 4, 'SHARD', '100碎片', '碎片獎勵', 25, 100, '#AAAAAA'),
-(11, 5, 'NORMAL', '宮城良田貼紙', '速度型後衛', 18, NULL, '#FFD93D'),
-(11, 6, 'FREE_SPIN', '再來一次', '免費再轉', 10, NULL, '#00FF00'),
-(11, 7, 'SHARD', '50碎片', '碎片獎勵', 28, 50, '#CCCCCC'),
-(11, 8, 'NORMAL', '赤木剛憲明信片', '大猩猩隊長', 20, NULL, '#6C5CE7');
-
--- 灌籃高手 九宮格格子 (game_id=11, 3x3)
-INSERT INTO bingo_cells (game_id, position, row_num, col_num, prize_name, prize_description, is_revealed) VALUES 
-(11, 1, 0, 0, '櫻木花道貼紙', '天才', FALSE),
-(11, 2, 0, 1, '流川楓徽章', '睡神', FALSE),
-(11, 3, 0, 2, '三井壽卡片', '三分射手', FALSE),
-(11, 4, 1, 0, '宮城良田書籤', '速度', FALSE),
-(11, 5, 1, 1, '赤木剛憲吊飾', '隊長', FALSE),
-(11, 6, 1, 2, '安西教練筆', '名言', FALSE),
-(11, 7, 2, 0, '彩子杯墊', '經理', FALSE),
-(11, 8, 2, 1, '仙道彰周邊', '陵南王牌', FALSE),
-(11, 9, 2, 2, '湘北隊徽鑰匙圈', '全國制霸', FALSE);
-
--- =====================================================
--- 8. 兌換商店商品
--- =====================================================
-INSERT INTO redeem_shop_items (name, description, image_url, shard_cost, estimated_value, stock, total_stock, item_type, status, sort_order, created_at) VALUES 
-('洛克人 S賞 限量公仔', '超稀有！1/4比例精緻可動公仔', '/images/redeem/rm_s.jpg', 10000, 5000, 3, 3, 'S_RANK', 'ACTIVE', 1, NOW()),
-('獵人 隱藏款 金色獵人執照', '24K鍍金限定版', '/images/redeem/hxh_hidden.jpg', 15000, 8000, 2, 2, 'HIDDEN', 'ACTIVE', 2, NOW()),
-('七龍珠 特別款 發光神龍', 'LED發光版神龍模型', '/images/redeem/db_special.jpg', 20000, 12000, 1, 1, 'SPECIAL', 'ACTIVE', 3, NOW()),
-('進擊的巨人 兵長組合包', '兵長主題周邊全套', '/images/redeem/aot_pack.jpg', 5000, 2000, 10, 10, 'PRIZE', 'ACTIVE', 10, NOW()),
-('鋼之鍊金術師 懷錶複製品', '精密機械複製品', '/images/redeem/fma_watch.jpg', 8000, 3500, 5, 5, 'PRIZE', 'ACTIVE', 11, NOW()),
-('天竺鼠車車 超大抱枕', '60cm馬鈴薯造型', '/images/redeem/mc_pillow.jpg', 6000, 2500, 8, 8, 'PRIZE', 'ACTIVE', 12, NOW()),
-('灌籃高手 湘北隊服套組', '限量版全套隊服', '/images/redeem/slam_uniform.jpg', 12000, 6000, 3, 3, 'S_RANK', 'ACTIVE', 13, NOW());
+-- ########## 7. 序列重置 ##########
+ALTER TABLE gacha_ips ALTER COLUMN id RESTART WITH 100;
+ALTER TABLE ichiban_boxes ALTER COLUMN id RESTART WITH 100;
+ALTER TABLE ichiban_prizes ALTER COLUMN id RESTART WITH 1000;
+ALTER TABLE ichiban_slots ALTER COLUMN id RESTART WITH 5000;
+ALTER TABLE roulette_games ALTER COLUMN id RESTART WITH 100;
+ALTER TABLE roulette_slots ALTER COLUMN id RESTART WITH 1000;
+ALTER TABLE bingo_games ALTER COLUMN id RESTART WITH 100;
+ALTER TABLE bingo_cells ALTER COLUMN id RESTART WITH 1000;
+ALTER TABLE redeem_shop_items ALTER COLUMN id RESTART WITH 100;

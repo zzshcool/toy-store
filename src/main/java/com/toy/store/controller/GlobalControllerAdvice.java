@@ -16,19 +16,16 @@ public class GlobalControllerAdvice {
 
     @ModelAttribute("currentUser")
     public Member getCurrentUser(HttpServletRequest request) {
-        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
+        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("memberTokenInfo");
         if (info != null && TokenService.ROLE_USER.equals(info.getRole())) {
             return memberRepository.findByUsername(info.getUsername()).orElse(null);
         }
-        return null; // Return null if not logged in or is admin (unless admin also needs this member
-                     // obj?)
-        // If Templates expect 'currentUser' to be null when not logged in, this is
-        // fine.
+        return null;
     }
 
     @ModelAttribute("adminName")
     public String getAdminName(HttpServletRequest request) {
-        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
+        TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("adminTokenInfo");
         if (info != null && TokenService.ROLE_ADMIN.equals(info.getRole())) {
             return info.getUsername();
         }

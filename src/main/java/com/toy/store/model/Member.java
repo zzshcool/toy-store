@@ -52,6 +52,14 @@ public class Member {
     @Column(nullable = false)
     private BigDecimal monthlyRecharge = BigDecimal.ZERO;
 
+    private String realName;
+
+    private String address;
+
+    private String gender;
+
+    private java.time.LocalDate birthday;
+
     public enum Role {
         USER, ADMIN
     }

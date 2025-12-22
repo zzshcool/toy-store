@@ -11,7 +11,8 @@ import java.util.UUID;
 @Service
 public class TokenService {
 
-    private static final Map<String, TokenInfo> tokenStore = new ConcurrentHashMap<>();
+    private static final Map<String, TokenInfo> memberTokenStore = new ConcurrentHashMap<>();
+    private static final Map<String, TokenInfo> adminTokenStore = new ConcurrentHashMap<>();
 
     // Roles
     public static final String ROLE_USER = "ROLE_USER";
@@ -24,64 +25,86 @@ public class TokenService {
         LocalDateTime maxLife = null;
 
         if (ROLE_ADMIN.equals(role)) {
-            // Admin: 8 hours max life, 5 min idle timeout (handled in validation)
-            expiry = now.plusMinutes(5); // Initial idle timeout
+            // Admin: 8 hours max life, 5 min idle timeout
+            expiry = now.plusMinutes(5);
             maxLife = now.plusHours(8);
+            adminTokenStore.put(token, new TokenInfo(username, role, expiry, now, maxLife));
         } else {
             // User: 1 hour initial
             expiry = now.plusHours(1);
+            memberTokenStore.put(token, new TokenInfo(username, role, expiry, now, null));
         }
 
-        TokenInfo info = new TokenInfo(username, role, expiry, now, maxLife);
-        tokenStore.put(token, info);
         return token;
     }
 
-    public TokenInfo validateToken(String token) {
-        TokenInfo info = tokenStore.get(token);
+    public TokenInfo validateMemberToken(String token) {
+        return validateTokenFromStore(token, memberTokenStore);
+    }
+
+    public TokenInfo validateAdminToken(String token) {
+        return validateTokenFromStore(token, adminTokenStore);
+    }
+
+    private TokenInfo validateTokenFromStore(String token, Map<String, TokenInfo> store) {
+        TokenInfo info = store.get(token);
         if (info == null) {
             return null;
         }
 
         LocalDateTime now = LocalDateTime.now();
 
-        // Check Hard Absolute Expiry (for Admin max life, or User absolute expiry if
-        // not extended)
+        // Check Hard Absolute Expiry
         if (now.isAfter(info.getExpiryTime())) {
-            tokenStore.remove(token);
+            store.remove(token);
             return null;
         }
 
         // Check Admin Max Life (8 hours)
         if (ROLE_ADMIN.equals(info.getRole()) && info.getMaxLifeTime() != null && now.isAfter(info.getMaxLifeTime())) {
-            tokenStore.remove(token);
+            store.remove(token);
             return null;
         }
 
         // Logic for updates
         if (ROLE_ADMIN.equals(info.getRole())) {
-            // Admin: Update idle timeout
-            // If we are here, it hasn't expired yet (so < 5 mins since last access)
-            // Reset idle timeout to 5 mins from NOW
             info.setExpiryTime(now.plusMinutes(5));
             info.setLastAccessTime(now);
         } else {
-            // User: "If online, every 1 min extend 30 mins"
-            // Throttle: Only extend if > 1 min since last access
             if (java.time.Duration.between(info.getLastAccessTime(), now).toMinutes() >= 1) {
                 info.setExpiryTime(now.plusMinutes(30));
                 info.setLastAccessTime(now);
             }
-            // If < 1 min, do nothing (keep existing expiry), effectively keeping it valid.
         }
 
         return info;
     }
 
+    public void invalidateMemberToken(String token) {
+        if (token != null)
+            memberTokenStore.remove(token);
+    }
+
+    public void invalidateAdminToken(String token) {
+        if (token != null)
+            adminTokenStore.remove(token);
+    }
+
+    // 保留舊方法以維持相容性，但標記為過渡
+    @Deprecated
     public void invalidateToken(String token) {
         if (token != null) {
-            tokenStore.remove(token);
+            memberTokenStore.remove(token);
+            adminTokenStore.remove(token);
         }
+    }
+
+    @Deprecated
+    public TokenInfo validateToken(String token) {
+        TokenInfo info = memberTokenStore.get(token);
+        if (info != null)
+            return validateMemberToken(token);
+        return validateAdminToken(token);
     }
 
     public static class TokenInfo {

@@ -14,7 +14,7 @@
             <button onclick="openTab('levels')" class="btn btn-outline btn-sm">等級管理</button>
             <button onclick="openTab('products')" class="btn btn-outline btn-sm">商品管理</button>
             <button onclick="openTab('categories')" class="btn btn-outline btn-sm">分類管理</button>
-            <button onclick="openTab('mystery')" class="btn btn-outline btn-sm">盲盒管理</button>
+            <button onclick="openTab('mystery')" class="btn btn-outline btn-sm">扭蛋管理</button>
             <button onclick="openTab('transactions')" class="btn btn-outline btn-sm">交易管理</button>
             <button onclick="openTab('activities')" class="btn btn-outline btn-sm">活動管理</button>
             <button onclick="openTab('coupons')" class="btn btn-outline btn-sm">優惠券管理</button>
@@ -303,11 +303,11 @@
 
         <!-- Mystery Box Management -->
         <div id="mystery" class="tab-content" style="display:none;">
-            <h3>盲盒管理</h3>
+            <h3>扭蛋管理</h3>
             <div class="card" style="padding: 20px; margin-bottom: 20px;">
                 <h4>新增主題</h4>
                 <!-- Theme Form -->
-                <form th:action="@{/admin/mystery-box/themes}" method="post">
+                <form th:action="@{/admin/gacha/themes}" method="post">
                     <div style="display: flex; gap: 10px;">
                         <input type="text" name="name" placeholder="主題名稱" class="form-control" required />
                         <input type="number" step="0.01" name="price" placeholder="價格" class="form-control" required />
@@ -316,20 +316,20 @@
                 </form>
             </div>
 
-            <div th:each="theme : ${mysteryBoxThemes}" class="card" style="margin-bottom: 20px;">
+            <div th:each="theme : ${gachaThemes}" class="card" style="margin-bottom: 20px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h4 th:text="${theme.name} + ' ($' + ${theme.price} + ')'">Gundam ($100)</h4>
                     <button class="btn btn-sm btn-info"
                         th:onclick="editTheme([[${theme.id}]], '[[${theme.name}]]', [[${theme.price}]])">編輯主題</button>
 
-                    <form th:action="@{/admin/mystery-box/themes/delete/{id}(id=${theme.id})}" method="post"
+                    <form th:action="@{/admin/gacha/themes/delete/{id}(id=${theme.id})}" method="post"
                         style="display:inline;" onsubmit="return confirm('刪除主題將連同獎品一起刪除，確定？');">
                         <button type="submit" class="btn btn-sm btn-danger">刪除主題</button>
                     </form>
                 </div>
 
                 <!-- Add Item to Theme -->
-                <form th:action="@{/admin/mystery-box/items}" method="post"
+                <form th:action="@{/admin/gacha/items}" method="post"
                     style="margin-bottom: 10px; background: #f9f9f9; padding: 10px;">
                     <input type="hidden" name="themeId" th:value="${theme.id}">
                     <div style="display: flex; gap: 5px;">
@@ -357,7 +357,7 @@
                             <td>
                                 <button class="btn btn-sm btn-info"
                                     th:onclick="editBoxItem([[${item.id}]], '[[${item.name}]]', [[${item.estimatedValue}]], [[${item.weight}]])">✏️</button>
-                                <form th:action="@{/admin/mystery-box/items/delete/{id}(id=${item.id})}" method="post"
+                                <form th:action="@{/admin/gacha/items/delete/{id}(id=${item.id})}" method="post"
                                     style="display:inline;" onsubmit="return confirm('確定刪除獎品？');">
                                     <button type="submit" style="background:none;border:none;cursor:pointer;"
                                         title="刪除">🗑️</button>
@@ -373,7 +373,7 @@
                 style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
                 <div class="card" style="margin: 15% auto; width: 30%; padding: 20px;">
                     <h4>編輯主題</h4>
-                    <form th:action="@{/admin/mystery-box/themes/update}" method="post">
+                    <form th:action="@{/admin/gacha/themes/update}" method="post">
                         <input type="hidden" id="editThemeId" name="id">
                         <input type="text" id="editThemeName" name="name" class="form-control" placeholder="名稱"
                             required>
@@ -393,7 +393,7 @@
                 style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
                 <div class="card" style="margin: 15% auto; width: 30%; padding: 20px;">
                     <h4>編輯獎品</h4>
-                    <form th:action="@{/admin/mystery-box/items/update}" method="post">
+                    <form th:action="@{/admin/gacha/items/update}" method="post">
                         <input type="hidden" id="editBoxItemId" name="id">
                         <input type="text" id="editBoxItemName" name="name" class="form-control" placeholder="名稱"
                             required>

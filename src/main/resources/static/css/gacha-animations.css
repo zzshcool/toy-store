@@ -602,6 +602,220 @@
     }
 }
 
+/* ==================== 專業級擬真扭蛋機系統 ==================== */
+.gacha-machine-wrap {
+    position: relative;
+    width: 320px;
+    height: 480px;
+    margin: 0 auto;
+    background: #f1f1f1;
+    border-radius: 40px 40px 20px 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    border: 8px solid #333;
+    overflow: hidden;
+}
+
+.gacha-head {
+    height: 60%;
+    background: rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+    border-bottom: 8px solid #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.gacha-dome {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.gacha-balls-pool {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 20px;
+    justify-content: center;
+    align-content: flex-end;
+    height: 100%;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.ball-mini {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: var(--bg);
+}
+
+.gacha-control {
+    height: 40%;
+    background: #e74c3c;
+    /* 經典紅 */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.gacha-handle-outer {
+    width: 100px;
+    height: 100px;
+    background: #c0392b;
+    border-radius: 50%;
+    border: 5px solid #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+}
+
+.gacha-handle {
+    width: 80px;
+    height: 20px;
+    background: #333;
+    border-radius: 10px;
+    position: relative;
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.gacha-handle::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 80px;
+    background: #333;
+    border-radius: 10px;
+    top: -30px;
+    left: 30px;
+}
+
+.gacha-handle.rotating {
+    animation: handle-rotate 0.8s ease-in-out;
+}
+
+@keyframes handle-rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.gacha-exit {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 60px;
+    background: #2c3e50;
+    border-radius: 10px;
+    border: 4px solid #333;
+    box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* 專業彈跳掉落動畫 */
+@keyframes capsule-drop-pro {
+    0% {
+        transform: translateY(-400px) scale(0.5);
+        opacity: 0;
+    }
+
+    50% {
+        transform: translateY(0) scale(1) rotate(180deg);
+        opacity: 1;
+    }
+
+    65% {
+        transform: translateY(-30px) rotate(270deg);
+    }
+
+    80% {
+        transform: translateY(0) rotate(360deg);
+    }
+
+    90% {
+        transform: translateY(-10px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.capsule-pro {
+    animation: capsule-drop-pro 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* 破殼動畫 */
+.capsule-crack {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+}
+
+.capsule-half {
+    position: absolute;
+    width: 100%;
+    height: 50%;
+    background: var(--color);
+    border: 3px solid #333;
+}
+
+.capsule-half.top {
+    top: 0;
+    border-radius: 60px 60px 0 0;
+    transform-origin: bottom;
+}
+
+.capsule-half.bottom {
+    bottom: 0;
+    border-radius: 0 0 60px 60px;
+    transform-origin: top;
+    background: #f1f1f1 !important;
+}
+
+.cracking .top {
+    animation: top-fly-away 0.8s ease forwards;
+}
+
+.cracking .bottom {
+    animation: bottom-fly-away 0.8s ease forwards;
+}
+
+@keyframes top-fly-away {
+    0% {
+        transform: rotate(0);
+    }
+
+    100% {
+        transform: translateY(-100px) rotate(-45deg);
+        opacity: 0;
+    }
+}
+
+@keyframes bottom-fly-away {
+    0% {
+        transform: rotate(0);
+    }
+
+    100% {
+        transform: translateY(100px) rotate(45deg);
+        opacity: 0;
+    }
+}
+
 /* ==================== 幸運值進度條 ==================== */
 .lucky-bar-container {
     background: rgba(0, 0, 0, 0.2);

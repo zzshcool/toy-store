@@ -50,6 +50,21 @@ public class BingoApiController {
         Map<String, Object> result = gameToMap(game);
         result.put("cells", bingoService.getCells(id).stream()
                 .map(this::cellToMap).collect(Collectors.toList()));
+
+        // 加入獎項預覽 (從單元格中提取不重複的獎項資訊)
+        List<Map<String, String>> prizePreview = bingoService.getCells(id).stream()
+                .filter(c -> c.getPrizeName() != null)
+                .map(c -> {
+                    Map<String, String> m = new HashMap<>();
+                    m.put("name", c.getPrizeName());
+                    m.put("description", c.getPrizeDescription());
+                    m.put("imageUrl", c.getPrizeImageUrl());
+                    return m;
+                })
+                .distinct()
+                .collect(Collectors.toList());
+        result.put("prizes", prizePreview);
+
         return ApiResponse.ok(result);
     }
 

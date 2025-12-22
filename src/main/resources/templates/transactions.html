@@ -41,7 +41,7 @@
                                 <span th:switch="${tx.type.name()}">
                                     <span th:case="'DEPOSIT'" style="color: #27ae60;">💰 儲值</span>
                                     <span th:case="'PURCHASE'" style="color: #e74c3c;">🛒 消費</span>
-                                    <span th:case="'MYSTERY_BOX_COST'" style="color: #e67e22;">🎁 盲盒</span>
+                                    <span th:case="'MYSTERY_BOX_COST'" style="color: #e67e22;">🎁 扭蛋</span>
                                     <span th:case="'REFUND'" style="color: #3498db;">↩️ 退款</span>
                                     <span th:case="*" th:text="${tx.type}">其他</span>
                                 </span>

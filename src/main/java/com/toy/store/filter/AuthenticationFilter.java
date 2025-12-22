@@ -13,19 +13,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 @Component
 public class AuthenticationFilter implements Filter {
 
     @Autowired
     private TokenService tokenService;
-
-    // Public paths that don't satisfy authentication
-    private static final List<String> PUBLIC_PATHS = Arrays.asList(
-            "/", "/login", "/register", "/products", "/mystery-box",
-            "/css/", "/js/", "/images/", "/error", "/h2-console", "/cart/api");
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -37,8 +30,6 @@ public class AuthenticationFilter implements Filter {
 
         // 1. Static resources and public endpoints pass through
         // Check if path starts with any public path (simple prefix match)
-        boolean isPublic = PUBLIC_PATHS.stream().anyMatch(
-                p -> path.equals(p) || path.startsWith(p + "/") || path.startsWith("/css") || path.startsWith("/js"));
 
         // Special case: /mystery-box/draw needs auth, so we should be careful what we
         // exclude.
@@ -46,26 +37,30 @@ public class AuthenticationFilter implements Filter {
         // Actually, let's keep it simple: Protected routes are Explicitly Checked or we
         // check "if not public".
 
-        // Check for specific cookies based on path
-        String token = null;
-        String cookieName = path.startsWith("/admin") ? "ADMIN_TOKEN" : "AUTH_TOKEN";
+        // 1. Token Validation
+        String memberToken = getCookieValue(httpRequest, "AUTH_TOKEN");
+        String adminToken = getCookieValue(httpRequest, "ADMIN_TOKEN");
 
-        Cookie[] cookies = httpRequest.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (cookieName.equals(cookie.getName())) {
-                    token = cookie.getValue();
-                    break;
-                }
+        TokenService.TokenInfo memberInfo = null;
+        if (memberToken != null) {
+            memberInfo = tokenService.validateMemberToken(memberToken);
+            if (memberInfo != null) {
+                request.setAttribute("memberTokenInfo", memberInfo);
+                request.setAttribute("authenticatedUserToken", memberInfo); // 保持後向相容
             }
         }
 
-        TokenService.TokenInfo tokenInfo = null;
-        if (token != null) {
-            tokenInfo = tokenService.validateToken(token);
+        TokenService.TokenInfo adminInfo = null;
+        if (adminToken != null) {
+            adminInfo = tokenService.validateAdminToken(adminToken);
+            if (adminInfo != null) {
+                request.setAttribute("adminTokenInfo", adminInfo);
+                // 如果是管理後台，優先覆蓋相容屬性
+                if (path.startsWith("/admin")) {
+                    request.setAttribute("authenticatedUserToken", adminInfo);
+                }
+            }
         }
-
-        request.setAttribute("currentUser", tokenInfo); // Set currentUser if logged in
 
         // 2. Admin Routes Protection
         if (path.startsWith("/admin")) {
@@ -76,7 +71,7 @@ public class AuthenticationFilter implements Filter {
                 return;
             }
 
-            if (tokenInfo == null || !TokenService.ROLE_ADMIN.equals(tokenInfo.getRole())) {
+            if (adminInfo == null || !TokenService.ROLE_ADMIN.equals(adminInfo.getRole())) {
                 httpResponse.sendRedirect("/admin/login");
                 return;
             }
@@ -91,7 +86,7 @@ public class AuthenticationFilter implements Filter {
                 || path.equals("/mystery-box/draw");
 
         if (isProtected) {
-            if (tokenInfo == null) {
+            if (memberInfo == null) {
                 if (path.startsWith("/cart/api") || path.equals("/mystery-box/draw") || path.startsWith("/admin/api")) {
                     httpResponse.setStatus(401);
                     httpResponse.setContentType("application/json;charset=UTF-8");
@@ -104,5 +99,17 @@ public class AuthenticationFilter implements Filter {
         }
 
         chain.doFilter(request, response);
+    }
+
+    private String getCookieValue(HttpServletRequest request, String name) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (name.equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
     }
 }

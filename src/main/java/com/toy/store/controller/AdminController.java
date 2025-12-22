@@ -2,9 +2,6 @@ package com.toy.store.controller;
 
 import com.toy.store.annotation.CurrentUser;
 import com.toy.store.model.Product;
-import com.toy.store.repository.MemberRepository;
-import com.toy.store.repository.MemberLevelRepository;
-import com.toy.store.service.ProductService;
 import com.toy.store.service.TokenService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,7 +13,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Collections;
 import java.util.Optional;
@@ -85,7 +81,7 @@ public class AdminController {
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if ("ADMIN_TOKEN".equals(cookie.getName())) {
-                    tokenService.invalidateToken(cookie.getValue());
+                    tokenService.invalidateAdminToken(cookie.getValue());
                     cookie.setMaxAge(0);
                     cookie.setPath("/");
                     cookie.setValue(null);
@@ -117,7 +113,7 @@ public class AdminController {
 
         // Initialize new objects for forms
         model.addAttribute("newProduct", new Product());
-        model.addAttribute("newTheme", new com.toy.store.model.MysteryBoxTheme());
+        model.addAttribute("newTheme", new com.toy.store.model.GachaTheme());
         model.addAttribute("newActivity", new com.toy.store.model.Activity());
         model.addAttribute("newCategory", new com.toy.store.model.Category());
 
@@ -171,19 +167,29 @@ public class AdminController {
         return adminService.getMemberHistory(id);
     }
 
-    // --- Mystery Box Management ---
-    @PostMapping("/mystery-box/themes")
-    public String createTheme(@ModelAttribute com.toy.store.model.MysteryBoxTheme theme,
+    // --- Gacha Management ---
+    @PostMapping("/gacha/themes")
+    public String createTheme(@ModelAttribute com.toy.store.model.GachaTheme theme,
             @CurrentUser TokenService.TokenInfo info) {
         adminService.createTheme(theme, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=mystery";
     }
 
-    @PostMapping("/mystery-box/items")
-    public String createMysteryBoxItem(@RequestParam Long themeId,
-            @ModelAttribute com.toy.store.model.MysteryBoxItem item,
+    @PostMapping("/gacha/items")
+    public String createGachaItem(@RequestParam Long themeId,
+            @ModelAttribute com.toy.store.model.GachaItem item,
             @CurrentUser TokenService.TokenInfo info) {
-        adminService.createMysteryBoxItem(themeId, item, info != null ? info.getUsername() : "System");
+        adminService.createGachaItem(themeId, item, info != null ? info.getUsername() : "System");
+        return "redirect:/admin?tab=mystery";
+    }
+
+    @PostMapping("/gacha/items/update")
+    public String updateGachaItem(@RequestParam Long id,
+            @RequestParam String name,
+            @RequestParam java.math.BigDecimal estimatedValue,
+            @RequestParam Integer weight,
+            @CurrentUser TokenService.TokenInfo info) {
+        adminService.updateGachaItem(id, name, estimatedValue, weight, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=mystery";
     }
 
@@ -194,7 +200,7 @@ public class AdminController {
         return "redirect:/admin?tab=activities";
     }
 
-    @PostMapping("/mystery-box/themes/update")
+    @PostMapping("/gacha/themes/update")
     public String updateTheme(@RequestParam Long id,
             @RequestParam String name,
             @RequestParam java.math.BigDecimal price,
@@ -279,15 +285,15 @@ public class AdminController {
         return "redirect:/admin?tab=levels";
     }
 
-    @PostMapping("/mystery-box/themes/delete/{id}")
-    public String deleteMysteryBoxTheme(@PathVariable Long id, @CurrentUser TokenService.TokenInfo info) {
+    @PostMapping("/gacha/themes/delete/{id}")
+    public String deleteGachaTheme(@PathVariable Long id, @CurrentUser TokenService.TokenInfo info) {
         adminService.deleteTheme(id, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=mystery";
     }
 
-    @PostMapping("/mystery-box/items/delete/{id}")
-    public String deleteMysteryBoxItem(@PathVariable Long id, @CurrentUser TokenService.TokenInfo info) {
-        adminService.deleteMysteryBoxItem(id, info != null ? info.getUsername() : "System");
+    @PostMapping("/gacha/items/delete/{id}")
+    public String deleteGachaItem(@PathVariable Long id, @CurrentUser TokenService.TokenInfo info) {
+        adminService.deleteGachaItem(id, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=mystery";
     }
 

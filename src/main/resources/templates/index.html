@@ -67,11 +67,11 @@
         <header class="hero" th:if="${#lists.isEmpty(carouselSlides)}">
             <div>
                 <h1>釋放你的 <span style="color: var(--accent-color)">童心靈魂</span></h1>
-                <p>探索稀有收藏品、限定公仔與神秘盲盒。</p>
+                <p>探索稀有收藏品、限定公仔與神秘扭蛋。</p>
                 <div>
                     <a th:if="${@systemSettingService.isShoppingEnabled()}" th:href="@{/products}"
                         class="btn btn-primary">立即選購</a>
-                    <a th:href="@{/mystery-box}" class="btn btn-outline"
+                    <a th:href="@{/gacha}" class="btn btn-outline"
                         th:style="${@systemSettingService.isShoppingEnabled() ? 'margin-left: 10px;' : ''}">試試手氣</a>
                 </div>
             </div>

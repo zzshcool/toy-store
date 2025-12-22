@@ -16,7 +16,7 @@
                     <div style="text-align: center; margin-bottom: 25px;">
                         <div th:if="${member.level != null}"
                             style="display: inline-block; padding: 10px 25px; border-radius: 30px; font-weight: bold; font-size: 1.2rem; color: white;"
-                            th:styleappend="'background: linear-gradient(145deg, ' + (member.level.sortOrder >= 4 ? '#FFD700, #FFA500' : (member.level.sortOrder >= 3 ? '#C0C0C0, #A0A0A0' : (member.level.sortOrder >= 2 ? '#CD7F32, #B87333' : '#667eea, #764ba2'))) + ');'">
+                            th:styleappend="'background: linear-gradient(145deg, ' + (${member.level.sortOrder >= 4} ? '#FFD700, #FFA500' : (${member.level.sortOrder >= 3} ? '#C0C0C0, #A0A0A0' : (${member.level.sortOrder >= 2} ? '#CD7F32, #B87333' : '#667eea, #764ba2'))) + ');'">
                             <span th:text="${member.level.name}">VIP</span>
                         </div>
                         <div th:if="${member.level == null}"
@@ -45,6 +45,34 @@
                             <label>本月累計儲值</label>
                             <span style="font-size: 1.1rem; color: #666;"
                                 th:text="'$' + ${#numbers.formatDecimal(currentSpent, 1, 2)}">$0.00</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label>真實姓名 <span style="color: red;">*</span></label>
+                            <input type="text" name="realName" class="form-control" th:value="${member.realName}"
+                                required placeholder="請輸入真實姓名">
+                        </div>
+
+                        <div class="form-group">
+                            <label>通訊地址</label>
+                            <input type="text" name="address" class="form-control" th:value="${member.address}"
+                                placeholder="請輸入通訊地址">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>性別</label>
+                                <select name="gender" class="form-control">
+                                    <option value="" th:selected="${member.gender == null || member.gender == ''}">尚未設定
+                                    </option>
+                                    <option value="Male" th:selected="${member.gender == 'Male'}">男性</option>
+                                    <option value="Female" th:selected="${member.gender == 'Female'}">女性</option>
+                                    <option value="Other" th:selected="${member.gender == 'Other'}">其他</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>生日</label>
+                                <input type="date" name="birthday" class="form-control" th:value="${member.birthday}">
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -85,8 +113,8 @@
 
                             <div
                                 style="background: #eee; border-radius: 10px; height: 15px; overflow: hidden; margin-bottom: 10px;">
-                                <div style="height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); transition: width 0.5s;"
-                                    th:style="'width: ' + ${nextLevel.threshold.doubleValue() > 0 ? (currentSpent.doubleValue() / nextLevel.threshold.doubleValue() * 100) : 0} + '%'">
+                                <div style="transition: width 0.5s;"
+                                    th:style="'height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: ' + ${nextLevel.threshold.doubleValue() > 0 ? (currentSpent.doubleValue() / nextLevel.threshold.doubleValue() * 100) : 0} + '%'">
                                 </div>
                             </div>
                             <div

@@ -4,33 +4,31 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "mystery_box_items")
-public class MysteryBoxItem {
+@Table(name = "gacha_themes")
+public class GachaTheme {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "theme_id")
-    @JsonIgnore
-    private MysteryBoxTheme theme;
-
     @Column(nullable = false)
     private String name;
 
-    private BigDecimal estimatedValue;
+    @Column(length = 1000)
+    private String description;
 
-    // Weight for random selection algorithm. Higher weight = higher chance.
     @Column(nullable = false)
-    private Integer weight;
+    private BigDecimal price; // Cost to draw once
 
     private String imageUrl;
+
+    @OneToMany(mappedBy = "theme", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<GachaItem> items;
 }

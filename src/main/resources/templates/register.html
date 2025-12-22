@@ -10,34 +10,255 @@
                 錯誤訊息
             </div>
 
-            <form th:action="@{/register}" th:object="${signupRequest}" method="post">
-                <div class="form-group">
-                    <label>使用者名稱 <span style="color: red;">*</span></label>
-                    <input type="text" th:field="*{username}" class="form-control" required minlength="3"
-                        placeholder="至少 3 個字元" />
+            <!-- 三步驟註冊容器 -->
+            <div id="registrationSteps">
+                <!-- 步驟一：Email 輸入 -->
+                <div id="step1" class="step-content">
+                    <p style="color: #666; margin-bottom: 20px;">第一步：驗證您的電子郵件</p>
+                    <div class="form-group">
+                        <label>Email <span style="color: red;">*</span></label>
+                        <input type="email" id="emailInput" class="form-control" required
+                            placeholder="example@mail.com" />
+                    </div>
+                    <button type="button" onclick="sendEmailCode()" class="btn btn-primary"
+                        style="width: 100%;">發送驗證碼</button>
+                    <p id="step1Msg" style="font-size: 0.85rem; margin-top: 10px;"></p>
                 </div>
-                <div class="form-group">
-                    <label>暱稱</label>
-                    <input type="text" th:field="*{nickname}" class="form-control" maxlength="30"
-                        placeholder="選填，顯示名稱" />
+
+                <!-- 步驟二：驗證碼輸入 -->
+                <div id="step2" class="step-content" style="display: none;">
+                    <p style="color: #666; margin-bottom: 20px;">第二步：輸入 6 位數驗證碼</p>
+                    <div class="form-group">
+                        <label>驗證碼 <span style="color: red;">*</span></label>
+                        <input type="text" id="verifyCodeInput" class="form-control" maxlength="6"
+                            placeholder="請輸入 6 位數代碼" />
+                    </div>
+                    <button type="button" onclick="verifyEmailCode()" class="btn btn-primary"
+                        style="width: 100%;">驗證代碼</button>
+                    <button type="button" onclick="backToStep1()" class="btn btn-outline"
+                        style="width: 100%; margin-top: 10px; border-color: #ddd;">返回修改 Email</button>
+                    <p id="step2Msg" style="font-size: 0.85rem; margin-top: 10px;"></p>
                 </div>
-                <div class="form-group">
-                    <label>Email <span style="color: red;">*</span></label>
-                    <input type="email" th:field="*{email}" class="form-control" required
-                        placeholder="example@mail.com" />
+
+                <!-- 步驟三：完整註冊表單 -->
+                <div id="step3" class="step-content" style="display: none;">
+                    <p style="color: #27ae60; font-weight: bold; margin-bottom: 20px;">✓ Email 驗證成功，請填寫基本資料</p>
+
+                    <form th:action="@{/register}" th:object="${signupRequest}" method="post" id="finalRegisterForm">
+                        <input type="hidden" th:field="*{email}" id="finalEmailInput" />
+
+                        <div class="form-group">
+                            <label>使用者名稱 <span style="color: red;">*</span></label>
+                            <input type="text" th:field="*{username}" class="form-control" required minlength="3"
+                                placeholder="至少 3 個字元" />
+                        </div>
+                        <div class="form-group">
+                            <label>真實姓名 <span style="color: red;">*</span></label>
+                            <input type="text" th:field="*{realName}" class="form-control" required
+                                placeholder="請輸入真實姓名" />
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>性別</label>
+                                <select th:field="*{gender}" class="form-control">
+                                    <option value="">請選擇 (選填)</option>
+                                    <option value="Male">男性</option>
+                                    <option value="Female">女性</option>
+                                    <option value="Other">其他</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>生日</label>
+                                <input type="date" th:field="*{birthday}" class="form-control" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>通訊地址</label>
+                            <input type="text" th:field="*{address}" class="form-control" placeholder="選填，用於實體獎品寄送" />
+                        </div>
+                        <div class="form-group">
+                            <label>手機號碼 <span style="color: red;">*</span></label>
+                            <input type="tel" th:field="*{phone}" class="form-control" required pattern="09\d{8}"
+                                placeholder="09XXXXXXXX" />
+                        </div>
+                        <div class="form-group">
+                            <label>密碼 <span style="color: red;">*</span></label>
+                            <input type="password" th:field="*{password}" id="pwdMain" class="form-control" required
+                                minlength="6" placeholder="至少 6 個字元" oninput="checkPasswords()" />
+                        </div>
+                        <div class="form-group">
+                            <label>確認密碼 <span style="color: red;">*</span></label>
+                            <input type="password" id="pwdConfirm" class="form-control" required placeholder="請再次輸入密碼"
+                                oninput="checkPasswords()" />
+                            <small id="pwdMsg" style="display: block; margin-top: 5px;"></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>圖形驗證碼 <span style="color: red;">*</span></label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" th:field="*{captcha}" class="form-control" required
+                                    placeholder="請輸入右側驗證碼" style="flex: 1;" />
+                                <img id="captchaImg" th:src="@{/api/captcha}" onclick="refreshCaptcha()"
+                                    style="cursor: pointer; border: 1px solid #ddd; border-radius: 5px; height: 38px;"
+                                    title="點擊換一張" />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>會員條款與隱私權政策 <span style="color: red;">*</span></label>
+                            <div id="termsContainer"
+                                style="height: 120px; overflow-y: scroll; border: 1px solid #ddd; padding: 12px; font-size: 0.8rem; color: #777; background: #fafafa; border-radius: 5px;">
+                                <p><strong>一、會員服務條款</strong></p>
+                                <p>歡迎您加入成為本平台會員。在您完成註冊程序並開始使用本平台服務前，請務必詳細閱讀下列服務條款...</p>
+                                <p>1. 會員帳號及密碼安全：您有義務妥善保管帳號及密碼，不得將其轉借或讓與他人使用。</p>
+                                <p>2. 個人資料保護：本平台將依隱私權政策保護您的隱私資料...</p>
+                                <p
+                                    style="text-align: center; color: var(--accent-color); font-weight: bold; margin-top: 10px;">
+                                    --- 已閱讀至底部 ---</p>
+                            </div>
+                            <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="agreedTerms" th:field="*{agreedTerms}" disabled />
+                                <label for="agreedTerms" style="font-size: 0.85rem; color: #555;">我已詳細閱讀並同意上述條款</label>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="submitBtn" class="btn btn-primary"
+                            style="width: 100%; margin-top: 10px; opacity: 0.5;" disabled>完成註冊</button>
+                    </form>
                 </div>
-                <div class="form-group">
-                    <label>手機號碼 <span style="color: red;">*</span></label>
-                    <input type="tel" th:field="*{phone}" class="form-control" required pattern="09\d{8}"
-                        placeholder="09XXXXXXXX" />
-                </div>
-                <div class="form-group">
-                    <label>密碼 <span style="color: red;">*</span></label>
-                    <input type="password" th:field="*{password}" class="form-control" required minlength="6"
-                        placeholder="至少 6 個字元" />
-                </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">註冊</button>
-            </form>
+            </div>
+
+            <script>
+                // 步驟跳轉邏輯
+                function sendEmailCode() {
+                    const email = document.getElementById('emailInput').value;
+                    const msg = document.getElementById('step1Msg');
+                    if (!email) { alert('請輸入 Email'); return; }
+
+                    msg.style.color = '#555';
+                    msg.textContent = '發送中...';
+
+                    const formData = new URLSearchParams();
+                    formData.append('email', email);
+
+                    fetch('/api/register/send-code', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                document.getElementById('step1').style.display = 'none';
+                                document.getElementById('step2').style.display = 'block';
+                                document.getElementById('step2Msg').textContent = data.message;
+                                document.getElementById('step2Msg').style.color = '#27ae60';
+                            } else {
+                                msg.textContent = '錯誤: ' + data.message;
+                                msg.style.color = '#e74c3c';
+                            }
+                        })
+                        .catch(e => {
+                            msg.textContent = '系統繁忙，請稍後再試';
+                            msg.style.color = '#e74c3c';
+                        });
+                }
+
+                function verifyEmailCode() {
+                    const email = document.getElementById('emailInput').value;
+                    const code = document.getElementById('verifyCodeInput').value;
+                    const msg = document.getElementById('step2Msg');
+
+                    if (!code) { alert('請輸入驗證碼'); return; }
+
+                    const formData = new URLSearchParams();
+                    formData.append('email', email);
+                    formData.append('code', code);
+
+                    fetch('/api/register/verify-code', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                document.getElementById('step2').style.display = 'none';
+                                document.getElementById('step3').style.display = 'block';
+                                document.getElementById('finalEmailInput').value = email;
+                            } else {
+                                msg.textContent = '錯誤: ' + data.message;
+                                msg.style.color = '#e74c3c';
+                            }
+                        })
+                        .catch(e => {
+                            msg.textContent = '驗證失敗，請重新輸入';
+                            msg.style.color = '#e74c3c';
+                        });
+                }
+
+                function backToStep1() {
+                    document.getElementById('step2').style.display = 'none';
+                    document.getElementById('step1').style.display = 'block';
+                }
+
+                function refreshCaptcha() {
+                    document.getElementById('captchaImg').src = '/api/captcha?t=' + new Date().getTime();
+                }
+
+                // 密碼一致性檢查
+                function checkPasswords() {
+                    const pwd = document.getElementById('pwdMain').value;
+                    const cpwd = document.getElementById('pwdConfirm').value;
+                    const msg = document.getElementById('pwdMsg');
+
+                    if (cpwd.length === 0) {
+                        msg.textContent = '';
+                        return false;
+                    }
+
+                    if (pwd === cpwd) {
+                        msg.textContent = '✓ 密碼一致';
+                        msg.style.color = '#27ae60';
+                        return true;
+                    } else {
+                        msg.textContent = '✗ 兩次輸入的密碼不一致';
+                        msg.style.color = '#e74c3c';
+                        return false;
+                    }
+                }
+
+                // 條款滾動監聽 (Step 3)
+                const terms = document.getElementById('termsContainer');
+                const checkbox = document.getElementById('agreedTerms');
+                const submitBtn = document.getElementById('submitBtn');
+
+                terms.onscroll = function () {
+                    if (this.scrollHeight - this.scrollTop <= this.clientHeight + 5) {
+                        checkbox.disabled = false;
+                        checkbox.style.cursor = 'pointer';
+                        submitBtn.style.opacity = '1';
+                    }
+                };
+
+                checkbox.onchange = function () {
+                    updateSubmitStatus();
+                };
+
+                const pwdMain = document.getElementById('pwdMain');
+                const pwdConfirm = document.getElementById('pwdConfirm');
+
+                function updateSubmitStatus() {
+                    const isAgreed = checkbox.checked;
+                    const isPwdMatch = checkPasswords();
+
+                    submitBtn.disabled = !(isAgreed && isPwdMatch);
+                    if (!submitBtn.disabled) {
+                        submitBtn.style.background = 'var(--accent-color)';
+                        submitBtn.style.opacity = '1';
+                    } else {
+                        submitBtn.style.background = '#ccc';
+                    }
+                }
+            </script>
 
             <div class="text-center mt-4">
                 <p>已經有帳號了嗎？ <a th:href="@{/login}" style="color: var(--accent-color)">登入</a></p>

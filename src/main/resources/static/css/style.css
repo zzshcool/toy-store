@@ -3,17 +3,18 @@
     --bg-secondary: #f8f9fa;
     --text-primary: #333333;
     --text-secondary: #666666;
-    --accent-color: #ffb300;
-    /* Orange-Yellow */
-    --accent-hover: #ffa000;
-    /* Darker Orange-Yellow */
-    --error-color: #dc3545;
-    --success-color: #28a745;
+    --accent-color: #f39c12;
+    /* 更高級的橙金色 */
+    --accent-hover: #e67e22;
+    --error-color: #e74c3c;
+    --success-color: #27ae60;
     --card-bg: #ffffff;
     --header-height: 70px;
-    --header-bg: #ffeb3b;
-    /* Yellow Banner */
-    --border-color: #eeeeee;
+    --header-bg: #fff;
+    /* 改為純白更現代 */
+    --border-color: #f1f1f1;
+    --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.05);
+    --shadow-medium: 0 15px 35px rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -441,13 +442,30 @@ th {
 
     .nav-menu a {
         display: block;
-        padding: 15px 0;
+        padding: 15px 20px;
+        text-align: left;
+    }
+
+    /* 未登入按鈕組優化 */
+    .nav-menu li:has(.btn) {
+        display: flex;
+        flex-direction: column;
+        padding: 15px 20px;
+        gap: 10px;
+    }
+
+    .nav-menu li .btn {
+        margin-left: 0 !important;
+        width: 100%;
+        text-align: center;
+        padding: 12px;
     }
 
     .nav-menu li[style*="display: flex"] {
         flex-direction: column;
-        gap: 10px;
-        padding: 15px 0;
+        gap: 12px;
+        padding: 20px;
+        align-items: flex-start;
     }
 
     /* Mobile Cart Full Width */
