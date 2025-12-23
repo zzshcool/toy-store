@@ -4,6 +4,7 @@
 <body>
     <div th:fragment="content">
         <link rel="stylesheet" th:href="@{/css/gacha-animations.css}">
+        <script th:src="@{/js/game-utils.js}"></script>
 
         <div class="container section">
             <h2 class="section-title">🎰 神秘扭蛋機</h2>
@@ -19,6 +20,11 @@
                     <div class="img-placeholder"
                         style="background: linear-gradient(145deg, #ff6b6b, #ee5a5a); margin-bottom: 15px;">
                         <span style="font-size: 3rem;">🎁</span>
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 5px; margin-bottom: 8px;">
+                        <span th:if="${theme.ipName != ''}" th:text="${theme.ipName}"
+                            style="background: var(--gacha-gold); color: #333; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold;">
+                        </span>
                     </div>
                     <h3 th:text="${theme.name}">主題名稱</h3>
                     <p th:text="${theme.description}"
@@ -128,14 +134,16 @@
                         $<span id="confirmPrice">0</span>
                     </p>
                 </div>
-                <div style="display: flex; gap: 15px; justify-content: center;">
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
                     <button class="btn btn-outline" onclick="cancelConfirm()">取消</button>
-                    <button class="btn-gacha" onclick="confirmDraw()">確認扣款</button>
+                    <button class="btn btn-outline" onclick="confirmDraw(true)"
+                        style="border-color: #667eea; color: #667eea;">免費試抽體驗</button>
+                    <button class="btn-gacha" onclick="confirmDraw(false)">確認投幣</button>
                 </div>
             </div>
         </div>
 
-        <script>
+        <script th:inline="javascript">
             let selectedTheme = null;
 
             function selectTheme(card) {
@@ -159,24 +167,21 @@
             }
 
             function startDraw() {
-                if (!selectedTheme) return;
-
-                // 檢查是否登入 (使用 Thymeleaf 安全內聯)
-                const currentUser = /*[[${currentUser != null}]]*/ false;
-                if (!currentUser) {
-                    if (confirm('正式抽獎需要先登入，是否前往登入頁面？\n(您也可以先點擊「免費試抽」體驗)')) {
-                        window.location.href = '/login';
-                    }
+                if (!selectedTheme) {
+                    alert('請先選擇主題');
                     return;
                 }
 
-                // 顯示確認模態框
+                // 無論是否登入，都顯示確認框
                 document.getElementById('confirmPrice').textContent = selectedTheme.price;
                 document.getElementById('confirmModal').style.display = 'flex';
             }
 
             function startTrial() {
-                if (!selectedTheme) return;
+                if (!selectedTheme) {
+                    alert('請先選擇主題');
+                    return;
+                }
                 confirmDraw(true);
             }
 
@@ -186,6 +191,7 @@
 
             function confirmDraw(isTrial = false) {
                 document.getElementById('confirmModal').style.display = 'none';
+                GameUtils.showMask();
 
                 const btn = document.getElementById('drawBtn');
                 const trialBtn = document.getElementById('trialBtn');
@@ -200,9 +206,6 @@
                 handle.classList.add('rotating');
                 playHandleSound();
 
-                // 顯示全域遮罩
-                if (window.showMask) window.showMask();
-
                 setTimeout(() => {
                     handle.classList.remove('rotating');
 
@@ -211,17 +214,21 @@
                     capsule.classList.add('capsule-pro');
 
                     // 非同步請求結果
-                    const body = 'themeId=' + selectedTheme.id + (isTrial ? '&isTrial=true' : '');
+                    const params = new URLSearchParams();
+                    params.append('themeId', selectedTheme.id);
+                    if (isTrial) {
+                        params.append('isTrial', 'true');
+                    }
                     fetch('/gacha/draw', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: body
+                        body: params.toString()
                     })
                         .then(response => response.json())
                         .then(data => {
                             if (!data.success) {
                                 alert(data.message || '抽獎失敗');
-                                if (window.hideMask) window.hideMask();
+                                GameUtils.hideMask();
                                 location.reload();
                                 return;
                             }
@@ -233,8 +240,8 @@
 
                             // 3. 延時開殼並顯示結果
                             setTimeout(() => {
-                                playWinSound();
-                                spawnConfetti();
+                                GameUtils.playWinSound();
+                                GameUtils.spawnConfetti();
                                 showAjaxResult(prizeName, prizeWeight, prizeValue, isTrial);
 
                                 // 重置狀態
@@ -247,7 +254,7 @@
                         .catch(err => {
                             console.error('Error:', err);
                             alert('網路異常或系統錯誤，請確認餘額後重試');
-                            if (window.hideMask) window.hideMask();
+                            GameUtils.hideMask();
                         });
 
                 }, 800); // 手把轉完一圈的時間
@@ -268,63 +275,46 @@
                 } catch (e) { }
             }
 
-            // 播放中獎音效
-            function playWinSound() {
-                try {
-                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    const oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-
-                    oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
-                    oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.15);
-                    oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.3);
-                    oscillator.frequency.setValueAtTime(1046, audioContext.currentTime + 0.45);
-
-                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.7);
-
-                    oscillator.start(audioContext.currentTime);
-                    oscillator.stop(audioContext.currentTime + 0.7);
-                } catch (e) { }
-            }
-
-            // 產生彩色碎片
-            function spawnConfetti() {
-                const container = document.createElement('div');
-                container.className = 'confetti-container';
-                document.body.appendChild(container);
-
-                const colors = ['#ff6b6b', '#ffd93d', '#6c5ce7', '#00cec9', '#fd79a8', '#55efc4'];
-                for (let i = 0; i < 60; i++) {
-                    const piece = document.createElement('div');
-                    piece.className = 'confetti-piece';
-                    piece.style.left = Math.random() * 100 + '%';
-                    piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                    piece.style.width = (Math.random() * 10 + 5) + 'px';
-                    piece.style.height = piece.style.width;
-                    piece.style.animationDuration = (Math.random() * 2 + 2) + 's';
-                    piece.style.animationDelay = Math.random() * 0.5 + 's';
-                    container.appendChild(piece);
-                }
-                setTimeout(() => container.remove(), 4000);
-            }
 
             function showAjaxResult(name, weight, value, isTrial) {
+                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
                 document.getElementById('prizeNameResult').textContent = name;
                 document.getElementById('prizeWeightResult').querySelector('span').textContent = weight;
                 document.getElementById('prizeValueResult').querySelector('span').textContent = value;
                 document.getElementById('trialBadge').style.display = isTrial ? 'inline-block' : 'none';
-                document.getElementById('trialAction').style.display = isTrial ? 'block' : 'none';
+
+                const trialAction = document.getElementById('trialAction');
+                if (isTrial) {
+                    trialAction.style.display = 'block';
+                    trialAction.innerHTML = isLoggedIn ?
+                        '✨ 試抽完成！隨時可以正式投幣抽取真品。' :
+                        '喜歡這個獎品嗎？登入後即可正式抽取！';
+                } else {
+                    trialAction.style.display = 'none';
+                }
+
+                const resultBtn = document.querySelector('#resultModal .btn-gacha');
+                if (isTrial) {
+                    resultBtn.innerHTML = isLoggedIn ? '✨ 返回選購' : '太棒了！再抽一次';
+                    resultBtn.onclick = closeResultModal;
+                } else {
+                    resultBtn.innerHTML = '📦 查看我的獎品紀錄';
+                    resultBtn.onclick = () => GameUtils.redirectToHistory();
+                }
+
                 document.getElementById('resultModal').style.display = 'flex';
             }
 
             function closeResultModal() {
                 document.getElementById('resultModal').style.display = 'none';
-                if (window.hideMask) window.hideMask();
-                location.reload();
+                GameUtils.hideMask();
+                // 如果是正式抽獎，關閉後跳轉至紀錄頁面
+                const isTrial = document.getElementById('trialBadge').style.display !== 'none';
+                if (!isTrial) {
+                    GameUtils.redirectToHistory();
+                } else {
+                    location.reload();
+                }
             }
 
             // 初始數據檢查

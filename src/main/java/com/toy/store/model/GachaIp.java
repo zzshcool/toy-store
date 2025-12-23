@@ -50,6 +50,10 @@ public class GachaIp {
     @OneToMany(mappedBy = "ip", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<BingoGame> bingoGames;
 
+    // 關聯的扭蛋主題
+    @OneToMany(mappedBy = "ip", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<GachaTheme> gachaThemes;
+
     public enum Status {
         ACTIVE, // 啟用中
         INACTIVE, // 停用

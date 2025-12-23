@@ -63,6 +63,11 @@ public class DataInitializer implements CommandLineRunner {
                 new String[] { "鋼彈W", "鋼彈G武鬥", "鋼彈Seed", "無敵鐵金剛", "鋼彈(夏亞逆襲)", "鋼彈X", "鋼蛋Z", "鋼彈ZZ", "鋼彈UC" });
         seedSeries("任天堂系列", new String[] { "超級瑪莉", "神奇寶貝" });
         seedSeries("Capcom系列", new String[] { "元祖洛克人", "洛克人X" });
+        seedSeries("海賊王系列", new String[] { "草帽一伙", "和之國篇", "紅髮歌姬" });
+        seedSeries("鬼滅之刃系列", new String[] { "竈門炭治郎立志篇", "無限列車篇", "遊郭篇" });
+        seedSeries("咒術迴戰系列", new String[] { "特級咒物", "懷玉·玉折", "澀谷事變" });
+        seedSeries("我的英雄學院系列", new String[] { "雄英高中", "職業英雄", "死穢八齋會" });
+        seedSeries("間諜家家酒系列", new String[] { "佛傑家族", "伊甸學園", "秘密任務" });
 
         // Seed Activities
         seedActivities();

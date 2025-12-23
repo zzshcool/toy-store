@@ -4,6 +4,7 @@
 <body>
     <div th:fragment="content">
         <link rel="stylesheet" th:href="@{/css/gacha-animations.css}">
+        <script th:src="@{/js/game-utils.js}"></script>
 
         <div class="container section">
             <h2 class="section-title">🎯 一番賞</h2>
@@ -97,10 +98,12 @@
                         總計：<strong id="confirmTotalCost" style="color: var(--gacha-red);">$0</strong>
                     </p>
                 </div>
-                <div style="display: flex; gap: 15px;">
-                    <button class="btn btn-outline" onclick="closePurchaseModal()" style="flex: 1;">回上一頁</button>
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn btn-outline" onclick="closePurchaseModal()">取消</button>
+                    <button class="btn btn-outline" onclick="simulateTrialPurchase()"
+                        style="border-color: #6c5ce7; color: #6c5ce7;">免費試抽體驗</button>
                     <button id="purchaseBtn" class="btn-gacha" onclick="executePurchase()"
-                        style="flex: 1;">確認購買</button>
+                        style="flex: 1; min-width: 150px;">確認正式購買</button>
                 </div>
             </div>
         </div>
@@ -126,7 +129,7 @@
             </div>
         </div>
 
-        <script>
+        <script th:inline="javascript">
             let currentBoxId = null;
             let selectedSlots = [];
             let pricePerDraw = 0;
@@ -201,7 +204,10 @@
                 updateCartBar();
 
                 const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                document.getElementById('trialModeBanner').style.display = isLoggedIn ? 'none' : 'block';
+                document.getElementById('trialModeBanner').style.display = 'block'; // 始終顯示或改為特定提示
+                document.getElementById('trialModeBanner').innerHTML = isLoggedIn
+                    ? '✨ 目前為試抽模式 (登入中)，結果不列入紀錄。'
+                    : '✨ 目前為試抽模式，結果不列入紀錄。立即登入贏取真品！';
 
                 document.getElementById('boxList').style.display = 'none';
                 document.getElementById('slotSection').style.display = 'block';
@@ -318,15 +324,9 @@
                 document.getElementById('selectedCount').textContent = count;
                 document.getElementById('totalPrice').textContent = '$' + total;
 
-                if (!isLoggedIn) {
-                    purchaseBtn.textContent = '試抽體驗 (不扣點)';
-                    purchaseBtn.style.background = '#6c5ce7';
-                    purchaseBtn.style.color = 'white';
-                } else {
-                    purchaseBtn.textContent = '確認購買';
-                    purchaseBtn.style.background = '#ffd700';
-                    purchaseBtn.style.color = '#333';
-                }
+                purchaseBtn.textContent = '確認購買 / 試抽';
+                purchaseBtn.style.background = '#ffd700';
+                purchaseBtn.style.color = '#333';
 
                 cartBar.style.display = count > 0 ? 'flex' : 'none';
             }
@@ -361,16 +361,8 @@
                 const modalTitle = document.querySelector('#purchaseModal h3');
                 const purchaseBtn = document.getElementById('purchaseBtn');
 
-                if (!isLoggedIn) {
-                    modalTitle.textContent = '🎈 試抽體驗 (模擬)';
-                    purchaseBtn.textContent = '開始試抽';
-                    purchaseBtn.style.background = '#6c5ce7';
-                } else {
-                    modalTitle.textContent = '確認購買';
-                    purchaseBtn.textContent = '確認購買';
-                    purchaseBtn.style.background = '#ffd700';
-                }
-
+                // 始終顯示兩個選項 (除非有特殊需求)
+                // 這裡我們修改 Modal HTML 來包含兩個按鈕
                 document.getElementById('purchaseModal').style.display = 'flex';
                 document.body.style.overflow = 'hidden';
                 if (window.showMask) window.showMask();
@@ -471,7 +463,7 @@
                 if (prizes.length === 0) return;
 
                 // 播放音效
-                playRevealSound();
+                GameUtils.playRevealSound();
 
                 // 如果只有一個獎品，顯示刮開動畫
                 if (prizes.length === 1) {
@@ -482,29 +474,6 @@
                 }
             }
 
-            // 播放揭曉音效
-            function playRevealSound() {
-                try {
-                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    const oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-
-                    oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-                    oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
-                    oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
-
-                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-                    oscillator.start(audioContext.currentTime);
-                    oscillator.stop(audioContext.currentTime + 0.5);
-                } catch (e) {
-                    // 音效播放失敗，忽略
-                }
-            }
 
             // 單張刮刮卡揭曉動畫
             function showScratchReveal(item, data) {
@@ -547,7 +516,7 @@
                         `;
 
                         // 觸發粒子爆發
-                        spawnConfetti();
+                        GameUtils.spawnConfetti();
 
                         // 3秒後關閉並顯示總結
                         setTimeout(() => {
@@ -586,7 +555,7 @@
                     document.body.appendChild(flash);
 
                     // 播放快速音效
-                    playRevealSound();
+                    GameUtils.playRevealSound();
 
                     setTimeout(() => {
                         flash.remove();
@@ -631,38 +600,35 @@
                 document.getElementById('totalShardsResult').textContent = data.totalShards;
                 document.getElementById('totalCostResult').textContent = data.totalCost;
 
-                // 修改彈窗按鈕
                 const summaryBtn = document.querySelector('#resultModal .btn-gacha');
+                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
+
                 if (isTrial) {
-                    summaryBtn.innerHTML = '✨ 立即登入抽真品';
-                    summaryBtn.onclick = () => window.location.href = '/login';
+                    summaryBtn.innerHTML = isLoggedIn ? '✨ 返回選購' : '確定';
+                    summaryBtn.onclick = closeResult;
                 } else {
-                    summaryBtn.innerHTML = '太棒了！';
-                    summaryBtn.onclick = closeResultModal;
+                    summaryBtn.innerHTML = '📦 查看我的獎品紀錄';
+                    summaryBtn.onclick = () => GameUtils.redirectToHistory();
                 }
 
-                document.getElementById('resultModal').style.display = 'block';
+                document.getElementById('resultModal').style.display = 'flex';
+                document.getElementById('resultModal').dataset.isTrial = isTrial;
+
+                if (!isTrial) {
+                    spawnConfetti();
+                }
             }
 
-            // 生成彩色碎片飄落
-            function spawnConfetti() {
-                const container = document.createElement('div');
-                container.className = 'confetti-container';
-                document.body.appendChild(container);
+            function closeResult() {
+                const isTrial = document.getElementById('resultModal').dataset.isTrial === 'true';
+                document.getElementById('resultModal').style.display = 'none';
+                if (window.hideMask) window.hideMask();
 
-                const colors = ['#ff6b6b', '#ffd93d', '#6c5ce7', '#00cec9', '#fd79a8', '#55efc4'];
-
-                for (let i = 0; i < 50; i++) {
-                    const piece = document.createElement('div');
-                    piece.className = 'confetti-piece';
-                    piece.style.left = Math.random() * 100 + '%';
-                    piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                    piece.style.animationDelay = Math.random() * 0.5 + 's';
-                    piece.style.animationDuration = (2 + Math.random() * 2) + 's';
-                    container.appendChild(piece);
+                if (!isTrial) {
+                    GameUtils.redirectToHistory();
+                } else {
+                    location.reload();
                 }
-
-                setTimeout(() => container.remove(), 4000);
             }
 
             function closePurchaseModal() {

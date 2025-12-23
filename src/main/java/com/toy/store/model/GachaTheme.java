@@ -27,8 +27,17 @@ public class GachaTheme {
     @Column(nullable = false)
     private BigDecimal price; // Cost to draw once
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ip_id")
+    private GachaIp ip;
+
     private String imageUrl;
 
     @OneToMany(mappedBy = "theme", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<GachaItem> items;
+
+    // 取得 IP 名稱
+    public String getIpName() {
+        return ip != null ? ip.getName() : "";
+    }
 }

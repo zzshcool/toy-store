@@ -4,6 +4,7 @@
 <body>
     <div th:fragment="content">
         <link rel="stylesheet" th:href="@{/css/gacha-animations.css}">
+        <script th:src="@{/js/game-utils.js}"></script>
 
         <div class="container section">
             <h2 class="section-title">🎡 幸運轉盤</h2>
@@ -45,9 +46,11 @@
                     </p>
                 </div>
 
-                <div class="roulette-container">
+                <div class="roulette-container"
+                    style="max-width: 400px; width: 90%; aspect-ratio: 1/1; margin: 30px auto; position: relative;">
                     <div class="roulette-pointer"></div>
-                    <canvas id="wheelCanvas" class="roulette-wheel" width="350" height="350"></canvas>
+                    <canvas id="wheelCanvas" class="roulette-wheel"
+                        style="width: 100%; height: 100%; display: block;"></canvas>
                     <div class="roulette-center" onclick="spin()">
                         <span>🎰</span>
                     </div>
@@ -143,14 +146,16 @@
                         $<span id="confirmPrice">0</span>
                     </p>
                 </div>
-                <div style="display: flex; gap: 15px; justify-content: center;">
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
                     <button class="btn btn-outline" onclick="cancelConfirm()">取消</button>
-                    <button class="btn-gacha" onclick="confirmSpin()">確認扣款</button>
+                    <button class="btn btn-outline" onclick="simulateTrialSpin()"
+                        style="border-color: #667eea; color: #667eea;">免費試抽體驗</button>
+                    <button id="realSpinBtn" class="btn-gacha" onclick="confirmSpin()">確認扣款</button>
                 </div>
             </div>
         </div>
 
-        <script>
+        <script th:inline="javascript">
             let currentGameId = null;
             let isSpinning = false;
             let wheelSlots = [];
@@ -216,19 +221,21 @@
                 const isLoggedIn = /*[[${currentUser != null}]]*/ false;
                 const html = games.map(game => `
                     <div class="card" style="cursor: pointer;" onclick="selectGame(${game.id})">
-                        <div class="img-placeholder" style="background: linear-gradient(145deg, #e74c3c, #f39c12); border-radius: 50%; margin: 20px auto; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center;">
-                            <span style="color: white; font-size: 4rem;">🎡</span>
+                        <div class="img-placeholder" style="background: linear-gradient(145deg, #FF6B6B, #FFD93D); border-radius: 50%; margin: 20px auto; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 15px rgba(255,107,107,0.3);">
+                            <span style="color: white; font-size: 3.5rem;">🎡</span>
                         </div>
-                        <div style="padding: 20px; text-align: center;">
-                            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 5px;">
-                                <span style="background: var(--gacha-gold); color: #333; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">
+                        <div style="padding: 15px; text-align: center;">
+                            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                <span style="background: var(--gacha-gold); color: #333; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;">
                                     ${game.ipName}
                                 </span>
-                                ${!isLoggedIn ? '<span style="color: #667eea; font-size: 0.75rem; font-weight: bold;">✨ 試抽模式</span>' : ''}
                             </div>
-                            <h3 style="margin: 10px 0;">${game.name}</h3>
-                            <p style="color: var(--accent-color); font-weight: bold; font-size: 1.3rem;">$${game.pricePerSpin} / 次</p>
-                            <p style="color: #666; font-size: 0.9rem;">${game.totalSlots} 個獎格</p>
+                            <h3 style="margin: 10px 0; font-size: 1.1rem; color: var(--text-primary);">${game.name}</h3>
+                            <div style="display: flex; justify-content: center; gap: 5px; margin-bottom: 8px;">
+                                <span style="background: rgba(102,126,234,0.1); color: #667eea; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;">✨ 支援試抽</span>
+                            </div>
+                            <p style="color: var(--accent-color); font-weight: bold; font-size: 1.2rem; margin-bottom: 5px;">$${game.pricePerSpin} / 次</p>
+                            <p style="color: #666; font-size: 0.8rem;">${game.totalSlots} 個獎格</p>
                         </div>
                     </div>
                 `).join('');
@@ -288,9 +295,15 @@
             function drawWheel(slots) {
                 const canvas = document.getElementById('wheelCanvas');
                 const ctx = canvas.getContext('2d');
+
+                // 根據容器實際大小設定 Canvas 解析度 (解決模糊與比例問題)
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+
                 const centerX = canvas.width / 2;
                 const centerY = canvas.height / 2;
-                const radius = canvas.width / 2 - 5;
+                const radius = Math.min(centerX, centerY) - 10;
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -337,7 +350,7 @@
                 document.getElementById('confirmPrice').textContent = currentSpinPrice;
 
                 const modalTitle = document.querySelector('#confirmModal h3');
-                modalTitle.textContent = isLoggedIn ? '確認旋轉' : '🎡 進入試抽體驗';
+                modalTitle.textContent = '確認旋轉 / 試抽';
 
                 document.getElementById('confirmModal').style.display = 'flex';
             }
@@ -354,7 +367,7 @@
                 }
 
                 document.getElementById('confirmModal').style.display = 'none';
-                if (window.showMask) window.showMask(); // Call showMask at the start
+                GameUtils.showMask(); // Call showMask at the start
                 isSpinning = true;
                 document.getElementById('spinBtn').disabled = true;
 
@@ -369,13 +382,13 @@
                                 loadLuckyValue();
                                 // 刷新餘額
                                 if (window.refreshBalance) window.refreshBalance();
-                                if (window.hideMask) window.hideMask(); // Call hideMask after result is shown
+                                GameUtils.hideMask(); // Call hideMask after result is shown
                             });
                         } else {
                             alert(response.message || '旋轉失敗');
                             isSpinning = false;
                             document.getElementById('spinBtn').disabled = false;
-                            if (window.hideMask) window.hideMask(); // Call hideMask on error
+                            GameUtils.hideMask(); // Call hideMask on error
                         }
                     })
                     .catch(err => {
@@ -383,13 +396,13 @@
                         alert('操作失敗');
                         isSpinning = false;
                         document.getElementById('spinBtn').disabled = false;
-                        if (window.hideMask) window.hideMask(); // Call hideMask on error
+                        GameUtils.hideMask(); // Call hideMask on error
                     });
             }
 
             function simulateTrialSpin() {
                 document.getElementById('confirmModal').style.display = 'none';
-                if (window.showMask) window.showMask();
+                GameUtils.showMask();
                 isSpinning = true;
                 document.getElementById('spinBtn').disabled = true;
 
@@ -406,7 +419,7 @@
                         isFreeSpin: false
                     };
                     showResult(trialResult, "試抽成功");
-                    if (window.hideMask) window.hideMask();
+                    GameUtils.hideMask();
                 });
             }
 
@@ -444,18 +457,45 @@
             }
 
             function showResult(result, message) {
+                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
+                const isTrial = !!result.isTrial;
                 const slot = result.slot;
+
                 document.getElementById('resultType').textContent = slot.isJackpot ? '🏆' : '🎊';
                 document.getElementById('resultPrize').textContent = slot.prizeName;
                 document.getElementById('resultShards').textContent = result.shardsEarned > 0 ? `+${result.shardsEarned} 碎片` : '';
                 document.getElementById('resultGuarantee').style.display = result.isGuarantee ? 'block' : 'none';
                 document.getElementById('resultFreeSpin').style.display = result.isFreeSpin ? 'block' : 'none';
+
+                const resultBtn = document.querySelector('#resultModal .btn-gacha');
+                if (isTrial) {
+                    resultBtn.innerHTML = isLoggedIn ? '✨ 返回選購' : '確定';
+                    resultBtn.onclick = closeResult;
+                } else {
+                    resultBtn.innerHTML = '📦 查看我的獎品紀錄';
+                    resultBtn.onclick = () => GameUtils.redirectToHistory();
+                }
+
                 document.getElementById('resultModal').style.display = 'flex';
+                // 儲存當前是否為正式抽獎，供關閉時參考
+                document.getElementById('resultModal').dataset.isTrial = isTrial;
+
+                if (!isTrial) {
+                    GameUtils.playWinSound();
+                    GameUtils.spawnConfetti();
+                }
             }
 
             function closeResult() {
+                const isTrial = document.getElementById('resultModal').dataset.isTrial === 'true';
                 document.getElementById('resultModal').style.display = 'none';
-                if (window.hideMask) window.hideMask();
+                GameUtils.hideMask();
+
+                if (!isTrial) {
+                    GameUtils.redirectToHistory();
+                } else {
+                    location.reload();
+                }
             }
         </script>
     </div>

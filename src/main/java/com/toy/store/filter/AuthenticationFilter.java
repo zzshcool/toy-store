@@ -83,7 +83,8 @@ public class AuthenticationFilter implements Filter {
         // Let's define Protected Routes: /cart, /profile, /orders, /mystery-box/draw
 
         boolean isProtected = path.startsWith("/cart") || path.startsWith("/profile") || path.startsWith("/orders")
-                || path.equals("/mystery-box/draw");
+                || path.equals("/mystery-box/draw")
+                || path.contains("/purchase") || path.contains("/spin") || path.contains("/dig");
 
         if (isProtected) {
             if (memberInfo == null) {
