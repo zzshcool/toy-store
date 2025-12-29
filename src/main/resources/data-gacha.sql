@@ -42,9 +42,9 @@ INSERT INTO ichiban_slots (box_id, slot_number, status, prize_id) VALUES
 (1, 20, 'AVAILABLE', 6);
 
 -- 6. 測試轉盤遊戲
-INSERT INTO roulette_games (ip_id, name, description, image_url, price_per_spin, max_slots, total_slots, status, created_at) VALUES 
-(1, '洛克人幸運轉盤', '轉動命運，贏取豪禮！', '/images/roulette/rockman.jpg', 100, 25, 8, 'ACTIVE', NOW()),
-(2, '航海王尋寶輪盤', '尋找屬於你的寶藏！', '/images/roulette/onepiece.jpg', 150, 25, 10, 'ACTIVE', NOW());
+INSERT INTO roulette_games (ip_id, name, description, image_url, price_per_spin, max_slots, total_slots, total_draws, status, created_at) VALUES 
+(1, '洛克人幸運轉盤', '轉動命運，贏取豪禮！', '/images/roulette/rockman.jpg', 100, 25, 8, 0, 'ACTIVE', NOW()),
+(2, '航海王尋寶輪盤', '尋找屬於你的寶藏！', '/images/roulette/onepiece.jpg', 150, 25, 10, 0, 'ACTIVE', NOW());
 
 -- 7. 轉盤獎格
 INSERT INTO roulette_slots (game_id, slot_order, slot_type, prize_name, prize_description, weight, shard_amount, color) VALUES 

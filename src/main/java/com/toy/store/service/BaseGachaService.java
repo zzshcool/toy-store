@@ -32,11 +32,15 @@ public abstract class BaseGachaService {
     }
 
     /**
-     * 處理 Gacha 抽獎獲得碎片
+     * 處理 Gacha 抽獎獲得隨機積分 (1~20)
      */
     @Transactional
     protected int processGachaShards(Long memberId, String sourceType, Long sourceId, String description) {
-        int shards = shardService.generateRandomShards();
+        // 按照用戶需求，產出 1~20 的隨機碎片 (積分)
+        int min = 1;
+        int max = 20;
+        int shards = new java.util.Random().nextInt(max - min + 1) + min;
+
         shardService.addGachaShards(memberId, shards, sourceType, sourceId, description);
         return shards;
     }

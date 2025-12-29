@@ -100,6 +100,31 @@ public class IchibanService extends BaseGachaService {
         deductWallet(memberId, box.getPricePerDraw(), Transaction.TransactionType.ICHIBAN_COST,
                 "一番賞抽獎: 箱體ID " + boxId + ", 格子號碼 " + slotNumber);
 
+        // 收益保護：如果抽出進度小於 70% 且抽中大獎，則嘗試與其他可用格子交換
+        int totalSlots = box.getTotalSlots();
+        int revealedSlots = totalSlots - slotRepository.countAvailableSlots(boxId);
+        double progress = (double) revealedSlots / totalSlots;
+
+        if (progress < 0.7 && slot.getTier() == GachaProbabilityEngine.PrizeTier.JACKPOT) {
+            // 嘗試尋找一個非大獎的可用格子進行交換
+            List<IchibanSlot> availableNormalSlots = slotRepository
+                    .findByBoxIdAndStatus(boxId, IchibanSlot.Status.AVAILABLE).stream()
+                    .filter(s -> s.getTier() != GachaProbabilityEngine.PrizeTier.JACKPOT
+                            && !s.getSlotNumber().equals(slotNumber))
+                    .collect(java.util.stream.Collectors.toList());
+
+            if (!availableNormalSlots.isEmpty()) {
+                // 選一個隨機的普通格子交換獎品
+                IchibanSlot targetSlot = availableNormalSlots
+                        .get(new java.util.Random().nextInt(availableNormalSlots.size()));
+                IchibanPrize bigPrize = slot.getPrize();
+                slot.setPrize(targetSlot.getPrize());
+                targetSlot.setPrize(bigPrize);
+                slotRepository.save(targetSlot);
+                // 繼續流程，slot 現在持有的是普通獎品
+            }
+        }
+
         // 揭曉格子
         slot.reveal(memberId);
         slotRepository.save(slot);

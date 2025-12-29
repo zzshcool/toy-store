@@ -3,6 +3,7 @@
 
 <body>
     <div th:fragment="content">
+        <link rel="stylesheet" th:href="@{/css/home-premium.css}">
 
         <style>
             /* Carousel Styles */
@@ -63,6 +64,46 @@
             }
         </style>
 
+        <!-- Winner Reel (Commercial Highlight) -->
+        <div class="winner-reel-container" th:if="${!#lists.isEmpty(latestWinners)}">
+            <div class="winner-reel">
+                <div th:each="win : ${latestWinners}" class="winner-item">
+                    🎊 恭喜玩家 <span class="winner-name" th:text="${win.username}">j***n</span>
+                    抽中 <span class="winner-prize" th:text="${win.prizeName}">實體抱枕</span>
+                    <span th:if="${win.prizeRank != null}" th:text="'(' + ${win.prizeRank} + '賞)'"
+                        style="color: #ff8c00; font-weight: bold;"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- Personal Dashboard (Login Status) -->
+            <div th:if="${currentMember != null}" class="personal-dashboard">
+                <div class="user-welcome">
+                    歡迎回來，<span
+                        th:text="${currentMember.nickname != null ? currentMember.nickname : currentMember.username}">玩家</span>！
+                </div>
+                <div class="user-assets">
+                    <div class="asset-item">
+                        <span class="asset-label">錢包餘額</span>
+                        <span class="asset-value gold" th:text="'$' + ${currentMember.platformWalletBalance}">$0</span>
+                    </div>
+                    <div class="asset-item">
+                        <span class="asset-label">累積碎片</span>
+                        <span class="asset-value shards" th:text="${currentMember.shards}">0</span>
+                    </div>
+                    <div class="asset-item">
+                        <span class="asset-label">幸運值</span>
+                        <span class="asset-value" style="color: #ff6b6b;" th:text="${currentMember.luckyValue}">0</span>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <a th:href="@{/transactions}" class="btn btn-sm"
+                        style="background: var(--premium-gold); color: #000; border-radius: 20px;">儲值點數</a>
+                </div>
+            </div>
+        </div>
+
         <!-- Default Hero if no slides -->
         <header class="hero" th:if="${#lists.isEmpty(carouselSlides)}">
             <div>
@@ -93,6 +134,50 @@
         </div>
 
         <div class="container">
+            <!-- Hot Ichiban Showcase -->
+            <div th:if="${@systemSettingService.isIchibanEnabled() && !#lists.isEmpty(hotIchiban)}"
+                style="margin-top: 40px; margin-bottom: 60px;">
+                <h2 class="premium-section-title">熱門一番賞 (Hot Ichiban)</h2>
+                <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;">
+                    <div th:each="box : ${hotIchiban}" class="game-card">
+                        <span class="game-tag">熱賣中</span>
+                        <img th:src="${box.imageUrl != null ? box.imageUrl : '/images/placeholder.jpg'}"
+                            alt="Game Image">
+                        <div class="game-card-content">
+                            <div class="game-card-title" th:text="${box.name}">一番賞名稱</div>
+                            <div class="game-card-stats">
+                                <span>單抽: <b style="color: var(--premium-gold);"
+                                        th:text="'$' + ${box.pricePerDraw}">$100</b></span>
+                                <span>剩餘: <b th:text="${box.totalSlots}">80</b>/<span
+                                        th:text="${box.maxSlots}">80</span></span>
+                            </div>
+                            <a th:href="@{/ichiban(boxId=${box.id})}" class="btn btn-premium">進入機台</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hot Bingo Showcase -->
+            <div th:if="${@systemSettingService.isBingoEnabled() && !#lists.isEmpty(hotBingo)}"
+                style="margin-bottom: 60px;">
+                <h2 class="premium-section-title">連線九宮格 (Bingo Games)</h2>
+                <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;">
+                    <div th:each="game : ${hotBingo}" class="game-card">
+                        <span class="game-tag" style="background: #00d2ff;">熱門</span>
+                        <img th:src="${game.imageUrl != null ? game.imageUrl : '/images/placeholder.jpg'}"
+                            alt="Game Image">
+                        <div class="game-card-content">
+                            <div class="game-card-title" th:text="${game.name}">九宮格名稱</div>
+                            <div class="game-card-stats">
+                                <span>單挖: <b style="color: var(--premium-gold);"
+                                        th:text="'$' + ${game.pricePerDig}">$50</b></span>
+                                <span>格數: <span th:text="${game.gridSize + 'x' + game.gridSize}">3x3</span></span>
+                            </div>
+                            <a th:href="@{/bingo(gameId=${game.id})}" class="btn btn-premium">開始挑戰</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- New Arrivals -->
             <div th:if="${@systemSettingService.isShoppingEnabled() && !#lists.isEmpty(newArrivals)}"
@@ -158,17 +243,20 @@
                 </div>
             </div>
 
-            <h2 class="section-title">最新活動</h2>
-            <div class="grid">
-                <div th:each="activity : ${activities}" class="card">
-                    <div class="img-placeholder">
-                        (活動圖片)
-                    </div>
-                    <div style="padding: 20px;">
-                        <span th:text="${activity.type}" class="btn btn-sm"
-                            style="background: #eee; color: #333;">TYPE</span>
-                        <h3 th:text="${activity.title}" style="margin: 10px 0;">標題</h3>
-                        <p th:text="${activity.description}">描述</p>
+            <!-- 隱藏最新活動區塊 -->
+            <div th:if="${false}">
+                <h2 class="section-title">最新活動</h2>
+                <div class="grid">
+                    <div th:each="activity : ${activities}" class="card">
+                        <div class="img-placeholder">
+                            (活動圖片)
+                        </div>
+                        <div style="padding: 20px;">
+                            <span th:text="${activity.type}" class="btn btn-sm"
+                                style="background: #eee; color: #333;">TYPE</span>
+                            <h3 th:text="${activity.title}" style="margin: 10px 0;">標題</h3>
+                            <p th:text="${activity.description}">描述</p>
+                        </div>
                     </div>
                 </div>
             </div>

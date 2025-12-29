@@ -142,8 +142,8 @@ FROM ichiban_boxes b
 CROSS JOIN SYSTEM_RANGE(1, 80) s;
 
 -- ########## 5. 轉盤與九宮格特化獎項 ##########
-INSERT INTO roulette_games (id, ip_id, name, description, image_url, price_per_spin, max_slots, total_slots, status, created_at)
-SELECT id, id, CONCAT(name, ' 極速轉盤'), '最高有機率獲得 1000 碎片！', '/images/roulette/generic.jpg', 150, 25, 8, 'ACTIVE', NOW() FROM gacha_ips;
+INSERT INTO roulette_games (id, ip_id, name, description, image_url, price_per_spin, max_slots, total_slots, total_draws, status, created_at)
+SELECT id, id, CONCAT(name, ' 極速轉盤'), '最高有機率獲得 1000 碎片！', '/images/roulette/generic.jpg', 150, 25, 8, 0, 'ACTIVE', NOW() FROM gacha_ips;
 
 INSERT INTO roulette_slots (game_id, slot_order, slot_type, prize_name, prize_description, weight, shard_amount, color)
 SELECT g.id, s.idx, 

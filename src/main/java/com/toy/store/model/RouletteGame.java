@@ -46,6 +46,9 @@ public class RouletteGame {
     @Column(nullable = false)
     private Integer totalSlots; // 實際設定的格數
 
+    @Column(nullable = false)
+    private Integer totalDraws = 0; // 累計抽獎次數 (用於機率控制)
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Status status = Status.ACTIVE;

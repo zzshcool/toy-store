@@ -74,6 +74,9 @@ public class DataInitializer implements CommandLineRunner {
 
         // Seed Member Levels
         seedMemberLevels();
+
+        // Seed Gacha Games (Ichiban, Bingo, Roulette)
+        seedGachaGames();
     }
 
     @Autowired
@@ -192,7 +195,7 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
-    private void createLevel(String name, int sortOrder, double threshold, String monthlyReward) {
+    private void createLevel(String name, int sortOrder, int threshold, String monthlyReward) {
         com.toy.store.model.MemberLevel level = new com.toy.store.model.MemberLevel();
         level.setName(name);
         level.setSortOrder(sortOrder);
@@ -200,5 +203,125 @@ public class DataInitializer implements CommandLineRunner {
         level.setMonthlyReward(monthlyReward);
         level.setEnabled(true);
         memberLevelRepository.save(level);
+    }
+
+    @Autowired
+    private com.toy.store.repository.GachaIpRepository ipRepository;
+
+    @Autowired
+    private com.toy.store.repository.IchibanBoxRepository ichibanBoxRepository;
+
+    @Autowired
+    private com.toy.store.repository.BingoGameRepository bingoGameRepository;
+
+    @Autowired
+    private com.toy.store.service.IchibanService ichibanService;
+
+    @Autowired
+    private com.toy.store.repository.RouletteGameRepository rouletteGameRepository;
+
+    @Autowired
+    private com.toy.store.repository.RouletteSlotRepository rouletteSlotRepository;
+
+    private void seedGachaGames() {
+        if (ichibanBoxRepository.count() > 0)
+            return;
+
+        com.toy.store.model.GachaIp ip = ipRepository.findAll().get(0);
+
+        // 1. One Ichiban Box
+        com.toy.store.model.IchibanBox box = new com.toy.store.model.IchibanBox();
+        box.setIp(ip);
+        box.setName("動漫大會串 一番賞");
+        box.setDescription("超強一番賞，內含多款實體獎品！");
+        box.setPricePerDraw(new BigDecimal("250.00"));
+        box.setTotalSlots(80);
+        box.setStatus(com.toy.store.model.IchibanBox.Status.ACTIVE);
+
+        java.util.List<com.toy.store.model.IchibanPrize> prizes = new java.util.ArrayList<>();
+        prizes.add(new com.toy.store.model.IchibanPrize(null, box, com.toy.store.model.IchibanPrize.Rank.A,
+                "實體抱枕 - 炭治郎款", "精美抱枕", null, new BigDecimal("1200"), 2, 2, 0));
+        prizes.add(new com.toy.store.model.IchibanPrize(null, box, com.toy.store.model.IchibanPrize.Rank.B,
+                "實體滑鼠墊 - 禰豆子款", "大尺寸滑鼠墊", null, new BigDecimal("800"), 3, 3, 1));
+        prizes.add(new com.toy.store.model.IchibanPrize(null, box, com.toy.store.model.IchibanPrize.Rank.C,
+                "實體鉛筆盒 - 善逸款", "多功能鉛筆盒", null, new BigDecimal("500"), 5, 5, 2));
+        prizes.add(new com.toy.store.model.IchibanPrize(null, box, com.toy.store.model.IchibanPrize.Rank.D,
+                "實體筆記本 - 伊之助款", "B5 筆記本", null, new BigDecimal("300"), 10, 10, 3));
+        prizes.add(new com.toy.store.model.IchibanPrize(null, box, com.toy.store.model.IchibanPrize.Rank.E, "角色精美徽章",
+                "隨機角色款式", null, new BigDecimal("150"), 60, 60, 4));
+
+        ichibanService.createBox(box, prizes);
+
+        // 2. One Bingo Game
+        com.toy.store.model.BingoGame bingo = new com.toy.store.model.BingoGame();
+        bingo.setIp(ip);
+        bingo.setName("幸運九宮格");
+        bingo.setDescription("連線即可獲得限量實體抱枕！");
+        bingo.setPricePerDig(new BigDecimal("150.00"));
+        bingo.setGridSize(3);
+        bingo.setStatus(com.toy.store.model.BingoGame.Status.ACTIVE);
+        bingo.setBingoRewardName("限量實體抱枕 (黃金版)");
+        bingo = bingoGameRepository.save(bingo);
+
+        for (int i = 1; i <= 9; i++) {
+            com.toy.store.model.BingoCell cell = new com.toy.store.model.BingoCell();
+            cell.setGame(bingo);
+            cell.setPosition(i);
+            cell.setRow((i - 1) / 3);
+            cell.setCol((i - 1) % 3);
+
+            if (i == 5) {
+                cell.setPrizeName("限量實體抱枕 (黃金版)");
+                cell.setPrizeValue(new BigDecimal("1500"));
+            } else if (i % 3 == 0) {
+                cell.setPrizeName("實體滑鼠墊");
+                cell.setPrizeValue(new BigDecimal("800"));
+            } else if (i % 3 == 1) {
+                cell.setPrizeName("實體鉛筆盒");
+                cell.setPrizeValue(new BigDecimal("500"));
+            } else {
+                cell.setPrizeName("實體筆記本");
+                cell.setPrizeValue(new BigDecimal("300"));
+            }
+            cell.setIsRevealed(false);
+            if (bingo.getCells() == null)
+                bingo.setCells(new java.util.ArrayList<>());
+            bingo.getCells().add(cell);
+        }
+        bingoGameRepository.save(bingo);
+
+        // 3. One Roulette Game
+        com.toy.store.model.RouletteGame roulette = new com.toy.store.model.RouletteGame();
+        roulette.setIp(ip);
+        roulette.setName("狂熱轉盤");
+        roulette.setDescription("轉動轉盤獲得徽章與水杯！");
+        roulette.setPricePerSpin(new BigDecimal("200.00"));
+        roulette.setTotalSlots(8);
+        roulette.setStatus(com.toy.store.model.RouletteGame.Status.ACTIVE);
+        roulette = rouletteGameRepository.save(roulette);
+
+        String[] prizesRoulette = { "周邊商品徽章", "實體水杯", "精美杯墊", "鑰匙圈", "角色帆布袋", "再來一次", "限量黃金版抱枕", "實體滑鼠墊" };
+        com.toy.store.model.RouletteSlot.SlotType[] types = {
+                com.toy.store.model.RouletteSlot.SlotType.NORMAL,
+                com.toy.store.model.RouletteSlot.SlotType.RARE,
+                com.toy.store.model.RouletteSlot.SlotType.NORMAL,
+                com.toy.store.model.RouletteSlot.SlotType.NORMAL,
+                com.toy.store.model.RouletteSlot.SlotType.NORMAL,
+                com.toy.store.model.RouletteSlot.SlotType.FREE_SPIN,
+                com.toy.store.model.RouletteSlot.SlotType.JACKPOT,
+                com.toy.store.model.RouletteSlot.SlotType.RARE
+        };
+
+        for (int i = 0; i < 8; i++) {
+            com.toy.store.model.RouletteSlot slot = new com.toy.store.model.RouletteSlot();
+            slot.setGame(roulette);
+            slot.setSlotOrder(i + 1);
+            slot.setPrizeName(prizesRoulette[i]);
+            slot.setSlotType(types[i]);
+            slot.setWeight(types[i] == com.toy.store.model.RouletteSlot.SlotType.JACKPOT ? 10 : 100);
+            if (types[i] == com.toy.store.model.RouletteSlot.SlotType.SHARD)
+                slot.setShardAmount(100);
+            rouletteSlotRepository.save(slot);
+        }
     }
 }

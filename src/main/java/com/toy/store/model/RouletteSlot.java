@@ -1,5 +1,6 @@
 package com.toy.store.model;
 
+import com.toy.store.service.GachaProbabilityEngine;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,7 +17,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "roulette_slots")
-public class RouletteSlot {
+public class RouletteSlot implements GachaProbabilityEngine.ProbableItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -49,6 +50,20 @@ public class RouletteSlot {
 
     // 顏色（用於前端顯示）
     private String color = "#FFD700";
+
+    @Override
+    public Integer getWeight() {
+        return weight;
+    }
+
+    @Override
+    public GachaProbabilityEngine.PrizeTier getTier() {
+        if (slotType == SlotType.JACKPOT)
+            return GachaProbabilityEngine.PrizeTier.JACKPOT;
+        if (slotType == SlotType.RARE)
+            return GachaProbabilityEngine.PrizeTier.RARE;
+        return GachaProbabilityEngine.PrizeTier.NORMAL;
+    }
 
     public enum SlotType {
         JACKPOT("大獎", "#FF0000"), // 大獎

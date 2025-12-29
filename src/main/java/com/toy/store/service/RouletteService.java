@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Random;
 
 /**
  * 轉盤服務
@@ -24,12 +23,13 @@ public class RouletteService extends BaseGachaService {
     private RouletteSlotRepository slotRepository;
 
     @Autowired
+    private GachaProbabilityEngine probabilityEngine;
+
+    @Autowired
     private MemberLuckyValueRepository luckyValueRepository;
 
     @Autowired
     private SystemSettingService settingService;
-
-    private final Random random = new Random();
 
     /**
      * 取得所有進行中的轉盤遊戲
@@ -42,6 +42,8 @@ public class RouletteService extends BaseGachaService {
      * 取得轉盤詳情（含獎格）
      */
     public RouletteGame getGameWithSlots(Long gameId) {
+        if (gameId == null)
+            return null;
         return gameRepository.findById(gameId).orElse(null);
     }
 
@@ -84,8 +86,12 @@ public class RouletteService extends BaseGachaService {
             winningSlot = selectJackpotSlot(slots);
             luckyValue.resetLuckyValue();
         } else {
-            // 正常隨機
-            winningSlot = selectRandomSlot(slots);
+            // 收益保護核心邏輯：計算進度 (此處模擬 100 次為一個收益週期)
+            double revenueThreshold = 0.7; // 70% 門檻
+            double progress = (game.getTotalDraws() % 100) / 100.0;
+
+            winningSlot = probabilityEngine.draw(slots, progress, revenueThreshold);
+
             if (!winningSlot.isJackpot()) {
                 // 未中大獎，累積幸運值
                 luckyValue.addLuckyValue(10);
@@ -94,24 +100,21 @@ public class RouletteService extends BaseGachaService {
                 luckyValue.resetLuckyValue();
             }
         }
+
+        // 更新累計抽獎次數
+        game.setTotalDraws(game.getTotalDraws() + 1);
+        gameRepository.save(game);
         luckyValueRepository.save(luckyValue);
 
         // 處理獎勵
         int shardsEarned = 0;
         boolean isFreeSpin = false;
 
-        switch (winningSlot.getSlotType()) {
-            case SHARD:
-                shardsEarned = winningSlot.getShardAmount() != null ? winningSlot.getShardAmount() : 50;
-                shardService.addGachaShards(memberId, shardsEarned, "ROULETTE", gameId, "轉盤抽獎獲得");
-                break;
-            case FREE_SPIN:
-                isFreeSpin = true;
-                break;
-            default:
-                // 其他獎品，產出隨機碎片
-                shardsEarned = processGachaShards(memberId, "ROULETTE", gameId, "轉盤抽獎獲得");
-                break;
+        // 所有獎項現在均產出隨機積分 1~20
+        shardsEarned = processGachaShards(memberId, "ROULETTE", gameId, "轉盤抽獎獲得");
+
+        if (winningSlot.getSlotType() == RouletteSlot.SlotType.FREE_SPIN) {
+            isFreeSpin = true;
         }
 
         // 記錄抽獎
@@ -128,23 +131,6 @@ public class RouletteService extends BaseGachaService {
     public MemberLuckyValue getMemberLuckyValue(Long memberId) {
         return luckyValueRepository.findByMemberId(memberId)
                 .orElse(new MemberLuckyValue(memberId));
-    }
-
-    /**
-     * 根據權重隨機選擇格子
-     */
-    private RouletteSlot selectRandomSlot(List<RouletteSlot> slots) {
-        int totalWeight = slots.stream().mapToInt(RouletteSlot::getWeight).sum();
-        int randomValue = random.nextInt(totalWeight);
-        int currentWeight = 0;
-
-        for (RouletteSlot slot : slots) {
-            currentWeight += slot.getWeight();
-            if (randomValue < currentWeight) {
-                return slot;
-            }
-        }
-        return slots.get(0);
     }
 
     /**

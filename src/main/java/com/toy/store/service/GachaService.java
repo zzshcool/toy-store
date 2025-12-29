@@ -17,7 +17,7 @@ import java.util.Random;
 import java.math.BigDecimal;
 
 @Service
-public class GachaService {
+public class GachaService extends BaseGachaService {
 
     @Autowired
     private GachaThemeRepository themeRepository;
@@ -92,14 +92,11 @@ public class GachaService {
             }
         }
 
+        // 產出隨機碎片 (1~20)
+        int shards = processGachaShards(memberId, "GACHA", themeId, "扭蛋抽獎獲得");
+
         // 記錄抽獎紀錄
-        GachaRecord record = new GachaRecord();
-        record.setMemberId(memberId);
-        record.setGachaType(GachaRecord.GachaType.GACHA);
-        record.setGameId(themeId);
-        record.setPrizeName(selectedItem.getName());
-        record.setCreatedAt(LocalDateTime.now());
-        gachaRecordRepository.save(record);
+        saveGachaRecord(memberId, themeId, selectedItem.getName(), shards);
 
         // Create Order Record for the Prize
         Order prizeOrder = new Order();
@@ -109,7 +106,7 @@ public class GachaService {
 
         OrderItem orderItem = new OrderItem();
         orderItem.setOrder(prizeOrder);
-        orderItem.setProductName("獎品: " + selectedItem.getName());
+        orderItem.setProductName("扭蛋獎品: " + selectedItem.getName());
         orderItem.setPriceAtPurchase(selectedItem.getEstimatedValue());
         orderItem.setQuantity(1);
 
@@ -117,6 +114,17 @@ public class GachaService {
         orderRepository.save(prizeOrder);
 
         return selectedItem;
+    }
+
+    private void saveGachaRecord(Long memberId, Long themeId, String prizeName, int shards) {
+        GachaRecord record = new GachaRecord();
+        record.setMemberId(memberId);
+        record.setGachaType(GachaRecord.GachaType.GACHA);
+        record.setGameId(themeId);
+        record.setPrizeName(prizeName);
+        record.setShardsEarned(shards);
+        record.setCreatedAt(LocalDateTime.now());
+        gachaRecordRepository.save(record);
     }
 
     public List<GachaTheme> getAllThemes() {

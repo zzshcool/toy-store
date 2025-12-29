@@ -8,6 +8,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.toy.store.service.GachaProbabilityEngine;
+
 /**
  * 九宮格格子實體
  * 每個格子代表網格中的一個位置
@@ -17,7 +19,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "bingo_cells")
-public class BingoCell {
+public class BingoCell implements GachaProbabilityEngine.ProbableItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -61,6 +63,23 @@ public class BingoCell {
     // 取得遊戲名稱
     public String getGameName() {
         return game != null ? game.getName() : "";
+    }
+
+    @Override
+    public Integer getWeight() {
+        return 1;
+    }
+
+    @Override
+    public GachaProbabilityEngine.PrizeTier getTier() {
+        // 簡單判斷：名稱包含 "大獎" 或 "極稀有" 或價值超過 1000
+        if (prizeName != null && (prizeName.contains("大獎") || prizeName.contains("極稀有"))) {
+            return GachaProbabilityEngine.PrizeTier.JACKPOT;
+        }
+        if (prizeValue != null && prizeValue.compareTo(new BigDecimal("1000")) >= 0) {
+            return GachaProbabilityEngine.PrizeTier.JACKPOT;
+        }
+        return GachaProbabilityEngine.PrizeTier.NORMAL;
     }
 
     // 根據位置計算行列（用於建立格子時）

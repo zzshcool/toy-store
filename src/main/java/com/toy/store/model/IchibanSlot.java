@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 
+import com.toy.store.service.GachaProbabilityEngine;
+
 /**
  * 一番賞格子實體
  * 每個格子對應一個編號和一個獎品
@@ -16,7 +18,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "ichiban_slots")
-public class IchibanSlot {
+public class IchibanSlot implements GachaProbabilityEngine.ProbableItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -80,6 +82,25 @@ public class IchibanSlot {
         this.status = Status.REVEALED;
         this.revealedByMemberId = memberId;
         this.revealedAt = LocalDateTime.now();
+    }
+
+    @Override
+    public Integer getWeight() {
+        return 1; // 一番賞每個格子機率相等
+    }
+
+    @Override
+    public GachaProbabilityEngine.PrizeTier getTier() {
+        if (prize == null)
+            return GachaProbabilityEngine.PrizeTier.NORMAL;
+        IchibanPrize.Rank rank = prize.getRank();
+        if (rank == IchibanPrize.Rank.A || rank == IchibanPrize.Rank.B) {
+            return GachaProbabilityEngine.PrizeTier.JACKPOT;
+        }
+        if (rank == IchibanPrize.Rank.C || rank == IchibanPrize.Rank.D) {
+            return GachaProbabilityEngine.PrizeTier.RARE;
+        }
+        return GachaProbabilityEngine.PrizeTier.NORMAL;
     }
 
     // 格式化編號顯示（補零）

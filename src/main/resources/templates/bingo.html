@@ -37,10 +37,25 @@
                     <p id="bingoReward" style="color: var(--gacha-purple); font-size: 0.9rem; margin-top: 5px;">
                         連線獎勵：<span id="rewardName">特別獎品</span>
                     </p>
+                    <div style="margin-top: 15px; display: flex; justify-content: center; gap: 10px;">
+                        <button id="batchModeBtn" class="btn btn-outline" onclick="toggleBatchMode()">
+                            🔘 切換批次挖掘模式
+                        </button>
+                    </div>
                 </div>
 
                 <div id="bingoGrid" class="bingo-grid grid-3">
                     <!-- 格子由 JS 動態生成 -->
+                </div>
+
+                <div id="batchCart"
+                    style="display: none; background: rgba(102,126,234,0.1); border-radius: 15px; padding: 20px; margin-top: 30px; text-align: center;">
+                    <p style="margin-bottom: 15px;">已選擇 <strong id="selectedDigCount"
+                            style="color: var(--accent-color); font-size: 1.2rem;">0</strong> 個格子</p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="btn btn-outline" onclick="clearDigSelection()">清除選擇</button>
+                        <button class="btn-gacha" onclick="confirmBatchDig()">選好了，立即挖掘！</button>
+                    </div>
                 </div>
 
                 <div style="text-align: center; margin-top: 30px;">
@@ -125,10 +140,37 @@
             let currentGameId = null;
             let currentGridSize = 3;
             let gameCells = [];
+            let selectedPositions = [];
+            let isBatchMode = false;
 
             document.addEventListener('DOMContentLoaded', function () {
                 loadGameList();
             });
+
+            function toggleBatchMode() {
+                isBatchMode = !isBatchMode;
+                const btn = document.getElementById('batchModeBtn');
+                btn.innerHTML = isBatchMode ? '❌ 關閉批次挖掘' : '🔘 切換批次挖掘模式';
+                btn.classList.toggle('active', isBatchMode);
+
+                if (!isBatchMode) {
+                    clearDigSelection();
+                }
+                renderBingoGrid();
+            }
+
+            function clearDigSelection() {
+                selectedPositions = [];
+                updateBatchCart();
+                renderBingoGrid();
+            }
+
+            function updateBatchCart() {
+                const cart = document.getElementById('batchCart');
+                const count = document.getElementById('selectedDigCount');
+                count.textContent = selectedPositions.length;
+                cart.style.display = selectedPositions.length > 0 ? 'block' : 'none';
+            }
 
             function loadGameList() {
                 fetch('/api/bingo')
@@ -187,6 +229,8 @@
 
             function backToList() {
                 currentGameId = null;
+                isBatchMode = false;
+                selectedPositions = [];
                 document.getElementById('gameList').style.display = 'grid';
                 document.getElementById('bingoGame').style.display = 'none';
             }
@@ -204,6 +248,7 @@
                             gameCells = game.cells || [];
                             renderBingoGrid();
                             renderPrizeList(game.prizes || []); // 使用預覽獎項
+                            updateBatchCart();
                         }
                     });
             }
@@ -227,14 +272,18 @@
                     if (cell.isRevealed) {
                         return `
                             <div class="bingo-cell revealed" data-pos="${cell.position}">
-                                <span style="font-size: 1rem; color: white; text-align: center; padding: 5px;">
-                                    ${cell.prizeName ? cell.prizeName.substring(0, 4) : '🎁'}
+                                <span style="font-size: 0.8rem; color: white; text-align: center; padding: 5px; word-break: break-all; line-height: 1.1;">
+                                    ${cell.prizeName || '🎁'}
                                 </span>
                             </div>
                         `;
                     } else {
+                        const isSelected = selectedPositions.includes(cell.position);
                         return `
-                            <div class="bingo-cell hidden" data-pos="${cell.position}" onclick="digCell(${cell.position})">
+                            <div class="bingo-cell hidden ${isSelected ? 'selected' : ''}" 
+                                 data-pos="${cell.position}" 
+                                 onclick="handleCellClick(${cell.position})">
+                                 ${isSelected ? '✅' : ''}
                             </div>
                         `;
                     }
@@ -243,7 +292,23 @@
                 grid.innerHTML = html;
             }
 
+            function handleCellClick(position) {
+                if (isBatchMode) {
+                    const idx = selectedPositions.indexOf(position);
+                    if (idx > -1) {
+                        selectedPositions.splice(idx, 1);
+                    } else {
+                        selectedPositions.push(position);
+                    }
+                    updateBatchCart();
+                    renderBingoGrid();
+                } else {
+                    digCell(position);
+                }
+            }
+
             let pendingPosition = null;
+            let pendingPositions = [];
 
             function digCell(position) {
                 if (!currentGameId) return;
@@ -254,6 +319,7 @@
 
                 // 顯示確認模態框
                 pendingPosition = position;
+                pendingPositions = [position];
                 document.getElementById('confirmPrice').textContent = document.getElementById('digPrice').textContent;
 
                 const modalTitle = document.querySelector('#confirmModal h3');
@@ -264,11 +330,26 @@
 
                 if (!isLoggedIn) {
                     realDigBtn.style.display = 'none';
-                    trialDigBtn.style.display = 'inline-block'; // Ensure trial button is visible
+                    trialDigBtn.style.display = 'inline-block';
                 } else {
                     realDigBtn.style.display = 'inline-block';
-                    trialDigBtn.style.display = 'inline-block'; // Ensure trial button is visible for logged-in users too
+                    trialDigBtn.style.display = 'inline-block';
                 }
+
+                document.getElementById('confirmModal').style.display = 'flex';
+            }
+
+            function confirmBatchDig() {
+                if (selectedPositions.length === 0) return;
+
+                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
+                pendingPositions = [...selectedPositions];
+
+                const priceValue = parseFloat(document.getElementById('digPrice').textContent);
+                document.getElementById('confirmPrice').textContent = (priceValue * pendingPositions.length).toFixed(2);
+
+                const modalTitle = document.querySelector('#confirmModal h3');
+                modalTitle.textContent = `確認挖掘 ${pendingPositions.length} 個格子`;
 
                 document.getElementById('confirmModal').style.display = 'flex';
             }
@@ -286,73 +367,86 @@
                 }
 
                 document.getElementById('confirmModal').style.display = 'none';
-                if (pendingPosition === null) return;
+                if (pendingPositions.length === 0) return;
 
-                // 顯示遮罩，防止操作
+                // 顯示遮罩
                 GameUtils.showMask();
 
-                // 播放挖掘動畫
-                const cell = document.querySelector(`[data-pos="${pendingPosition}"]`);
-                if (cell) {
-                    cell.classList.add('digging');
-                    playDigSound();
-                    spawnDigParticles(cell);
-                }
+                // 播放挖掘動畫 (對所有選中的格子)
+                pendingPositions.forEach(pos => {
+                    const cell = document.querySelector(`[data-pos="${pos}"]`);
+                    if (cell) {
+                        cell.classList.add('digging');
+                        spawnDigParticles(cell);
+                    }
+                });
+                playDigSound();
 
                 setTimeout(() => {
-                    fetch(`/api/bingo/${currentGameId}/dig/${pendingPosition}`, { method: 'POST' })
+                    const apiUrl = pendingPositions.length === 1
+                        ? `/api/bingo/${currentGameId}/dig/${pendingPositions[0]}`
+                        : `/api/bingo/${currentGameId}/dig-batch`;
+
+                    const fetchOptions = pendingPositions.length === 1
+                        ? { method: 'POST' }
+                        : {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ positions: pendingPositions })
+                        };
+
+                    fetch(apiUrl, fetchOptions)
                         .then(r => r.json())
                         .then(response => {
                             if (response.success) {
                                 showDigResult(response.data, response.message);
                                 loadGameDetails(currentGameId);
                                 if (window.refreshBalance) window.refreshBalance();
+                                selectedPositions = []; // 清空選擇
                             } else {
                                 alert(response.message || '挖掘失敗');
                                 if (GameUtils.hideMask) GameUtils.hideMask();
                             }
-                            pendingPosition = null;
                         })
                         .catch(err => {
                             console.error('Error:', err);
                             alert('操作失敗');
                             if (window.hideMask) window.hideMask();
-                            pendingPosition = null;
                         });
-                }, 600); // 等待動畫完成
+                }, 600);
             }
 
             function simulateTrialDig() {
                 document.getElementById('confirmModal').style.display = 'none';
-                if (pendingPosition === null) return;
+                if (pendingPositions.length === 0) return;
                 if (window.showMask) window.showMask();
 
-                const cell = document.querySelector(`[data-pos="${pendingPosition}"]`);
-                if (cell) {
-                    cell.classList.add('digging');
-                    playDigSound();
-                    spawnDigParticles(cell);
-                }
+                pendingPositions.forEach(pos => {
+                    const cell = document.querySelector(`[data-pos="${pos}"]`);
+                    if (cell) {
+                        cell.classList.add('digging');
+                        spawnDigParticles(cell);
+                    }
+                });
+                playDigSound();
 
                 setTimeout(() => {
-                    // 從現有獎池隨機拼一個結果
+                    // 模擬結果
                     const randomCell = gameCells[Math.floor(Math.random() * gameCells.length)];
                     const trialResult = {
                         isTrial: true,
-                        cell: { prizeName: randomCell.prizeName },
+                        cells: pendingPositions.map(p => ({ prizeName: randomCell.prizeName, position: p })),
+                        cell: { prizeName: randomCell.prizeName }, //相容舊邏輯
+                        totalShards: Math.floor(Math.random() * 30) * pendingPositions.length,
                         shardsEarned: Math.floor(Math.random() * 30),
                         hasBingo: Math.random() > 0.8,
                         bingoRewardName: "神秘大獎"
                     };
                     showDigResult(trialResult, "試挖完成");
-
-                    // 恢復按鈕狀態
-                    cell.classList.remove('digging');
-                    pendingPosition = null;
+                    selectedPositions = [];
                 }, 600);
             }
 
-            // 播放挖掘音效
             function playDigSound() {
                 try {
                     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -374,7 +468,6 @@
                 } catch (e) { }
             }
 
-            // 產生挖掘粒子效果
             function spawnDigParticles(cell) {
                 const rect = cell.getBoundingClientRect();
                 const centerX = rect.left + rect.width / 2;
@@ -420,8 +513,15 @@
                 // 播放成功音效
                 GameUtils.playWinSound();
 
-                document.getElementById('digPrize').textContent = result.cell.prizeName || '神秘獎品';
-                document.getElementById('digShards').textContent = result.shardsEarned > 0 ? `+${result.shardsEarned} 碎片` : '';
+                const cells = result.cells || [result.cell];
+                const prizeNames = cells.map(c => c.prizeName).filter(n => n).join(', ');
+
+                document.getElementById('digPrize').textContent = cells.length > 2
+                    ? `獲得 ${cells.length} 個獎品`
+                    : (prizeNames || '神秘獎品');
+
+                const shards = result.totalShards !== undefined ? result.totalShards : result.shardsEarned;
+                document.getElementById('digShards').textContent = shards > 0 ? `+${shards} 碎片` : '';
 
                 const bingoAlert = document.getElementById('bingoAlert');
                 if (result.hasBingo) {
@@ -443,7 +543,6 @@
                 }
 
                 document.getElementById('digModal').style.display = 'flex';
-                // 儲存當前是否為正式抽獎
                 document.getElementById('digModal').dataset.isTrial = isTrial;
             }
 

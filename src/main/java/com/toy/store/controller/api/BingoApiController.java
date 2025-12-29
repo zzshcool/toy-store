@@ -92,18 +92,58 @@ public class BingoApiController {
         if (result.isHasBingo()) {
             response.put("bingoRewardName", result.getBingoRewardName());
             response.put("bingoLines", result.getBingoLines().stream()
-                    .map(line -> {
-                        Map<String, Object> lineMap = new HashMap<>();
-                        lineMap.put("type", line.getType().name());
-                        lineMap.put("index", line.getIndex());
-                        return lineMap;
-                    }).collect(Collectors.toList()));
+                    .map(this::lineToMap).collect(Collectors.toList()));
         }
 
         String message = result.isHasBingo()
                 ? "🎉 連線成功！恭喜獲得額外獎勵！"
                 : "恭喜獲得: " + result.getCell().getPrizeName();
         return ApiResponse.ok(response, message);
+    }
+
+    /**
+     * 批次挖掘格子
+     */
+    @PostMapping("/{id}/dig-batch")
+    public ApiResponse<Map<String, Object>> digBatch(
+            @PathVariable Long id,
+            @RequestBody Map<String, List<Integer>> payload,
+            @CurrentUser TokenService.TokenInfo info) {
+
+        Long memberId = getMemberId(info);
+        if (memberId == null) {
+            throw new AppException("請先登入");
+        }
+
+        List<Integer> positions = payload.get("positions");
+        if (positions == null || positions.isEmpty()) {
+            throw new AppException("請選擇欲挖掘的格子");
+        }
+
+        BingoService.DigBatchResult result = bingoService.digMultiple(id, positions, memberId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("cells", result.getCells().stream().map(this::cellToMap).collect(Collectors.toList()));
+        response.put("totalShards", result.getTotalShards());
+        response.put("hasBingo", result.isHasBingo());
+        response.put("gridSize", result.getGridSize());
+
+        if (result.isHasBingo()) {
+            response.put("bingoRewardName", result.getBingoRewardName());
+            response.put("bingoLines", result.getBingoLines().stream()
+                    .map(this::lineToMap).collect(Collectors.toList()));
+        }
+
+        String message = result.isHasBingo()
+                ? "🎉 挖得漂亮！且連線成功！"
+                : "成功開箱 " + positions.size() + " 個格子！";
+        return ApiResponse.ok(response, message);
+    }
+
+    private Map<String, Object> lineToMap(BingoService.BingoLine line) {
+        Map<String, Object> lineMap = new HashMap<>();
+        lineMap.put("type", line.getType().name());
+        lineMap.put("index", line.getIndex());
+        return lineMap;
     }
 
     private Long getMemberId(TokenService.TokenInfo info) {
