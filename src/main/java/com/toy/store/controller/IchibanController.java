@@ -1,7 +1,7 @@
 package com.toy.store.controller;
 
 import com.toy.store.service.IchibanService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
  */
 @Controller
 @RequestMapping("/ichiban")
+@RequiredArgsConstructor
 public class IchibanController {
 
-    @Autowired
-    private IchibanService ichibanService;
+    private final IchibanService ichibanService;
 
     @GetMapping
     public String index(Model model) {

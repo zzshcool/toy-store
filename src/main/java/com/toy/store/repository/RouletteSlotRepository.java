@@ -8,7 +8,7 @@ import java.util.List;
 @Repository
 public interface RouletteSlotRepository extends JpaRepository<RouletteSlot, Long> {
 
-    List<RouletteSlot> findByGameIdOrderBySlotOrderAsc(Long gameId);
+    List<RouletteSlot> findByGame_IdOrderBySlotOrderAsc(Long gameId);
 
-    List<RouletteSlot> findByGameIdAndSlotType(Long gameId, RouletteSlot.SlotType slotType);
+    List<RouletteSlot> findByGame_IdAndSlotType(Long gameId, RouletteSlot.SlotType slotType);
 }

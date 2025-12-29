@@ -2,27 +2,31 @@ package com.toy.store.service;
 
 import com.toy.store.exception.AppException;
 import com.toy.store.model.Member;
+import com.toy.store.model.MemberLevel;
+import com.toy.store.model.MemberMission;
 import com.toy.store.model.Transaction;
+import com.toy.store.repository.MemberLevelRepository;
 import com.toy.store.repository.MemberRepository;
 import com.toy.store.repository.TransactionRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class TransactionService {
 
-    @Autowired
-    private MemberRepository memberRepository;
-
-    @Autowired
-    private TransactionRepository transactionRepository;
-
-    @Autowired
-    private com.toy.store.repository.MemberLevelRepository memberLevelRepository;
+    private final MemberRepository memberRepository;
+    private final TransactionRepository transactionRepository;
+    private final MemberLevelRepository memberLevelRepository;
+    @Lazy
+    private final MissionService missionService;
 
     /**
      * Updates member wallet balance atomically.
@@ -44,6 +48,21 @@ public class TransactionService {
             throw new AppException("餘額不足，無法完成操作");
         }
 
+        // Handle consumption (negative amount) - Award Growth Value 1:1
+        if (amount.compareTo(BigDecimal.ZERO) < 0) {
+            long spent = amount.abs().longValue();
+            member.setGrowthValue(member.getGrowthValue() + spent);
+            checkAndUpgradeLevel(member);
+
+            // 觸發消費任務
+            try {
+                missionService.updateMissionProgress(memberId,
+                        MemberMission.MissionType.SPEND_AMOUNT, (int) spent);
+            } catch (Exception e) {
+                // Log and continue
+            }
+        }
+
         if (type == Transaction.TransactionType.DEPOSIT) {
             member.setMonthlyRecharge(member.getMonthlyRecharge().add(amount));
             checkAndUpgradeLevel(member);
@@ -62,36 +81,51 @@ public class TransactionService {
         transactionRepository.save(transaction);
     }
 
-    private void checkAndUpgradeLevel(Member member) {
-        com.toy.store.model.MemberLevel current = member.getLevel();
+    /**
+     * 扣除餘額（便捷方法）
+     */
+    @Transactional
+    public void deductBalance(Long memberId, BigDecimal amount, String description) {
+        updateWalletBalance(memberId, amount.negate(), Transaction.TransactionType.GACHA_SPEND, description);
+    }
 
-        // 新會員無等級時，自動指派最低等級
-        if (current == null) {
-            java.util.List<com.toy.store.model.MemberLevel> allLevels = memberLevelRepository
-                    .findByEnabledTrueOrderBySortOrderAsc();
-            if (!allLevels.isEmpty()) {
-                member.setLevel(allLevels.get(0));
-            }
-            return;
-        }
+    /**
+     * 增加餘額（便捷方法）
+     */
+    @Transactional
+    public void addBalance(Long memberId, BigDecimal amount, String description) {
+        updateWalletBalance(memberId, amount, Transaction.TransactionType.REFUND, description);
+    }
+
+    private void checkAndUpgradeLevel(Member member) {
+        MemberLevel current = member.getLevel();
 
         // Fetch all enabled levels sorted by sort order
-        java.util.List<com.toy.store.model.MemberLevel> allLevels = memberLevelRepository
-                .findByEnabledTrueOrderBySortOrderAsc();
+        List<MemberLevel> allLevels = memberLevelRepository.findByEnabledTrueOrderBySortOrderAsc();
 
-        com.toy.store.model.MemberLevel targetLevel = current;
+        if (allLevels.isEmpty())
+            return;
 
-        // Find the highest eligible level
-        for (com.toy.store.model.MemberLevel level : allLevels) {
-            // Check if level is higher than current and member meets the threshold
+        // 新會員無等級時，或重新指派
+        if (current == null) {
+            member.setLevel(allLevels.get(0));
+            current = allLevels.get(0);
+        }
+
+        MemberLevel targetLevel = current;
+
+        // Find the highest eligible level using growthValue
+        BigDecimal growthValueBD = BigDecimal.valueOf(member.getGrowthValue());
+        for (MemberLevel level : allLevels) {
             if (level.getSortOrder() > current.getSortOrder() &&
-                    member.getMonthlyRecharge().compareTo(level.getThreshold()) >= 0) {
+                    growthValueBD.compareTo(level.getThreshold()) >= 0) {
                 targetLevel = level;
             }
         }
 
         if (!targetLevel.equals(current)) {
             member.setLevel(targetLevel);
+            member.setLastLevelReviewDate(LocalDate.now());
         }
     }
 }

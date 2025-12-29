@@ -46,6 +46,7 @@ public class SystemSetting {
     public static final String GACHA_SHARD_MAX = "gacha.shard.max";
     public static final String GACHA_DUPLICATE_SHARD = "gacha.duplicate.shard";
     public static final String GACHA_REDEEM_COST = "gacha.redeem.cost";
+    public static final String GACHA_REVENUE_THRESHOLD = "gacha.revenue.threshold";
 
     // 驗證碼設定
     public static final String CAPTCHA_ENABLED = "captcha.enabled";

@@ -375,42 +375,48 @@
                 if (window.hideMask) window.hideMask();
             }
 
-            // 模擬試抽邏輯
+            // 模擬試抽邏輯（使用真正的試抽 API）
             function simulateTrialPurchase() {
                 closePurchaseModal();
                 if (window.showMask) window.showMask();
 
-                const prizes = [];
-                let totalShards = 0;
-                const pool = currentBoxData.prizes || [];
+                // 調用試抽 API
+                fetch(`/api/ichiban/${currentBoxId}/trial`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ count: selectedSlots.length })
+                })
+                    .then(res => res.json())
+                    .then(response => {
+                        if (response.success) {
+                            const data = response.data;
+                            // 轉換格式以配合現有顯示邏輯
+                            const prizes = data.results.map(r => ({
+                                slotNumber: r.slotNumber,
+                                prize: r.prize,
+                                shards: r.shards
+                            }));
 
-                selectedSlots.forEach(num => {
-                    // 隨機從獎池挑一個 (模擬隨機性，不影響真實庫存)
-                    const randomPrize = pool[Math.floor(Math.random() * pool.length)];
-                    prizes.push({
-                        slotNumber: num,
-                        prize: randomPrize,
-                        shards: Math.floor(Math.random() * 50) + 10 // 隨機虛擬碎片
+                            const simulatedData = {
+                                prizes: prizes,
+                                totalShards: prizes.reduce((sum, p) => sum + p.shards, 0),
+                                totalCost: selectedSlots.length * pricePerDraw,
+                                isTrial: true
+                            };
+
+                            showResultModal(simulatedData);
+                            selectedSlots = [];
+                            updateCartBar();
+                        } else {
+                            alert(response.message || '試抽失敗');
+                            if (window.hideMask) window.hideMask();
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Trial error:', err);
+                        alert('試抽失敗，請重試');
+                        if (window.hideMask) window.hideMask();
                     });
-                    totalShards += prizes[prizes.length - 1].shards;
-                });
-
-                const simulatedData = {
-                    success: true,
-                    isTrial: true,
-                    data: {
-                        prizes: prizes,
-                        totalShards: totalShards,
-                        totalCost: selectedSlots.length * pricePerDraw
-                    }
-                };
-
-                // 稍微延遲模擬網路請求
-                setTimeout(() => {
-                    showResultModal(simulatedData.data);
-                    selectedSlots = [];
-                    updateCartBar();
-                }, 500);
             }
 
             // 執行購買 (含試抽模擬)
@@ -462,16 +468,114 @@
                 const prizes = data.prizes || [];
                 if (prizes.length === 0) return;
 
-                // 播放音效
-                GameUtils.playRevealSound();
+                // 使用 GSAP 揭曉動畫
+                showAdvancedReveal(prizes, data);
+            }
 
-                // 如果只有一個獎品，顯示刮開動畫
-                if (prizes.length === 1) {
-                    showScratchReveal(prizes[0], data);
-                } else {
-                    // 多個獎品，依序快速展示後顯示結果
-                    showSequentialReveal(prizes, data);
+            function showAdvancedReveal(prizes, data) {
+                if (prizes.length === 0) return;
+
+                let currentIndex = 0;
+
+                function revealNext() {
+                    if (currentIndex >= prizes.length) {
+                        showFinalSummary(data);
+                        return;
+                    }
+
+                    const item = prizes[currentIndex];
+                    const prize = item.prize || {};
+                    const rankDisplay = prize.rankDisplay || '?賞';
+                    const prizeName = prize.name || '神秘獎品';
+
+                    // 建立撕票容器
+                    const overlay = document.createElement('div');
+                    overlay.className = 'ichiban-ticket-overlay';
+                    overlay.innerHTML = `
+                        <div class="ticket-wrapper">
+                            <div class="ticket-content">
+                                <h1 class="ticket-rank-text">${rankDisplay}</h1>
+                                <p class="ticket-prize-name">${prizeName}</p>
+                                <div style="color: #6c5ce7; font-weight: bold; margin-top: 20px;">+${item.shards} 碎片</div>
+                            </div>
+                            <div class="ticket-part ticket-top">
+                                <span>#${String(item.slotNumber).padStart(2, '0')}</span>
+                            </div>
+                            <div class="ticket-part ticket-bottom">
+                                <span>OPEN</span>
+                                <div class="ticket-peek-corner"></div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(overlay);
+
+                    const top = overlay.querySelector('.ticket-top');
+                    const bottom = overlay.querySelector('.ticket-bottom');
+                    const content = overlay.querySelector('.ticket-content');
+
+                    // 1. 咪牌動畫 (Peek) - 僅針對 A 賞或大獎
+                    const tl = gsap.timeline();
+
+                    if (prize.rank === 'A' || rankDisplay.includes('A')) {
+                        tl.to(bottom, { rotationX: -15, duration: 0.5, ease: "power2.out" })
+                            .to(bottom, { rotationX: 0, duration: 0.3, ease: "bounce.out", delay: 0.5 });
+                    }
+
+                    // 2. 撕票動畫 (Tear) - 點擊後觸發
+                    overlay.onclick = () => {
+                        overlay.onclick = null; // 防止重複點擊
+
+                        const tearTl = gsap.timeline({
+                            onComplete: () => {
+                                setTimeout(() => {
+                                    gsap.to(overlay, {
+                                        opacity: 0, duration: 0.5, onComplete: () => {
+                                            overlay.remove();
+                                            currentIndex++;
+                                            revealNext();
+                                        }
+                                    });
+                                }, 1500);
+                            }
+                        });
+
+                        if (window.GameUtils && GameUtils.playRevealSound) {
+                            GameUtils.playRevealSound();
+                        }
+
+                        tearTl.to(top, {
+                            y: -200,
+                            rotation: -15,
+                            opacity: 0,
+                            duration: 0.8,
+                            ease: "power2.in"
+                        }, 0);
+
+                        tearTl.to(bottom, {
+                            y: 200,
+                            rotation: 15,
+                            opacity: 0,
+                            duration: 0.8,
+                            ease: "power2.in"
+                        }, 0);
+
+                        tearTl.from(content, {
+                            scale: 0.5,
+                            opacity: 0,
+                            duration: 0.6,
+                            ease: "back.out(1.7)"
+                        }, 0.2);
+
+                        // 煙火特效
+                        if (prize.rank === 'A' || rankDisplay.includes('A')) {
+                            if (window.GameUtils && GameUtils.spawnConfetti) {
+                                setTimeout(() => GameUtils.spawnConfetti(), 300);
+                            }
+                        }
+                    };
                 }
+
+                revealNext();
             }
 
 

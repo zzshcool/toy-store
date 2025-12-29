@@ -181,4 +181,80 @@ public class BingoApiController {
         }
         return map;
     }
+
+    // ============== 試抽功能 (無需登入，不扣代幣) ==============
+
+    /**
+     * 試挖 - 模擬九宮格挖掘體驗
+     * 不需登入，不扣代幣，隨機返回結果
+     * 
+     * @param id    遊戲 ID
+     * @param count 模擬挖掘數量 (1-9)
+     */
+    @PostMapping("/{id}/trial")
+    public ApiResponse<Map<String, Object>> trial(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Integer> body) {
+
+        BingoGame game = bingoService.getGameWithCells(id);
+        if (game == null) {
+            return ApiResponse.error("遊戲不存在");
+        }
+
+        List<BingoCell> cells = bingoService.getCells(id);
+        List<BingoCell> availableCells = cells.stream()
+                .filter(c -> !c.getIsRevealed())
+                .collect(Collectors.toList());
+
+        if (availableCells.isEmpty()) {
+            return ApiResponse.error("此遊戲已結束，無法試挖");
+        }
+
+        int count = 1;
+        if (body != null && body.containsKey("count")) {
+            count = Math.max(1, Math.min(availableCells.size(), body.get("count")));
+        }
+
+        java.util.Random random = new java.util.Random();
+        java.util.List<Map<String, Object>> results = new java.util.ArrayList<>();
+        java.util.Set<Integer> usedIndexes = new java.util.HashSet<>();
+
+        for (int i = 0; i < count; i++) {
+            int index;
+            do {
+                index = random.nextInt(availableCells.size());
+            } while (usedIndexes.contains(index) && usedIndexes.size() < availableCells.size());
+            usedIndexes.add(index);
+
+            BingoCell cell = availableCells.get(index);
+            int mockShards = random.nextInt(20) + 1;
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("position", cell.getPosition());
+            result.put("row", cell.getRow());
+            result.put("col", cell.getCol());
+            result.put("prizeName", cell.getPrizeName());
+            result.put("prizeImageUrl", cell.getPrizeImageUrl());
+            result.put("shards", mockShards);
+            results.add(result);
+        }
+
+        // 模擬連線檢查
+        boolean mockBingo = count >= 3 && random.nextInt(5) == 0;
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("isTrial", true);
+        response.put("gameName", game.getName());
+        response.put("pricePerDig", game.getPricePerDig());
+        response.put("gridSize", game.getGridSize());
+        response.put("results", results);
+        response.put("hasBingo", mockBingo);
+        if (mockBingo) {
+            response.put("bingoRewardName", game.getBingoRewardName());
+        }
+        response.put("message", "這是試挖結果，正式遊戲需要登入並使用代幣");
+
+        String message = mockBingo ? "🎉 試挖連線成功！體驗中獎的快感！" : "試挖完成！";
+        return ApiResponse.ok(response, message);
+    }
 }

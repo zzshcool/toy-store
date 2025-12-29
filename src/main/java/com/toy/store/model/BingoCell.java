@@ -49,6 +49,9 @@ public class BingoCell implements GachaProbabilityEngine.ProbableItem {
     @Column(nullable = false)
     private Boolean isRevealed = false;
 
+    @Enumerated(EnumType.STRING)
+    private GachaProbabilityEngine.PrizeTier tier = GachaProbabilityEngine.PrizeTier.NORMAL;
+
     // 揭曉資訊
     private Long revealedByMemberId;
     private LocalDateTime revealedAt;
@@ -72,14 +75,15 @@ public class BingoCell implements GachaProbabilityEngine.ProbableItem {
 
     @Override
     public GachaProbabilityEngine.PrizeTier getTier() {
-        // 簡單判斷：名稱包含 "大獎" 或 "極稀有" 或價值超過 1000
-        if (prizeName != null && (prizeName.contains("大獎") || prizeName.contains("極稀有"))) {
-            return GachaProbabilityEngine.PrizeTier.JACKPOT;
-        }
-        if (prizeValue != null && prizeValue.compareTo(new BigDecimal("1000")) >= 0) {
-            return GachaProbabilityEngine.PrizeTier.JACKPOT;
-        }
-        return GachaProbabilityEngine.PrizeTier.NORMAL;
+        return this.tier != null ? this.tier : GachaProbabilityEngine.PrizeTier.NORMAL;
+    }
+
+    public void setTier(GachaProbabilityEngine.PrizeTier tier) {
+        this.tier = tier;
+    }
+
+    public Long getGameId() {
+        return game != null ? game.getId() : null;
     }
 
     // 根據位置計算行列（用於建立格子時）

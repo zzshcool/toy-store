@@ -8,9 +8,9 @@ import java.util.List;
 @Repository
 public interface IchibanPrizeRepository extends JpaRepository<IchibanPrize, Long> {
 
-    List<IchibanPrize> findByBoxIdOrderBySortOrderAsc(Long boxId);
+    List<IchibanPrize> findByBox_IdOrderBySortOrderAsc(Long boxId);
 
-    List<IchibanPrize> findByBoxIdAndRemainingQuantityGreaterThan(Long boxId, Integer quantity);
+    List<IchibanPrize> findByBox_IdAndRemainingQuantityGreaterThan(Long boxId, Integer quantity);
 
-    List<IchibanPrize> findByBoxIdAndRank(Long boxId, IchibanPrize.Rank rank);
+    List<IchibanPrize> findByBox_IdAndRank(Long boxId, IchibanPrize.Rank rank);
 }

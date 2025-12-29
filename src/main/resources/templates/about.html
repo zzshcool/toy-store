@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='關於我們', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <div class="container section">
+            <!-- 頂部橫幅 -->
+            <div class="about-hero"
+                style="background: linear-gradient(145deg, #667eea, #764ba2); border-radius: 20px; padding: 60px 30px; text-align: center; color: white; margin-bottom: 40px;">
+                <h1 style="font-size: 2.5rem; margin-bottom: 15px;">🎮 關於 ToySoul</h1>
+                <p style="font-size: 1.2rem; opacity: 0.9;">您的線上抽獎娛樂平台</p>
+            </div>
+
+            <!-- 公司簡介 -->
+            <section class="about-section">
+                <h2 class="section-title">我們的故事</h2>
+                <div class="about-content">
+                    <p>ToySoul 成立於 2024 年，致力於為玩家提供最刺激、最公平的線上抽獎體驗。我們整合了一番賞、轉盤、九宮格、扭蛋等多種經典抽獎玩法，讓您隨時隨地都能享受抽獎的樂趣。</p>
+                    <p>我們的使命是打造一個安全、透明、有趣的抽獎平台，讓每一位玩家都能獲得公平的中獎機會。</p>
+                </div>
+            </section>
+
+            <!-- 核心優勢 -->
+            <section class="about-section">
+                <h2 class="section-title">為什麼選擇我們</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">🎯</div>
+                        <h3>公平透明</h3>
+                        <p>採用 SHA256 加密驗證機制，確保每一次抽獎結果都公平可驗證。</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🎁</div>
+                        <h3>正版商品</h3>
+                        <p>所有獎品均為正版授權商品，品質保證，絕無仿冒。</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🚚</div>
+                        <h3>快速發貨</h3>
+                        <p>滿 5 件免運費，專業包裝，保護您的珍貴獎品。</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">💎</div>
+                        <h3>VIP 權益</h3>
+                        <p>10 級 VIP 系統，等級越高折扣越多，專屬禮遇等您來享。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 聯繫我們 -->
+            <section class="about-section">
+                <h2 class="section-title">聯繫我們</h2>
+                <div class="contact-info" style="background: #f8f9fa; border-radius: 15px; padding: 30px;">
+                    <div class="contact-row">
+                        <span class="contact-label">📧 電子郵件</span>
+                        <span>support@toysoul.com</span>
+                    </div>
+                    <div class="contact-row">
+                        <span class="contact-label">📱 客服專線</span>
+                        <span>0800-123-456 (週一至週五 10:00-18:00)</span>
+                    </div>
+                    <div class="contact-row">
+                        <span class="contact-label">📍 公司地址</span>
+                        <span>台北市信義區信義路五段 7 號</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <style>
+            .about-section {
+                margin-bottom: 50px;
+            }
+
+            .about-content p {
+                line-height: 1.8;
+                color: #555;
+                margin-bottom: 15px;
+            }
+
+            .features-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 25px;
+            }
+
+            .feature-card {
+                background: white;
+                border-radius: 15px;
+                padding: 30px;
+                text-align: center;
+                box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+                transition: transform 0.3s;
+            }
+
+            .feature-card:hover {
+                transform: translateY(-5px);
+            }
+
+            .feature-icon {
+                font-size: 3rem;
+                margin-bottom: 15px;
+            }
+
+            .feature-card h3 {
+                margin-bottom: 10px;
+                color: #333;
+            }
+
+            .feature-card p {
+                color: #666;
+                font-size: 0.9rem;
+            }
+
+            .contact-row {
+                display: flex;
+                gap: 20px;
+                padding: 15px 0;
+                border-bottom: 1px solid #eee;
+            }
+
+            .contact-row:last-child {
+                border-bottom: none;
+            }
+
+            .contact-label {
+                font-weight: bold;
+                min-width: 120px;
+            }
+        </style>
+    </div>
+</body>
+
+</html>

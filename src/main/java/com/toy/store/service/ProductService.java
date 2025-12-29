@@ -1,19 +1,18 @@
 package com.toy.store.service;
 
+import com.toy.store.exception.ResourceNotFoundException;
 import com.toy.store.model.Product;
 import com.toy.store.repository.ProductRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
-
 @Service
+@RequiredArgsConstructor
 public class ProductService {
 
-    @Autowired
-    private ProductRepository productRepository;
+    private final ProductRepository productRepository;
 
     public Page<Product> findAll(Pageable pageable) {
         return productRepository.findAll(pageable);
@@ -32,7 +31,8 @@ public class ProductService {
     }
 
     public Product findById(Long id) {
-        return productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        return productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("產品", id));
     }
 
     public Product saveProduct(Product product) {

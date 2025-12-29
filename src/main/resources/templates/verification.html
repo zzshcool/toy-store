@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='抽獎驗證中心', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <div class="container section">
+            <h2 class="section-title">🔍 抽獎驗證中心</h2>
+            <p class="text-center" style="color: var(--text-secondary); margin-bottom: 30px;">
+                透過 SHA256 哈希技術，確保每一次抽獎結果的公正透明
+            </p>
+
+            <!-- 說明區塊 -->
+            <div class="info-block"
+                style="background: linear-gradient(145deg, #667eea, #764ba2); color: white; border-radius: 20px; padding: 30px; margin-bottom: 40px;">
+                <h3 style="margin-bottom: 15px;">🔐 如何驗證抽獎結果？</h3>
+                <ol style="line-height: 2;">
+                    <li>每場遊戲開始時，系統生成唯一的隨機種子 (Random Seed)</li>
+                    <li>每次抽獎結果都會鏈式記錄並計算新的 SHA256 哈希值</li>
+                    <li>遊戲完售後，您可以查看完整的中獎紀錄與最終哈希值</li>
+                    <li>使用下方工具自行計算驗證，確保結果未被篡改</li>
+                </ol>
+            </div>
+
+            <!-- 最近完售遊戲 -->
+            <div class="verification-section">
+                <h3 style="margin-bottom: 20px;">📋 最近完售遊戲</h3>
+                <div id="completedList" class="completed-games">
+                    <div class="loading-state">載入中...</div>
+                </div>
+            </div>
+
+            <!-- 驗證工具 -->
+            <div class="verification-section" style="margin-top: 40px;">
+                <h3 style="margin-bottom: 20px;">🧮 SHA256 驗證工具</h3>
+                <div class="verify-tool"
+                    style="background: white; border-radius: 20px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                    <div class="form-group">
+                        <label>輸入字符串</label>
+                        <textarea id="verifyInput" rows="3" placeholder="輸入您想驗證的字符串..."
+                            style="width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 10px; resize: vertical;"></textarea>
+                    </div>
+                    <button class="btn-gacha" onclick="computeHash()" style="margin-top: 15px;">計算 SHA256</button>
+
+                    <div id="hashResult"
+                        style="display: none; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                        <label style="color: #666; font-size: 0.9rem;">SHA256 結果</label>
+                        <div id="hashOutput"
+                            style="font-family: monospace; word-break: break-all; color: #667eea; font-weight: bold; margin-top: 5px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 詳情 Modal -->
+            <div id="detailModal" class="verification-modal" style="display: none;">
+                <div class="modal-backdrop" onclick="closeDetailModal()"></div>
+                <div class="modal-content">
+                    <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+                    <h3 id="modalTitle">遊戲詳情</h3>
+                    <div id="modalBody"></div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', loadCompletedGames);
+
+            function loadCompletedGames() {
+                fetch('/api/verification/completed')
+                    .then(r => r.json())
+                    .then(response => {
+                        const container = document.getElementById('completedList');
+                        if (!response.success || response.data.length === 0) {
+                            container.innerHTML = '<div class="empty-state">尚無完售遊戲記錄</div>';
+                            return;
+                        }
+
+                        container.innerHTML = response.data.map(game => `
+                            <div class="game-item" onclick="showDetail('${game.gameType}', ${game.id})">
+                                <div class="game-info">
+                                    <span class="game-type">${getGameTypeIcon(game.gameType)} ${game.gameType}</span>
+                                    <span class="game-name">${game.gameName}</span>
+                                    <span class="game-time">${formatTime(game.completedAt)}</span>
+                                </div>
+                                <div class="game-hash" title="${game.hashValue}">
+                                    <span>SHA256:</span>
+                                    <code>${game.hashValue.substring(0, 16)}...${game.hashValue.substring(48)}</code>
+                                </div>
+                            </div>
+                        `).join('');
+                    });
+            }
+
+            function getGameTypeIcon(type) {
+                const icons = {
+                    'ICHIBAN': '🎯',
+                    'ROULETTE': '🎡',
+                    'BINGO': '🔢',
+                    'GACHA': '🎰',
+                    'BLINDBOX': '📦'
+                };
+                return icons[type] || '🎮';
+            }
+
+            function formatTime(dateStr) {
+                if (!dateStr) return '-';
+                return new Date(dateStr).toLocaleString('zh-TW');
+            }
+
+            function showDetail(gameType, verificationId) {
+                fetch(`/api/verification/${gameType}/${verificationId}`)
+                    .then(r => r.json())
+                    .then(response => {
+                        if (!response.success) {
+                            alert(response.message);
+                            return;
+                        }
+
+                        const data = response.data;
+                        document.getElementById('modalTitle').textContent = data.gameName;
+                        document.getElementById('modalBody').innerHTML = `
+                            <div class="detail-section">
+                                <label>遊戲類型</label>
+                                <p>${getGameTypeIcon(data.gameType)} ${data.gameType}</p>
+                            </div>
+                            <div class="detail-section">
+                                <label>隨機種子 (Random Seed)</label>
+                                <code class="hash-code">${data.randomSeed}</code>
+                            </div>
+                            <div class="detail-section">
+                                <label>最終哈希值 (SHA256)</label>
+                                <code class="hash-code">${data.hashValue}</code>
+                            </div>
+                            <div class="detail-section">
+                                <label>完售時間</label>
+                                <p>${formatTime(data.completedAt)}</p>
+                            </div>
+                            ${data.resultJson ? `
+                                <div class="detail-section">
+                                    <label>中獎記錄</label>
+                                    <div class="result-preview">${formatResults(data.resultJson)}</div>
+                                </div>
+                            ` : ''}
+                        `;
+                        document.getElementById('detailModal').style.display = 'flex';
+                    });
+            }
+
+            function formatResults(json) {
+                try {
+                    const results = JSON.parse(json);
+                    if (Array.isArray(results) && results.length > 0) {
+                        return results.slice(0, 5).map(r =>
+                            `<div class="result-row">${r.memberName || '會員'} → ${r.prizeName || '獎品'}</div>`
+                        ).join('') + (results.length > 5 ? `<div class="result-more">...還有 ${results.length - 5} 筆</div>` : '');
+                    }
+                    return '<em>無詳細記錄</em>';
+                } catch (e) {
+                    return '<em>格式解析錯誤</em>';
+                }
+            }
+
+            function closeDetailModal() {
+                document.getElementById('detailModal').style.display = 'none';
+            }
+
+            function computeHash() {
+                const input = document.getElementById('verifyInput').value;
+                if (!input.trim()) {
+                    alert('請輸入字符串');
+                    return;
+                }
+
+                fetch('/api/verification/compute-hash', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ input: input })
+                })
+                    .then(r => r.json())
+                    .then(response => {
+                        if (response.success) {
+                            document.getElementById('hashResult').style.display = 'block';
+                            document.getElementById('hashOutput').textContent = response.data.sha256;
+                        }
+                    });
+            }
+        </script>
+
+        <style>
+            .completed-games {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .game-item {
+                background: white;
+                border-radius: 15px;
+                padding: 20px;
+                box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+
+            .game-item:hover {
+                transform: translateX(5px);
+                box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
+            }
+
+            .game-info {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                margin-bottom: 10px;
+            }
+
+            .game-type {
+                background: rgba(102, 126, 234, 0.1);
+                color: #667eea;
+                padding: 5px 12px;
+                border-radius: 20px;
+                font-size: 0.85rem;
+                font-weight: bold;
+            }
+
+            .game-name {
+                font-weight: bold;
+                flex: 1;
+            }
+
+            .game-time {
+                color: #999;
+                font-size: 0.85rem;
+            }
+
+            .game-hash {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                color: #666;
+                font-size: 0.9rem;
+            }
+
+            .game-hash code {
+                background: #f8f9fa;
+                padding: 5px 10px;
+                border-radius: 5px;
+                font-family: monospace;
+            }
+
+            .verification-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 10001;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .modal-backdrop {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+            }
+
+            .modal-content {
+                position: relative;
+                background: white;
+                border-radius: 20px;
+                max-width: 600px;
+                width: 95%;
+                max-height: 80vh;
+                overflow-y: auto;
+                padding: 30px;
+            }
+
+            .modal-close {
+                position: absolute;
+                top: 15px;
+                right: 20px;
+                background: none;
+                border: none;
+                font-size: 2rem;
+                color: #aaa;
+                cursor: pointer;
+            }
+
+            .detail-section {
+                margin-bottom: 20px;
+            }
+
+            .detail-section label {
+                display: block;
+                color: #999;
+                font-size: 0.85rem;
+                margin-bottom: 5px;
+            }
+
+            .hash-code {
+                display: block;
+                background: #f8f9fa;
+                padding: 12px;
+                border-radius: 8px;
+                font-family: monospace;
+                word-break: break-all;
+                color: #667eea;
+            }
+
+            .result-row {
+                padding: 8px 0;
+                border-bottom: 1px solid #eee;
+            }
+
+            .result-more {
+                color: #999;
+                padding: 8px 0;
+            }
+
+            .empty-state,
+            .loading-state {
+                text-align: center;
+                padding: 40px;
+                color: #999;
+            }
+        </style>
+    </div>
+</body>
+
+</html>

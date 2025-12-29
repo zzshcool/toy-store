@@ -3,7 +3,7 @@ package com.toy.store.service;
 import com.toy.store.model.GachaRecord;
 import com.toy.store.model.Transaction;
 import com.toy.store.repository.GachaRecordRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 
@@ -11,16 +11,13 @@ import java.math.BigDecimal;
  * Gacha 遊戲服務基類
  * 提供扣款、紀錄、碎片發放等共同邏輯
  */
+@RequiredArgsConstructor
 public abstract class BaseGachaService {
 
-    @Autowired
-    protected GachaRecordRepository recordRepository;
-
-    @Autowired
-    protected TransactionService transactionService;
-
-    @Autowired
-    protected ShardService shardService;
+    protected final GachaRecordRepository recordRepository;
+    protected final TransactionService transactionService;
+    protected final ShardService shardService;
+    protected final MissionService missionService;
 
     /**
      * 處理錢包扣款
@@ -48,26 +45,48 @@ public abstract class BaseGachaService {
     /**
      * 儲存 Gacha 紀錄 (一番賞)
      */
-    protected void saveIchibanRecord(Long memberId, Long boxId, String prizeName, String prizeRank, int shards) {
-        GachaRecord record = GachaRecord.createIchibanRecord(memberId, boxId, prizeName, prizeRank, shards);
+    protected void saveIchibanRecord(Long memberId, Long boxId, String prizeName, String prizeRank, int shards,
+            BigDecimal value) {
+        GachaRecord record = GachaRecord.createIchibanRecord(memberId, boxId, prizeName, prizeRank, shards, value);
         recordRepository.save(record);
+
+        // 觸發抽獎任務
+        try {
+            missionService.updateMissionProgress(memberId,
+                    com.toy.store.model.MemberMission.MissionType.DRAW_COUNT, 1);
+        } catch (Exception e) {
+        }
     }
 
     /**
      * 儲存 Gacha 紀錄 (轉盤)
      */
     protected void saveRouletteRecord(Long memberId, Long gameId, String prizeName, int shards,
-            int luckyAdd, boolean isGuarantee) {
+            int luckyAdd, boolean isGuarantee, BigDecimal value) {
         GachaRecord record = GachaRecord.createRouletteRecord(memberId, gameId, prizeName, shards, luckyAdd,
-                isGuarantee);
+                isGuarantee, value);
         recordRepository.save(record);
+
+        // 觸發抽獎任務
+        try {
+            missionService.updateMissionProgress(memberId,
+                    com.toy.store.model.MemberMission.MissionType.DRAW_COUNT, 1);
+        } catch (Exception e) {
+        }
     }
 
     /**
      * 儲存 Gacha 紀錄 (九宮格)
      */
-    protected void saveBingoRecord(Long memberId, Long gameId, String prizeName, int shards) {
-        GachaRecord record = GachaRecord.createBingoRecord(memberId, gameId, prizeName, shards);
+    protected void saveBingoRecord(Long memberId, Long gameId, String prizeName, int shards, BigDecimal value) {
+        GachaRecord record = GachaRecord.createBingoRecord(memberId, gameId, prizeName, shards, value);
         recordRepository.save(record);
+
+        // 觸發抽獎任務
+        try {
+            missionService.updateMissionProgress(memberId,
+                    com.toy.store.model.MemberMission.MissionType.DRAW_COUNT, 1);
+        } catch (Exception e) {
+        }
     }
 }

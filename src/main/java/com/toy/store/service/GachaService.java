@@ -7,7 +7,6 @@ import com.toy.store.repository.GachaThemeRepository;
 import com.toy.store.repository.MemberRepository;
 import com.toy.store.repository.OrderRepository;
 import com.toy.store.repository.MemberCouponRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,25 +18,27 @@ import java.math.BigDecimal;
 @Service
 public class GachaService extends BaseGachaService {
 
-    @Autowired
-    private GachaThemeRepository themeRepository;
-
-    @Autowired
-    private MemberRepository memberRepository;
-
-    @Autowired
-    private OrderRepository orderRepository;
-
-    @Autowired
-    private TransactionService transactionService;
-
-    @Autowired
-    private MemberCouponRepository memberCouponRepository;
-
-    @Autowired
-    private GachaRecordRepository gachaRecordRepository;
-
+    private final GachaThemeRepository themeRepository;
+    private final MemberRepository memberRepository;
+    private final OrderRepository orderRepository;
+    private final MemberCouponRepository memberCouponRepository;
     private final Random random = new Random();
+
+    public GachaService(
+            GachaRecordRepository recordRepository,
+            TransactionService transactionService,
+            ShardService shardService,
+            MissionService missionService,
+            GachaThemeRepository themeRepository,
+            MemberRepository memberRepository,
+            OrderRepository orderRepository,
+            MemberCouponRepository memberCouponRepository) {
+        super(recordRepository, transactionService, shardService, missionService);
+        this.themeRepository = themeRepository;
+        this.memberRepository = memberRepository;
+        this.orderRepository = orderRepository;
+        this.memberCouponRepository = memberCouponRepository;
+    }
 
     /**
      * Draws a gacha box.
@@ -124,7 +125,7 @@ public class GachaService extends BaseGachaService {
         record.setPrizeName(prizeName);
         record.setShardsEarned(shards);
         record.setCreatedAt(LocalDateTime.now());
-        gachaRecordRepository.save(record);
+        recordRepository.save(record);
     }
 
     public List<GachaTheme> getAllThemes() {

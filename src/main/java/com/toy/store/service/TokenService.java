@@ -7,6 +7,9 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.UUID;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Collections;
 
 @Service
 public class TokenService {
@@ -18,7 +21,7 @@ public class TokenService {
     public static final String ROLE_USER = "ROLE_USER";
     public static final String ROLE_ADMIN = "ROLE_ADMIN";
 
-    public String createToken(String username, String role) {
+    public String createToken(String username, String role, Set<String> permissions) {
         String token = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime expiry;
@@ -28,14 +31,19 @@ public class TokenService {
             // Admin: 8 hours max life, 5 min idle timeout
             expiry = now.plusMinutes(5);
             maxLife = now.plusHours(8);
-            adminTokenStore.put(token, new TokenInfo(username, role, expiry, now, maxLife));
+            adminTokenStore.put(token, new TokenInfo(username, role, expiry, now, maxLife, permissions));
         } else {
             // User: 1 hour initial
             expiry = now.plusHours(1);
-            memberTokenStore.put(token, new TokenInfo(username, role, expiry, now, null));
+            memberTokenStore.put(token, new TokenInfo(username, role, expiry, now, null, Collections.emptySet()));
         }
 
         return token;
+    }
+
+    @Deprecated
+    public String createToken(String username, String role) {
+        return createToken(username, role, Collections.emptySet());
     }
 
     public TokenInfo validateMemberToken(String token) {
@@ -113,14 +121,16 @@ public class TokenService {
         private LocalDateTime expiryTime;
         private LocalDateTime lastAccessTime;
         private LocalDateTime maxLifeTime; // For Admin 8hr limit
+        private Set<String> permissions;
 
         public TokenInfo(String username, String role, LocalDateTime expiryTime, LocalDateTime lastAccessTime,
-                LocalDateTime maxLifeTime) {
+                LocalDateTime maxLifeTime, Set<String> permissions) {
             this.username = username;
             this.role = role;
             this.expiryTime = expiryTime;
             this.lastAccessTime = lastAccessTime;
             this.maxLifeTime = maxLifeTime;
+            this.permissions = permissions != null ? permissions : new HashSet<>();
         }
 
         public String getUsername() {
@@ -129,6 +139,14 @@ public class TokenService {
 
         public String getRole() {
             return role;
+        }
+
+        public Set<String> getPermissions() {
+            return permissions;
+        }
+
+        public boolean hasPermission(String code) {
+            return permissions.contains(code);
         }
 
         public LocalDateTime getExpiryTime() {

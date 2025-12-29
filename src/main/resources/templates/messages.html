@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='消息中心', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <div class="container section">
+            <div class="messages-header">
+                <h2 class="section-title">🔔 消息中心</h2>
+                <button class="btn-gacha btn-sm" onclick="markAllRead()">全部已讀</button>
+            </div>
+
+            <div id="messagesContainer" class="messages-list">
+                <div class="loading-state">載入中...</div>
+            </div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-icon">📭</div>
+                <p>暫無消息</p>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', loadMessages);
+
+            function loadMessages() {
+                fetch('/api/messages')
+                    .then(res => res.json())
+                    .then(response => {
+                        const container = document.getElementById('messagesContainer');
+                        const emptyState = document.getElementById('emptyState');
+
+                        if (!response.success || !response.data || response.data.length === 0) {
+                            container.innerHTML = '';
+                            emptyState.style.display = 'block';
+                            return;
+                        }
+
+                        emptyState.style.display = 'none';
+                        container.innerHTML = response.data.map(msg => `
+                            <div class="message-item ${msg.read ? '' : 'unread'}" data-id="${msg.id}">
+                                <div class="message-icon ${msg.type.toLowerCase()}">${getIcon(msg.type)}</div>
+                                <div class="message-content">
+                                    <div class="message-title">${msg.title}</div>
+                                    <div class="message-body">${msg.content}</div>
+                                    <div class="message-time">${formatTime(msg.createdAt)}</div>
+                                </div>
+                                ${msg.actionUrl ? `<a href="${msg.actionUrl}" class="message-action">查看</a>` : ''}
+                                ${!msg.read ? `<button class="mark-read-btn" onclick="markRead(${msg.id}, this)">✓</button>` : ''}
+                            </div>
+                        `).join('');
+                    })
+                    .catch(err => {
+                        document.getElementById('messagesContainer').innerHTML =
+                            '<div class="error-state">載入失敗，請重新整理頁面</div>';
+                    });
+            }
+
+            function getIcon(type) {
+                const icons = {
+                    'SYSTEM': '📢',
+                    'PRIZE': '🎁',
+                    'SHIPPING': '📦',
+                    'PROMOTION': '🎉',
+                    'LEVEL_UP': '⬆️',
+                    'WARNING': '⚠️'
+                };
+                return icons[type] || '📌';
+            }
+
+            function formatTime(dateStr) {
+                const date = new Date(dateStr);
+                const now = new Date();
+                const diff = now - date;
+
+                if (diff < 60000) return '剛剛';
+                if (diff < 3600000) return Math.floor(diff / 60000) + ' 分鐘前';
+                if (diff < 86400000) return Math.floor(diff / 3600000) + ' 小時前';
+                if (diff < 604800000) return Math.floor(diff / 86400000) + ' 天前';
+
+                return date.toLocaleDateString();
+            }
+
+            function markRead(id, btn) {
+                fetch(`/api/messages/${id}/read`, { method: 'POST' })
+                    .then(res => res.json())
+                    .then(response => {
+                        if (response.success) {
+                            const item = btn.closest('.message-item');
+                            item.classList.remove('unread');
+                            btn.remove();
+                        }
+                    });
+            }
+
+            function markAllRead() {
+                fetch('/api/messages/read-all', { method: 'POST' })
+                    .then(res => res.json())
+                    .then(response => {
+                        if (response.success) {
+                            document.querySelectorAll('.message-item.unread').forEach(item => {
+                                item.classList.remove('unread');
+                                const btn = item.querySelector('.mark-read-btn');
+                                if (btn) btn.remove();
+                            });
+                            if (typeof showToast !== 'undefined') {
+                                showToast('✅ 已全部標記為已讀', 'success');
+                            }
+                        }
+                    });
+            }
+        </script>
+
+        <style>
+            .messages-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 25px;
+            }
+
+            .messages-list {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .message-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 15px;
+                background: white;
+                border-radius: 15px;
+                padding: 20px;
+                box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
+                transition: all 0.3s;
+                position: relative;
+            }
+
+            .message-item:hover {
+                transform: translateX(5px);
+            }
+
+            .message-item.unread {
+                border-left: 4px solid #667eea;
+                background: linear-gradient(to right, rgba(102, 126, 234, 0.05), white);
+            }
+
+            .message-icon {
+                width: 50px;
+                height: 50px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                flex-shrink: 0;
+            }
+
+            .message-icon.system {
+                background: #e3f2fd;
+            }
+
+            .message-icon.prize {
+                background: #fff3e0;
+            }
+
+            .message-icon.shipping {
+                background: #f3e5f5;
+            }
+
+            .message-icon.promotion {
+                background: #e8f5e9;
+            }
+
+            .message-icon.level_up {
+                background: #ede7f6;
+            }
+
+            .message-icon.warning {
+                background: #fff8e1;
+            }
+
+            .message-content {
+                flex: 1;
+            }
+
+            .message-title {
+                font-weight: bold;
+                color: #333;
+                margin-bottom: 5px;
+            }
+
+            .message-body {
+                color: #666;
+                font-size: 0.95rem;
+                line-height: 1.5;
+            }
+
+            .message-time {
+                font-size: 0.8rem;
+                color: #999;
+                margin-top: 8px;
+            }
+
+            .message-action {
+                background: #667eea;
+                color: white;
+                padding: 8px 16px;
+                border-radius: 8px;
+                text-decoration: none;
+                font-size: 0.85rem;
+                white-space: nowrap;
+            }
+
+            .mark-read-btn {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: #27ae60;
+                color: white;
+                border: none;
+                width: 25px;
+                height: 25px;
+                border-radius: 50%;
+                cursor: pointer;
+                font-size: 0.8rem;
+            }
+
+            .empty-state,
+            .loading-state,
+            .error-state {
+                text-align: center;
+                padding: 60px 20px;
+                color: #999;
+            }
+
+            .empty-icon {
+                font-size: 4rem;
+                margin-bottom: 15px;
+            }
+        </style>
+    </div>
+</body>
+
+</html>

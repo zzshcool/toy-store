@@ -4,15 +4,15 @@ import com.toy.store.model.Member;
 import com.toy.store.repository.MemberRepository;
 import com.toy.store.service.TokenService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
 @ControllerAdvice
+@RequiredArgsConstructor
 public class GlobalControllerAdvice {
 
-    @Autowired
-    private MemberRepository memberRepository;
+    private final MemberRepository memberRepository;
 
     @ModelAttribute("currentUser")
     public Member getCurrentUser(HttpServletRequest request) {

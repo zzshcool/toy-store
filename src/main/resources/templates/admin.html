@@ -31,6 +31,8 @@
                 style="background: #e8f4fd;">九宮格</button>
             <button onclick="openTab('gacha-redeem')" class="btn btn-outline btn-sm"
                 style="background: #e8f4fd;">碎片商店</button>
+            <button onclick="openTab('rbac')" class="btn btn-outline btn-sm" style="background: #ffe4e1;">🔐
+                角色權限</button>
         </div>
 
         <!-- Member Management -->
@@ -835,6 +837,93 @@
             </table>
         </div>
 
+        <!-- RBAC 角色權限管理 -->
+        <div id="rbac" class="tab-content" style="display:none;">
+            <h3>🔐 角色權限管理</h3>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- 管理員帳號 -->
+                <div class="card" style="padding: 20px;">
+                    <h4>👤 管理員帳號</h4>
+                    <div style="background: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <input type="text" id="new-admin-username" placeholder="帳號" class="form-control">
+                            <input type="password" id="new-admin-password" placeholder="密碼" class="form-control">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="email" id="new-admin-email" placeholder="Email" class="form-control"
+                                style="flex:1;">
+                            <select id="new-admin-roles" class="form-control" multiple style="width: 150px;"></select>
+                            <button class="btn btn-primary" onclick="createAdmin()">新增</button>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>帳號</th>
+                                <th>Email</th>
+                                <th>角色</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rbac-admins-table"></tbody>
+                    </table>
+                </div>
+
+                <!-- 角色管理 -->
+                <div class="card" style="padding: 20px;">
+                    <h4>🎭 角色管理</h4>
+                    <div style="background: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="new-role-name" placeholder="角色名稱" class="form-control"
+                                style="flex:1;">
+                            <select id="new-role-perms" class="form-control" multiple style="width: 200px;"></select>
+                            <button class="btn btn-primary" onclick="createRole()">新增</button>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>名稱</th>
+                                <th>權限</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rbac-roles-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 權限管理 -->
+            <div class="card" style="padding: 20px; margin-top: 20px;">
+                <h4>🔑 權限設定</h4>
+                <div style="background: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="new-perm-code" placeholder="權限代碼 (如 MANAGE_USERS)" class="form-control"
+                            style="width: 200px;">
+                        <input type="text" id="new-perm-name" placeholder="權限名稱 (如 管理用戶)" class="form-control"
+                            style="width: 150px;">
+                        <input type="text" id="new-perm-desc" placeholder="說明" class="form-control" style="flex:1;">
+                        <button class="btn btn-primary" onclick="createPermission()">新增</button>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>代碼</th>
+                            <th>名稱</th>
+                            <th>說明</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rbac-perms-table"></tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- ==================== 抽獎系統管理 ==================== -->
 
         <!-- IP 主題管理 -->
@@ -1393,6 +1482,171 @@
                     }
                 });
             });
+
+            // ==================== RBAC 角色權限管理 ====================
+            async function loadRbacData() {
+                try {
+                    const [adminsRes, rolesRes, permsRes] = await Promise.all([
+                        fetch('/api/admin/rbac/admins'),
+                        fetch('/api/admin/rbac/roles'),
+                        fetch('/api/admin/rbac/permissions')
+                    ]);
+                    const admins = (await adminsRes.json()).data || [];
+                    const roles = (await rolesRes.json()).data || [];
+                    const perms = (await permsRes.json()).data || [];
+
+                    // 渲染管理員列表
+                    const adminsTable = document.getElementById('rbac-admins-table');
+                    if (adminsTable) {
+                        adminsTable.innerHTML = admins.map(a => `
+                            <tr>
+                                <td>${a.id}</td>
+                                <td>${a.username}</td>
+                                <td>${a.email || '-'}</td>
+                                <td>${a.roles.map(r => r.name).join(', ') || '-'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteAdmin(${a.id})">刪除</button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+
+                    // 渲染角色列表
+                    const rolesTable = document.getElementById('rbac-roles-table');
+                    if (rolesTable) {
+                        rolesTable.innerHTML = roles.map(r => `
+                            <tr>
+                                <td>${r.id}</td>
+                                <td>${r.name}</td>
+                                <td>${r.permissions.map(p => p.name).join(', ') || '-'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" onclick="editRole(${r.id}, '${r.name}')">編輯</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteRole(${r.id})">刪除</button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+
+                    // 渲染權限列表
+                    const permsTable = document.getElementById('rbac-perms-table');
+                    if (permsTable) {
+                        permsTable.innerHTML = perms.map(p => `
+                            <tr>
+                                <td>${p.id}</td>
+                                <td>${p.code}</td>
+                                <td>${p.name}</td>
+                                <td>${p.description || '-'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger" onclick="deletePermission(${p.id})">刪除</button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+
+                    // 更新下拉選單
+                    const roleSelect = document.getElementById('new-admin-roles');
+                    if (roleSelect) {
+                        roleSelect.innerHTML = roles.map(r =>
+                            `<option value="${r.id}">${r.name}</option>`
+                        ).join('');
+                    }
+
+                    const permSelect = document.getElementById('new-role-perms');
+                    if (permSelect) {
+                        permSelect.innerHTML = perms.map(p =>
+                            `<option value="${p.id}">${p.name} (${p.code})</option>`
+                        ).join('');
+                    }
+                } catch (e) {
+                    console.error('載入 RBAC 資料失敗', e);
+                }
+            }
+
+            async function createAdmin() {
+                const username = document.getElementById('new-admin-username').value;
+                const password = document.getElementById('new-admin-password').value;
+                const email = document.getElementById('new-admin-email').value;
+                const roleSelect = document.getElementById('new-admin-roles');
+                const roleIds = Array.from(roleSelect.selectedOptions).map(o => parseInt(o.value));
+
+                const res = await fetch('/api/admin/rbac/admins', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, email, roleIds })
+                });
+                const json = await res.json();
+                if (json.code === 200) {
+                    alert('建立成功');
+                    loadRbacData();
+                } else {
+                    alert('失敗: ' + json.message);
+                }
+            }
+
+            async function deleteAdmin(id) {
+                if (!confirm('確定刪除此管理員？')) return;
+                await fetch('/api/admin/rbac/admins/' + id, { method: 'DELETE' });
+                loadRbacData();
+            }
+
+            async function createRole() {
+                const name = document.getElementById('new-role-name').value;
+                const permSelect = document.getElementById('new-role-perms');
+                const permissionIds = Array.from(permSelect.selectedOptions).map(o => parseInt(o.value));
+
+                const res = await fetch('/api/admin/rbac/roles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, permissionIds })
+                });
+                const json = await res.json();
+                if (json.code === 200) {
+                    alert('建立成功');
+                    loadRbacData();
+                } else {
+                    alert('失敗: ' + json.message);
+                }
+            }
+
+            async function deleteRole(id) {
+                if (!confirm('確定刪除此角色？')) return;
+                await fetch('/api/admin/rbac/roles/' + id, { method: 'DELETE' });
+                loadRbacData();
+            }
+
+            async function createPermission() {
+                const code = document.getElementById('new-perm-code').value;
+                const name = document.getElementById('new-perm-name').value;
+                const description = document.getElementById('new-perm-desc').value;
+
+                const res = await fetch('/api/admin/rbac/permissions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, name, description })
+                });
+                const json = await res.json();
+                if (json.code === 200) {
+                    alert('建立成功');
+                    loadRbacData();
+                } else {
+                    alert('失敗: ' + json.message);
+                }
+            }
+
+            async function deletePermission(id) {
+                if (!confirm('確定刪除此權限？')) return;
+                await fetch('/api/admin/rbac/permissions/' + id, { method: 'DELETE' });
+                loadRbacData();
+            }
+
+            // 當切換到 RBAC Tab 時載入資料
+            const origOpenTab = window.openTab;
+            window.openTab = function (tabName) {
+                origOpenTab(tabName);
+                if (tabName === 'rbac') {
+                    loadRbacData();
+                }
+            };
         </script>
     </div>
 </body>

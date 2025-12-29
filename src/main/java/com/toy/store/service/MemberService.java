@@ -9,10 +9,11 @@ import com.toy.store.repository.MemberRepository;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -23,25 +24,33 @@ import java.util.List;
  * 處理註冊、登入、資料更新與儲值等核心邏輯
  */
 @Service
+@Slf4j
 public class MemberService {
 
-    @Autowired
-    private MemberRepository memberRepository;
+    private final MemberRepository memberRepository;
+    private final MemberLevelRepository memberLevelRepository;
+    private final PasswordEncoder encoder;
+    private final TokenService tokenService;
+    private final TransactionService transactionService;
+    private final EmailVerificationService emailVerificationService;
+    private final SignInService signInService;
 
-    @Autowired
-    private MemberLevelRepository memberLevelRepository;
-
-    @Autowired
-    private PasswordEncoder encoder;
-
-    @Autowired
-    private TokenService tokenService;
-
-    @Autowired
-    private TransactionService transactionService;
-
-    @Autowired
-    private EmailVerificationService emailVerificationService;
+    public MemberService(
+            MemberRepository memberRepository,
+            MemberLevelRepository memberLevelRepository,
+            PasswordEncoder encoder,
+            TokenService tokenService,
+            @Lazy TransactionService transactionService,
+            EmailVerificationService emailVerificationService,
+            @Lazy SignInService signInService) {
+        this.memberRepository = memberRepository;
+        this.memberLevelRepository = memberLevelRepository;
+        this.encoder = encoder;
+        this.tokenService = tokenService;
+        this.transactionService = transactionService;
+        this.emailVerificationService = emailVerificationService;
+        this.signInService = signInService;
+    }
 
     /**
      * 處理會員登入
@@ -77,7 +86,28 @@ public class MemberService {
         member.setLastLoginTime(LocalDateTime.now());
         memberRepository.save(member);
 
+        // 觸發每日簽到與任務
+        try {
+            signInService.processDailySignIn(member.getId());
+        } catch (Exception e) {
+            log.error("Failed to process daily sign-in for member {}: {}", member.getUsername(), e.getMessage());
+        }
+
         return token;
+    }
+
+    /**
+     * 驗證登入（不需驗證碼，供 API 登入使用）
+     */
+    public Member validateLogin(String username, String password) {
+        Member member = memberRepository.findByUsername(username).orElse(null);
+        if (member == null || !encoder.matches(password, member.getPassword())) {
+            return null;
+        }
+        // 更新最後登入時間
+        member.setLastLoginTime(LocalDateTime.now());
+        memberRepository.save(member);
+        return member;
     }
 
     /**
@@ -192,5 +222,33 @@ public class MemberService {
      */
     public boolean verifyCode(String email, String code, HttpSession session) {
         return emailVerificationService.verifyCode(email, code, session);
+    }
+
+    /**
+     * 增加會員積分 (Points)
+     */
+    @Transactional
+    public void addPoints(Long memberId, int amount) {
+        if (memberId == null)
+            return;
+        memberRepository.findById(memberId).ifPresent(member -> {
+            member.setPoints(member.getPoints() + amount);
+            memberRepository.save(member);
+            log.info("Member {} earned {} points", member.getUsername(), amount);
+        });
+    }
+
+    /**
+     * 增加會員紅利點數 (BonusPoints)
+     */
+    @Transactional
+    public void addBonusPoints(Long memberId, int amount) {
+        if (memberId == null)
+            return;
+        memberRepository.findById(memberId).ifPresent(member -> {
+            member.setBonusPoints(member.getBonusPoints() + amount);
+            memberRepository.save(member);
+            log.info("Member {} earned {} bonus points", member.getUsername(), amount);
+        });
     }
 }

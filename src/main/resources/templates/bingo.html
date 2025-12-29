@@ -271,10 +271,15 @@
                 const html = gameCells.map(cell => {
                     if (cell.isRevealed) {
                         return `
-                            <div class="bingo-cell revealed" data-pos="${cell.position}">
-                                <span style="font-size: 0.8rem; color: white; text-align: center; padding: 5px; word-break: break-all; line-height: 1.1;">
-                                    ${cell.prizeName || '🎁'}
-                                </span>
+                            <div class="bingo-cell revealed flipped" data-pos="${cell.position}">
+                                <div class="bingo-cell-inner">
+                                    <div class="bingo-cell-front"></div>
+                                    <div class="bingo-cell-back">
+                                        <span style="font-size: 0.8rem; color: white; text-align: center; padding: 5px; word-break: break-all; line-height: 1.1;">
+                                            ${cell.prizeName || '🎁'}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         `;
                     } else {
@@ -283,7 +288,12 @@
                             <div class="bingo-cell hidden ${isSelected ? 'selected' : ''}" 
                                  data-pos="${cell.position}" 
                                  onclick="handleCellClick(${cell.position})">
-                                 ${isSelected ? '✅' : ''}
+                                <div class="bingo-cell-inner">
+                                    <div class="bingo-cell-front">
+                                        ${isSelected ? '<span style="position:absolute; top:5px; right:5px;">✅</span>' : ''}
+                                    </div>
+                                    <div class="bingo-cell-back"></div>
+                                </div>
                             </div>
                         `;
                     }
@@ -376,8 +386,21 @@
                 pendingPositions.forEach(pos => {
                     const cell = document.querySelector(`[data-pos="${pos}"]`);
                     if (cell) {
-                        cell.classList.add('digging');
-                        spawnDigParticles(cell);
+                        const inner = cell.querySelector('.bingo-cell-inner');
+                        // 1. GSAP 抖動動畫
+                        gsap.to(inner, {
+                            x: "random(-4, 4)",
+                            y: "random(-4, 4)",
+                            rotation: "random(-2, 2)",
+                            duration: 0.1,
+                            repeat: 5,
+                            yoyo: true,
+                            ease: "none",
+                            onComplete: () => {
+                                // 2. 增加粒子與音效 (保持原邏輯)
+                                spawnDigParticles(cell);
+                            }
+                        });
                     }
                 });
                 playDigSound();
@@ -399,10 +422,26 @@
                         .then(r => r.json())
                         .then(response => {
                             if (response.success) {
-                                showDigResult(response.data, response.message);
-                                loadGameDetails(currentGameId);
-                                if (window.refreshBalance) window.refreshBalance();
-                                selectedPositions = []; // 清空選擇
+                                // 3. 翻轉動畫
+                                pendingPositions.forEach(pos => {
+                                    const cell = document.querySelector(`[data-pos="${pos}"]`);
+                                    if (cell) {
+                                        const resCell = response.data.cells ? response.data.cells.find(c => c.position === pos) : response.data.cell;
+                                        if (resCell) {
+                                            const back = cell.querySelector('.bingo-cell-back');
+                                            back.innerHTML = `<span style="font-size: 0.8rem; color: white; text-align: center; padding: 5px; word-break: break-all; line-height: 1.1;">${resCell.prizeName || '🎁'}</span>`;
+                                        }
+                                        cell.classList.add('flipped');
+                                        cell.classList.remove('hidden');
+                                    }
+                                });
+
+                                setTimeout(() => {
+                                    showDigResult(response.data, response.message);
+                                    loadGameDetails(currentGameId);
+                                    if (window.refreshBalance) window.refreshBalance();
+                                    selectedPositions = []; // 清空選擇
+                                }, 600);
                             } else {
                                 alert(response.message || '挖掘失敗');
                                 if (GameUtils.hideMask) GameUtils.hideMask();
@@ -424,8 +463,19 @@
                 pendingPositions.forEach(pos => {
                     const cell = document.querySelector(`[data-pos="${pos}"]`);
                     if (cell) {
-                        cell.classList.add('digging');
-                        spawnDigParticles(cell);
+                        const inner = cell.querySelector('.bingo-cell-inner');
+                        gsap.to(inner, {
+                            x: "random(-4, 4)",
+                            y: "random(-4, 4)",
+                            rotation: "random(-2, 2)",
+                            duration: 0.1,
+                            repeat: 5,
+                            yoyo: true,
+                            ease: "none",
+                            onComplete: () => {
+                                spawnDigParticles(cell);
+                            }
+                        });
                     }
                 });
                 playDigSound();
@@ -442,8 +492,22 @@
                         hasBingo: Math.random() > 0.8,
                         bingoRewardName: "神秘大獎"
                     };
-                    showDigResult(trialResult, "試挖完成");
-                    selectedPositions = [];
+
+                    // 翻轉動畫
+                    pendingPositions.forEach(pos => {
+                        const cell = document.querySelector(`[data-pos="${pos}"]`);
+                        if (cell) {
+                            const back = cell.querySelector('.bingo-cell-back');
+                            back.innerHTML = `<span style="font-size: 0.8rem; color: white; text-align: center; padding: 5px; word-break: break-all; line-height: 1.1;">${randomCell.prizeName || '🎁'}</span>`;
+                            cell.classList.add('flipped');
+                            cell.classList.remove('hidden');
+                        }
+                    });
+
+                    setTimeout(() => {
+                        showDigResult(trialResult, "試挖完成");
+                        selectedPositions = [];
+                    }, 600);
                 }, 600);
             }
 

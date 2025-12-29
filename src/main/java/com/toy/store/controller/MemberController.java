@@ -13,7 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -21,22 +21,19 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * 會員控制器
  * 僅處理路由請求與頁面導向，業務邏輯委託給 MemberService
  */
 @Controller
+@RequiredArgsConstructor
 public class MemberController {
 
-    @Autowired
-    private MemberService memberService;
-
-    @Autowired
-    private MemberRepository memberRepository;
-
-    @Autowired
-    private TokenService tokenService;
+    private final MemberService memberService;
+    private final MemberRepository memberRepository;
+    private final TokenService tokenService;
 
     @GetMapping("/login")
     public String loginPage(@CurrentUser TokenService.TokenInfo info) {
@@ -110,7 +107,7 @@ public class MemberController {
             @RequestParam String realName,
             @RequestParam(required = false) String address,
             @RequestParam(required = false) String gender,
-            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate birthday,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate birthday,
             RedirectAttributes redirectAttributes) {
         TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("authenticatedUserToken");
         if (user == null) {
@@ -133,8 +130,7 @@ public class MemberController {
         if (user == null)
             return "redirect:/login";
 
-        Member member = memberRepository.findByUsername(user.getUsername()).orElse(null);
-        model.addAttribute("member", member);
+        memberRepository.findByUsername(user.getUsername()).ifPresent(member -> model.addAttribute("member", member));
         return "topup";
     }
 

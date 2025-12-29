@@ -3,7 +3,6 @@ package com.toy.store.service;
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
 import com.toy.store.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,11 +16,26 @@ import java.util.List;
 @Service
 public class BingoService extends BaseGachaService {
 
-    @Autowired
-    private BingoGameRepository gameRepository;
+    private final BingoGameRepository gameRepository;
+    private final BingoCellRepository cellRepository;
+    private final MemberRepository memberRepository;
+    private final SystemSettingService systemSettingService;
 
-    @Autowired
-    private BingoCellRepository cellRepository;
+    public BingoService(
+            GachaRecordRepository recordRepository,
+            TransactionService transactionService,
+            ShardService shardService,
+            MissionService missionService,
+            BingoGameRepository gameRepository,
+            BingoCellRepository cellRepository,
+            MemberRepository memberRepository,
+            SystemSettingService systemSettingService) {
+        super(recordRepository, transactionService, shardService, missionService);
+        this.gameRepository = gameRepository;
+        this.cellRepository = cellRepository;
+        this.memberRepository = memberRepository;
+        this.systemSettingService = systemSettingService;
+    }
 
     /**
      * 取得所有進行中的九宮格遊戲
@@ -34,6 +48,8 @@ public class BingoService extends BaseGachaService {
      * 取得遊戲詳情（含格子）
      */
     public BingoGame getGameWithCells(Long gameId) {
+        if (gameId == null)
+            return null;
         return gameRepository.findById(gameId).orElse(null);
     }
 
@@ -43,7 +59,7 @@ public class BingoService extends BaseGachaService {
     public List<BingoCell> getCells(Long gameId) {
         if (gameId == null)
             return new ArrayList<>();
-        return cellRepository.findByGameIdOrderByPositionAsc(gameId);
+        return cellRepository.findByGame_IdOrderByPositionAsc(gameId);
     }
 
     /**
@@ -64,6 +80,8 @@ public class BingoService extends BaseGachaService {
      */
     @Transactional
     public DigBatchResult digMultiple(Long gameId, List<Integer> positions, Long memberId) {
+        if (gameId == null)
+            throw new AppException("遊戲ID不能為空");
         BingoGame game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new AppException("遊戲不存在"));
 
@@ -74,7 +92,7 @@ public class BingoService extends BaseGachaService {
         // 1. 驗證所有格子可用
         List<BingoCell> targetCells = new ArrayList<>();
         for (Integer pos : positions) {
-            BingoCell cell = cellRepository.findByGameIdAndPosition(gameId, pos)
+            BingoCell cell = cellRepository.findByGame_IdAndPosition(gameId, pos)
                     .orElseThrow(() -> new AppException("格子 " + pos + " 不存在"));
             if (cell.getIsRevealed()) {
                 throw new AppException("格子 " + pos + " 已被挖掘");
@@ -88,34 +106,16 @@ public class BingoService extends BaseGachaService {
                 "九宮格批次消費: " + game.getName() + " (" + positions.size() + " 格)");
 
         // 3. 處理收益保護與挖掘
-        int totalCells = game.getTotalCells();
+        int totalCellsCount = game.getTotalCells();
         int revealedCount = cellRepository.countRevealedCells(gameId);
         int totalShards = 0;
         List<BingoCell> revealedCells = new ArrayList<>();
 
         for (BingoCell cell : targetCells) {
-            double progress = (double) revealedCount / totalCells;
+            double progress = (double) revealedCount / totalCellsCount;
 
-            // 如果進度未滿 70% 且抽中大獎，則嘗試與未開格子交換
-            if (progress < 0.7 && cell.getTier() == GachaProbabilityEngine.PrizeTier.JACKPOT) {
-                List<BingoCell> availableNormalCells = cellRepository.findByGameIdAndIsRevealed(gameId, false).stream()
-                        .filter(c -> c.getTier() != GachaProbabilityEngine.PrizeTier.JACKPOT
-                                && !positions.contains(c.getPosition()))
-                        .collect(java.util.stream.Collectors.toList());
-
-                if (!availableNormalCells.isEmpty()) {
-                    BingoCell swapCell = availableNormalCells
-                            .get(new java.util.Random().nextInt(availableNormalCells.size()));
-                    // 交換獎品內容
-                    String tempName = cell.getPrizeName();
-                    java.math.BigDecimal tempValue = cell.getPrizeValue();
-                    cell.setPrizeName(swapCell.getPrizeName());
-                    cell.setPrizeValue(swapCell.getPrizeValue());
-                    swapCell.setPrizeName(tempName);
-                    swapCell.setPrizeValue(tempValue);
-                    cellRepository.save(swapCell);
-                }
-            }
+            // 檢查幸運值保底或收益保護
+            applyRevenueProtectionAndLuckyValue(memberId, cell, progress, positions);
 
             // 挖掘
             cell.dig(memberId);
@@ -123,12 +123,16 @@ public class BingoService extends BaseGachaService {
             revealedCells.add(cell);
             revealedCount++;
 
+            // 幸運值邏輯
+            updateMemberLuckyValue(memberId, cell.getTier());
+
             // 產出隨機積分 1~20
             int shardsEarned = processGachaShards(memberId, "BINGO", gameId, "九宮格挖掘獲得");
             totalShards += shardsEarned;
 
             // 記錄抽獎
-            saveBingoRecord(memberId, gameId, cell.getPrizeName(), shardsEarned);
+            saveBingoRecord(memberId, gameId, cell.getPrizeName(), shardsEarned,
+                    cell.getPrizeValue() != null ? cell.getPrizeValue() : java.math.BigDecimal.ZERO);
         }
 
         // 4. 檢查連線
@@ -136,7 +140,8 @@ public class BingoService extends BaseGachaService {
         boolean hasBingo = !bingoLines.isEmpty();
 
         if (hasBingo && game.getBingoRewardName() != null) {
-            saveBingoRecord(memberId, gameId, "連線獎勵: " + game.getBingoRewardName(), 0);
+            // 連線獎勵暫時不計入單次格子價值，或者可以另外定義連線獎勵價值
+            saveBingoRecord(memberId, gameId, "連線獎勵: " + game.getBingoRewardName(), 0, java.math.BigDecimal.ZERO);
         }
 
         return new DigBatchResult(revealedCells, totalShards, hasBingo, bingoLines,
@@ -147,7 +152,7 @@ public class BingoService extends BaseGachaService {
      * 檢查所有連線（橫、豎、對角）
      */
     public List<BingoLine> checkBingoLines(Long gameId, int gridSize) {
-        List<BingoCell> cells = cellRepository.findByGameIdOrderByPositionAsc(gameId);
+        List<BingoCell> cells = cellRepository.findByGame_IdOrderByPositionAsc(gameId);
         List<BingoLine> bingoLines = new ArrayList<>();
 
         // 建立 2D 陣列方便檢查
@@ -328,5 +333,82 @@ public class BingoService extends BaseGachaService {
         public int getGridSize() {
             return gridSize;
         }
+    }
+
+    /**
+     * 更新渲染幸運值
+     */
+    private void updateMemberLuckyValue(Long memberId, GachaProbabilityEngine.PrizeTier tier) {
+        if (memberId == null)
+            return;
+        memberRepository.findById(memberId).ifPresent(member -> {
+            if (tier == GachaProbabilityEngine.PrizeTier.JACKPOT) {
+                member.setLuckyValue(0);
+            } else {
+                member.setLuckyValue(member.getLuckyValue() + 10);
+            }
+            memberRepository.save(member);
+        });
+    }
+
+    /**
+     * 應用收益保護與幸運值保底邏輯
+     */
+    private void applyRevenueProtectionAndLuckyValue(Long memberId, BingoCell cell, double progress,
+            List<Integer> batchPositions) {
+        if (memberId == null)
+            return;
+        Member member = memberRepository.findById(memberId).orElse(null);
+        if (member == null)
+            return;
+
+        boolean isBigPrize = cell.getTier() == GachaProbabilityEngine.PrizeTier.JACKPOT;
+        boolean hasGuarantee = member.getLuckyValue() >= 100;
+        double threshold = systemSettingService.getRevenueThreshold();
+
+        // 1. 保底邏輯
+        if (hasGuarantee && !isBigPrize) {
+            List<BingoCell> availableBigCells = cellRepository.findByGame_IdAndIsRevealed(cell.getGameId(), false)
+                    .stream()
+                    .filter(c -> c.getTier() == GachaProbabilityEngine.PrizeTier.JACKPOT
+                            && !batchPositions.contains(c.getPosition()))
+                    .collect(java.util.stream.Collectors.toList());
+
+            if (!availableBigCells.isEmpty()) {
+                BingoCell target = availableBigCells.get(new java.util.Random().nextInt(availableBigCells.size()));
+                swapCellContent(cell, target);
+                isBigPrize = true;
+            }
+        }
+
+        // 2. 收益保護
+        if (progress < threshold && isBigPrize && !hasGuarantee) {
+            List<BingoCell> availableNormalCells = cellRepository.findByGame_IdAndIsRevealed(cell.getGameId(), false)
+                    .stream()
+                    .filter(c -> c.getTier() != GachaProbabilityEngine.PrizeTier.JACKPOT
+                            && !batchPositions.contains(c.getPosition()))
+                    .collect(java.util.stream.Collectors.toList());
+
+            if (!availableNormalCells.isEmpty()) {
+                BingoCell target = availableNormalCells
+                        .get(new java.util.Random().nextInt(availableNormalCells.size()));
+                swapCellContent(cell, target);
+            }
+        }
+    }
+
+    private void swapCellContent(BingoCell c1, BingoCell c2) {
+        String tempName = c1.getPrizeName();
+        java.math.BigDecimal tempValue = c1.getPrizeValue();
+        GachaProbabilityEngine.PrizeTier tempTier = c1.getTier();
+
+        c1.setPrizeName(c2.getPrizeName());
+        c1.setPrizeValue(c2.getPrizeValue());
+        c1.setTier(c2.getTier());
+
+        c2.setPrizeName(tempName);
+        c2.setPrizeValue(tempValue);
+        c2.setTier(tempTier);
+        cellRepository.save(c2);
     }
 }

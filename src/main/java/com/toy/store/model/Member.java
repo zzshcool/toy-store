@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
 @Data
@@ -59,6 +60,20 @@ public class Member {
     private String gender;
 
     private java.time.LocalDate birthday;
+
+    @Column(nullable = false)
+    private Long growthValue = 0L;
+
+    @Column(nullable = false)
+    private Integer points = 0; // 積分 (原 Shards)
+
+    @Column(nullable = false)
+    private Integer bonusPoints = 0; // 紅利點數
+
+    @Column(nullable = false)
+    private Integer luckyValue = 0; // 幸運值
+
+    private LocalDate lastLevelReviewDate;
 
     public enum Role {
         USER, ADMIN

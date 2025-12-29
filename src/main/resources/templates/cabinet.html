@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='我的盒櫃', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <div class="container section">
+            <h2 class="section-title">📦 我的盒櫃</h2>
+            <p class="text-center" style="color: var(--text-secondary); margin-bottom: 30px;">
+                管理您抽中的獎品，申請發貨或兌換積分。滿 5 件免運費！
+            </p>
+
+            <!-- 免運提示 -->
+            <div id="shippingBanner"
+                style="background: linear-gradient(to right, #667eea, #764ba2); color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
+                <span id="shippingMessage">載入中...</span>
+            </div>
+
+            <!-- 標籤頁 -->
+            <div
+                style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                <button class="tab-btn active" onclick="switchTab('cabinet')">盒櫃中</button>
+                <button class="tab-btn" onclick="switchTab('shipments')">發貨紀錄</button>
+                <button class="tab-btn" onclick="switchTab('history')">全部獎品</button>
+            </div>
+
+            <!-- 盒櫃內容 -->
+            <div id="cabinetTab">
+                <div id="cabinetItems" class="cabinet-grid">
+                    <div class="text-center" style="grid-column: 1/-1; padding: 40px;">
+                        <div class="loading-spinner"></div>
+                        <p>載入中...</p>
+                    </div>
+                </div>
+
+                <!-- 選中發貨按鈕 -->
+                <div id="shipBar"
+                    style="display: none; position: sticky; bottom: 0; background: linear-gradient(to right, #667eea, #764ba2); 
+                           border-radius: 15px; padding: 15px 25px; margin-top: 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                    <div style="color: white;">
+                        <span>已選擇 <strong id="selectedCount">0</strong> 件</span>
+                        <span style="margin-left: 20px;">運費：<strong id="shippingFee">$0</strong></span>
+                    </div>
+                    <button class="btn-gacha" onclick="showShipModal()" style="background: #ffd700; color: #333;">
+                        📦 申請發貨
+                    </button>
+                </div>
+            </div>
+
+            <!-- 發貨紀錄 -->
+            <div id="shipmentsTab" style="display: none;">
+                <div id="shipmentList">
+                    <p class="text-center">載入中...</p>
+                </div>
+            </div>
+
+            <!-- 全部獎品紀錄 -->
+            <div id="historyTab" style="display: none;">
+                <div id="historyList" class="cabinet-grid">
+                    <p class="text-center" style="grid-column: 1/-1;">載入中...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 發貨申請彈窗 -->
+        <div id="shipModal"
+            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 10000; overflow-y: auto;">
+            <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                <div style="background: white; border-radius: 20px; padding: 30px; max-width: 500px; width: 100%;">
+                    <h3 style="margin-bottom: 20px;">📦 發貨申請</h3>
+
+                    <form id="shipForm">
+                        <div class="form-group">
+                            <label>收件人姓名 *</label>
+                            <input type="text" id="recipientName" required class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>聯絡電話 *</label>
+                            <input type="tel" id="recipientPhone" required class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>郵遞區號</label>
+                            <input type="text" id="postalCode" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>收件地址 *</label>
+                            <textarea id="recipientAddress" required class="form-control" rows="2"></textarea>
+                        </div>
+
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin: 20px 0;">
+                            <p>獎品數量：<strong id="confirmItemCount">0</strong> 件</p>
+                            <p id="freeShippingNote" style="color: #27ae60;"></p>
+                            <p>運費：<strong id="confirmShippingFee">$0</strong></p>
+                        </div>
+
+                        <div style="display: flex; gap: 15px; justify-content: center;">
+                            <button type="button" class="btn btn-outline" onclick="closeShipModal()">取消</button>
+                            <button type="submit" class="btn-gacha">確認申請</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script th:inline="javascript">
+            let selectedItems = [];
+            let cabinetData = [];
+
+            document.addEventListener('DOMContentLoaded', function () {
+                loadCabinet();
+            });
+
+            function loadCabinet() {
+                fetch('/api/cabinet')
+                    .then(res => res.json())
+                    .then(response => {
+                        if (response.success) {
+                            cabinetData = response.data.items;
+                            renderCabinetItems(cabinetData);
+                            updateShippingBanner(response.data);
+                        }
+                    })
+                    .catch(err => {
+                        document.getElementById('cabinetItems').innerHTML =
+                            '<p class="text-center" style="grid-column: 1/-1; color: var(--error-color);">載入失敗</p>';
+                    });
+            }
+
+            function updateShippingBanner(data) {
+                const banner = document.getElementById('shippingMessage');
+                if (data.isFreeShipping) {
+                    banner.innerHTML = `🎉 恭喜！您已達 ${data.totalCount} 件，享有免運費！`;
+                } else if (data.itemsNeededForFree > 0) {
+                    banner.innerHTML = `📦 目前 ${data.totalCount} 件，再 ${data.itemsNeededForFree} 件即可免運！`;
+                } else {
+                    banner.innerHTML = '📦 將您的獎品申請發貨吧！';
+                }
+            }
+
+            function renderCabinetItems(items) {
+                if (items.length === 0) {
+                    document.getElementById('cabinetItems').innerHTML =
+                        '<p class="text-center" style="grid-column: 1/-1;">盒櫃目前是空的～快去抽獎吧！</p>';
+                    return;
+                }
+
+                const html = items.map(item => `
+                    <div class="cabinet-item ${selectedItems.includes(item.id) ? 'selected' : ''}" 
+                         onclick="toggleItem(${item.id})">
+                        <div class="item-image">🎁</div>
+                        <div class="item-info">
+                            ${item.prizeRank ? `<span class="prize-rank">${item.prizeRank}</span>` : ''}
+                            <div class="prize-name">${item.prizeName}</div>
+                            <div class="source-type">${item.sourceTypeDisplay}</div>
+                        </div>
+                        <div class="item-actions">
+                            <button class="btn-sm" onclick="event.stopPropagation(); exchangeItem(${item.id})">
+                                💰 兌換積分
+                            </button>
+                        </div>
+                        <div class="select-indicator">${selectedItems.includes(item.id) ? '✓' : ''}</div>
+                    </div>
+                `).join('');
+                document.getElementById('cabinetItems').innerHTML = html;
+            }
+
+            function toggleItem(itemId) {
+                const index = selectedItems.indexOf(itemId);
+                if (index > -1) {
+                    selectedItems.splice(index, 1);
+                } else {
+                    selectedItems.push(itemId);
+                }
+                renderCabinetItems(cabinetData);
+                updateShipBar();
+            }
+
+            function updateShipBar() {
+                const bar = document.getElementById('shipBar');
+                const count = selectedItems.length;
+
+                document.getElementById('selectedCount').textContent = count;
+
+                if (count > 0) {
+                    bar.style.display = 'flex';
+
+                    // 計算運費
+                    fetch('/api/cabinet/shipping-preview', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ itemIds: selectedItems })
+                    })
+                        .then(res => res.json())
+                        .then(response => {
+                            if (response.success) {
+                                const fee = response.data.isFreeShipping ? '免運' : '$' + response.data.shippingFee;
+                                document.getElementById('shippingFee').textContent = fee;
+                            }
+                        });
+                } else {
+                    bar.style.display = 'none';
+                }
+            }
+
+            function showShipModal() {
+                if (selectedItems.length === 0) {
+                    alert('請選擇要發貨的獎品');
+                    return;
+                }
+
+                document.getElementById('confirmItemCount').textContent = selectedItems.length;
+
+                const isFree = selectedItems.length >= 5;
+                document.getElementById('freeShippingNote').textContent = isFree ? '✨ 滿 5 件免運！' : '';
+                document.getElementById('confirmShippingFee').textContent = isFree ? '免運' : '$60';
+
+                document.getElementById('shipModal').style.display = 'flex';
+            }
+
+            function closeShipModal() {
+                document.getElementById('shipModal').style.display = 'none';
+            }
+
+            document.getElementById('shipForm').onsubmit = function (e) {
+                e.preventDefault();
+
+                const data = {
+                    itemIds: selectedItems,
+                    recipientName: document.getElementById('recipientName').value,
+                    recipientPhone: document.getElementById('recipientPhone').value,
+                    recipientAddress: document.getElementById('recipientAddress').value,
+                    postalCode: document.getElementById('postalCode').value
+                };
+
+                fetch('/api/cabinet/ship', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                })
+                    .then(res => res.json())
+                    .then(response => {
+                        closeShipModal();
+                        if (response.success) {
+                            alert(response.message);
+                            selectedItems = [];
+                            loadCabinet();
+                            updateShipBar();
+                        } else {
+                            alert(response.message);
+                        }
+                    });
+            };
+
+            function exchangeItem(itemId) {
+                if (!confirm('確定要將此獎品兌換為積分嗎？此操作無法復原。')) return;
+
+                fetch(`/api/cabinet/items/${itemId}/exchange`, { method: 'POST' })
+                    .then(res => res.json())
+                    .then(response => {
+                        if (response.success) {
+                            alert(response.message);
+                            loadCabinet();
+                        } else {
+                            alert(response.message);
+                        }
+                    });
+            }
+
+            function switchTab(tab) {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                event.target.classList.add('active');
+
+                document.getElementById('cabinetTab').style.display = tab === 'cabinet' ? 'block' : 'none';
+                document.getElementById('shipmentsTab').style.display = tab === 'shipments' ? 'block' : 'none';
+                document.getElementById('historyTab').style.display = tab === 'history' ? 'block' : 'none';
+
+                if (tab === 'shipments') loadShipments();
+                if (tab === 'history') loadHistory();
+            }
+
+            function loadShipments() {
+                fetch('/api/cabinet/shipments')
+                    .then(res => res.json())
+                    .then(response => {
+                        if (response.success && response.data.length > 0) {
+                            const html = response.data.map(s => `
+                                <div class="shipment-card">
+                                    <div class="shipment-header">
+                                        <span class="shipment-status ${s.status.toLowerCase()}">${s.statusDisplay}</span>
+                                        <span class="shipment-date">${new Date(s.createdAt).toLocaleDateString()}</span>
+                                    </div>
+                                    <div class="shipment-info">
+                                        <p>📦 ${s.itemCount} 件商品</p>
+                                        <p>📍 ${s.recipientAddress}</p>
+                                        ${s.trackingNumber ? `<p>🚚 ${s.shippingCompany}: ${s.trackingNumber}</p>` : ''}
+                                        <p>💰 運費: ${s.isFreeShipping ? '免運' : '$' + s.shippingFee}</p>
+                                    </div>
+                                    ${s.status === 'PENDING' ?
+                                    `<button class="btn-sm btn-danger" onclick="cancelShipment(${s.id})">取消申請</button>` : ''}
+                                </div>
+                            `).join('');
+                            document.getElementById('shipmentList').innerHTML = html;
+                        } else {
+                            document.getElementById('shipmentList').innerHTML = '<p class="text-center">暫無發貨紀錄</p>';
+                        }
+                    });
+            }
+
+            function cancelShipment(id) {
+                if (!confirm('確定要取消此發貨申請嗎？')) return;
+
+                fetch(`/api/cabinet/shipments/${id}/cancel`, { method: 'POST' })
+                    .then(res => res.json())
+                    .then(response => {
+                        if (response.success) {
+                            alert(response.message);
+                            loadShipments();
+                            loadCabinet();
+                        } else {
+                            alert(response.message);
+                        }
+                    });
+            }
+
+            function loadHistory() {
+                fetch('/api/cabinet/all')
+                    .then(res => res.json())
+                    .then(response => {
+                        if (response.success && response.data.length > 0) {
+                            const html = response.data.map(item => `
+                                <div class="cabinet-item history-item">
+                                    <div class="item-image">🎁</div>
+                                    <div class="item-info">
+                                        ${item.prizeRank ? `<span class="prize-rank">${item.prizeRank}</span>` : ''}
+                                        <div class="prize-name">${item.prizeName}</div>
+                                        <div class="source-type">${item.sourceTypeDisplay}</div>
+                                        <div class="item-status ${item.status.toLowerCase()}">${item.status}</div>
+                                    </div>
+                                </div>
+                            `).join('');
+                            document.getElementById('historyList').innerHTML = html;
+                        } else {
+                            document.getElementById('historyList').innerHTML =
+                                '<p class="text-center" style="grid-column: 1/-1;">暫無獎品紀錄</p>';
+                        }
+                    });
+            }
+        </script>
+
+        <style>
+            .tab-btn {
+                background: none;
+                border: none;
+                padding: 10px 20px;
+                cursor: pointer;
+                font-size: 1rem;
+                color: #666;
+                transition: all 0.3s;
+            }
+
+            .tab-btn.active {
+                color: var(--primary-color);
+                border-bottom: 3px solid var(--primary-color);
+                font-weight: bold;
+            }
+
+            .cabinet-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 15px;
+            }
+
+            .cabinet-item {
+                background: white;
+                border-radius: 15px;
+                padding: 20px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                cursor: pointer;
+                transition: all 0.3s;
+                position: relative;
+            }
+
+            .cabinet-item:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+            }
+
+            .cabinet-item.selected {
+                border: 3px solid var(--primary-color);
+            }
+
+            .select-indicator {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                width: 25px;
+                height: 25px;
+                border-radius: 50%;
+                background: var(--primary-color);
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+            }
+
+            .cabinet-item:not(.selected) .select-indicator {
+                background: #ddd;
+            }
+
+            .item-image {
+                font-size: 3rem;
+                text-align: center;
+                margin-bottom: 10px;
+            }
+
+            .prize-rank {
+                background: var(--gacha-gold);
+                color: #333;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 0.75rem;
+                font-weight: bold;
+            }
+
+            .prize-name {
+                font-weight: bold;
+                margin: 8px 0;
+            }
+
+            .source-type {
+                font-size: 0.8rem;
+                color: #999;
+            }
+
+            .item-actions {
+                margin-top: 10px;
+            }
+
+            .btn-sm {
+                padding: 5px 10px;
+                font-size: 0.8rem;
+                border-radius: 5px;
+                border: none;
+                cursor: pointer;
+                background: #6c5ce7;
+                color: white;
+            }
+
+            .btn-danger {
+                background: #e74c3c;
+            }
+
+            .shipment-card {
+                background: white;
+                border-radius: 15px;
+                padding: 20px;
+                margin-bottom: 15px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            }
+
+            .shipment-header {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 10px;
+            }
+
+            .shipment-status {
+                padding: 3px 10px;
+                border-radius: 10px;
+                font-size: 0.8rem;
+                font-weight: bold;
+            }
+
+            .shipment-status.pending {
+                background: #f39c12;
+                color: white;
+            }
+
+            .shipment-status.shipped {
+                background: #3498db;
+                color: white;
+            }
+
+            .shipment-status.delivered {
+                background: #27ae60;
+                color: white;
+            }
+
+            .shipment-status.cancelled {
+                background: #95a5a6;
+                color: white;
+            }
+
+            .form-group {
+                margin-bottom: 15px;
+            }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: 500;
+            }
+
+            .form-control {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 1rem;
+            }
+        </style>
+    </div>
+</body>
+
+</html>

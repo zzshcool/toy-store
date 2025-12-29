@@ -190,4 +190,81 @@ public class IchibanApiController {
         map.put("remainingQuantity", prize.getRemainingQuantity());
         return map;
     }
+
+    // ============== 試抽功能 (無需登入，不扣代幣) ==============
+
+    /**
+     * 試抽 - 模擬一番賞抽獎體驗
+     * 不需登入，不扣代幣，隨機返回獎品結果
+     * 
+     * @param id    箱體 ID
+     * @param count 模擬抽取數量 (1-10)
+     */
+    @PostMapping("/{id}/trial")
+    public ApiResponse<Map<String, Object>> trial(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Integer> body) {
+
+        IchibanBox box = ichibanService.getBoxWithSlots(id);
+        if (box == null) {
+            return ApiResponse.error("箱體不存在");
+        }
+
+        int count = 1;
+        if (body != null && body.containsKey("count")) {
+            count = Math.max(1, Math.min(10, body.get("count")));
+        }
+
+        // 從獎品池中隨機抽取（模擬）
+        java.util.List<Map<String, Object>> results = new java.util.ArrayList<>();
+        java.util.Random random = new java.util.Random();
+
+        // 獲取所有可用獎品（有剩餘數量的）
+        java.util.List<IchibanPrize> availablePrizes = box.getPrizes().stream()
+                .filter(p -> p.getRemainingQuantity() > 0)
+                .collect(Collectors.toList());
+
+        if (availablePrizes.isEmpty()) {
+            return ApiResponse.error("此箱體已售罄，無法試抽");
+        }
+
+        // 計算總權重（依剩餘數量加權）
+        int totalWeight = availablePrizes.stream()
+                .mapToInt(IchibanPrize::getRemainingQuantity)
+                .sum();
+
+        for (int i = 0; i < count; i++) {
+            // 隨機抽取
+            int roll = random.nextInt(totalWeight);
+            int cumulative = 0;
+            IchibanPrize selectedPrize = availablePrizes.get(0);
+
+            for (IchibanPrize prize : availablePrizes) {
+                cumulative += prize.getRemainingQuantity();
+                if (roll < cumulative) {
+                    selectedPrize = prize;
+                    break;
+                }
+            }
+
+            // 模擬格子編號
+            int mockSlotNumber = random.nextInt(box.getTotalSlots()) + 1;
+            int mockShards = random.nextInt(20) + 1;
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("slotNumber", String.format("%02d", mockSlotNumber));
+            result.put("shards", mockShards);
+            result.put("prize", prizeToMap(selectedPrize));
+            results.add(result);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("isTrial", true);
+        response.put("boxName", box.getName());
+        response.put("pricePerDraw", box.getPricePerDraw());
+        response.put("results", results);
+        response.put("message", "這是試抽結果，正式抽獎需要登入並使用代幣");
+
+        return ApiResponse.ok(response, "試抽完成！體驗抽獎的樂趣～");
+    }
 }

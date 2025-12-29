@@ -1,9 +1,8 @@
 /* Premium Home Page Enhancements */
 :root {
-    --premium-gold: #ffd700;
-    --premium-silver: #c0c0c0;
-    --premium-bronze: #cd7f32;
-    --dark-bg: #0f0f1a;
+    --premium-gold: #FFC107;
+    --flame-red: #D32F2F;
+    --dark-bg: #121212;
     --card-bg: rgba(255, 255, 255, 0.05);
     --glass-bg: rgba(255, 255, 255, 0.1);
 }
@@ -14,9 +13,9 @@ body {
 
 /* Winner Reel (Marquee) */
 .winner-reel-container {
-    background: linear-gradient(90deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
-    border-bottom: 1px solid rgba(255, 215, 0, 0.3);
-    padding: 10px 0;
+    background: linear-gradient(90deg, #1a1a1a 0%, #2c0000 50%, #1a1a1a 100%);
+    border-bottom: 2px solid var(--flame-red);
+    padding: 12px 0;
     overflow: hidden;
     position: relative;
     white-space: nowrap;
@@ -45,8 +44,13 @@ body {
 }
 
 @keyframes marquee {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-100%); }
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-100%);
+    }
 }
 
 /* Personal Dashboard */
@@ -55,12 +59,14 @@ body {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 15px;
-    padding: 15px 25px;
+    padding: 25px;
     margin: 20px 0;
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
     color: #fff;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .user-welcome span {
@@ -89,8 +95,18 @@ body {
     color: #fff;
 }
 
-.asset-value.gold { color: var(--premium-gold); }
-.asset-value.shards { color: #00ffcc; }
+.asset-value.gold {
+    color: var(--premium-gold);
+    text-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
+}
+
+.asset-value.points {
+    color: #4fc3f7;
+}
+
+.asset-value.lucky {
+    color: #ff5252;
+}
 
 /* Game Showcase */
 .premium-section-title {
@@ -156,7 +172,7 @@ body {
 }
 
 .btn-premium {
-    background: linear-gradient(45deg, #ffd700, #ff8c00);
+    background: linear-gradient(45deg, var(--premium-gold), #ff8c00);
     border: none;
     color: #000 !important;
     font-weight: bold;
@@ -170,5 +186,128 @@ body {
 
 .btn-premium:hover {
     filter: brightness(1.1);
-    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+}
+
+/* Sign-in & Missions */
+.loyalty-container {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 20px;
+    margin-top: 20px;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+}
+
+.sign-in-section {
+    flex: 1;
+    min-width: 300px;
+}
+
+.mission-section {
+    flex: 1.5;
+    min-width: 300px;
+}
+
+.loyalty-label {
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 12px;
+}
+
+.streak-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.streak-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 10px 5px;
+    text-align: center;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.streak-box.active {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 193, 7, 0.4));
+    border-color: var(--premium-gold);
+    box-shadow: 0 0 10px rgba(255, 193, 7, 0.3);
+}
+
+.day-num {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #fff;
+}
+
+.bonus-tag {
+    font-size: 0.7rem;
+    color: var(--premium-gold);
+    margin-top: 4px;
+}
+
+.streak-box.active .day-num {
+    color: var(--premium-gold);
+}
+
+/* Missions */
+.mission-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mission-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.mission-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.m-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #eee;
+}
+
+.m-reward {
+    color: var(--premium-gold);
+    font-size: 0.85rem;
+}
+
+.m-progress-bg {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.m-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--flame-red), #ff5252);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.m-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.done-tag {
+    color: #4caf50;
+    font-weight: bold;
 }

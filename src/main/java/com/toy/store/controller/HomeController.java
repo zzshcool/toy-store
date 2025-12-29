@@ -1,74 +1,83 @@
 package com.toy.store.controller;
 
+import com.toy.store.model.*;
+import com.toy.store.repository.*;
+import com.toy.store.service.MissionService;
+import com.toy.store.service.TokenService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
+@RequiredArgsConstructor
 public class HomeController {
 
-        @org.springframework.beans.factory.annotation.Autowired
-        private com.toy.store.repository.ActivityRepository activityRepository;
-
-        @org.springframework.beans.factory.annotation.Autowired
-        private com.toy.store.repository.MemberActionLogRepository memberActionLogRepository;
-
-        @org.springframework.beans.factory.annotation.Autowired
-        private com.toy.store.repository.MemberRepository memberRepository;
-
-        @org.springframework.beans.factory.annotation.Autowired
-        private com.toy.store.repository.CarouselSlideRepository carouselSlideRepository;
-
-        @org.springframework.beans.factory.annotation.Autowired
-        private com.toy.store.repository.FeaturedItemRepository featuredItemRepository;
-
-        @org.springframework.beans.factory.annotation.Autowired
-        private com.toy.store.repository.GachaRecordRepository gachaRecordRepository;
-
-        @org.springframework.beans.factory.annotation.Autowired
-        private com.toy.store.repository.IchibanBoxRepository ichibanBoxRepository;
-
-        @org.springframework.beans.factory.annotation.Autowired
-        private com.toy.store.repository.BingoGameRepository bingoGameRepository;
+        private final ActivityRepository activityRepository;
+        private final MemberActionLogRepository memberActionLogRepository;
+        private final MemberRepository memberRepository;
+        private final CarouselSlideRepository carouselSlideRepository;
+        private final FeaturedItemRepository featuredItemRepository;
+        private final GachaRecordRepository gachaRecordRepository;
+        private final IchibanBoxRepository ichibanBoxRepository;
+        private final BingoGameRepository bingoGameRepository;
+        private final MissionService missionService;
+        private final MemberMissionRepository memberMissionRepository;
+        private final MemberSignInRepository memberSignInRepository;
 
         @GetMapping("/")
-        public String home(Model model, jakarta.servlet.http.HttpServletRequest request) {
+        public String home(Model model, HttpServletRequest request) {
                 // Log Action (if user is logged in)
-                com.toy.store.service.TokenService.TokenInfo info = (com.toy.store.service.TokenService.TokenInfo) request
-                                .getAttribute("currentUser");
+                TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
 
-                if (info != null && com.toy.store.service.TokenService.ROLE_USER.equals(info.getRole())) {
-                        com.toy.store.model.Member member = memberRepository.findByUsername(info.getUsername())
-                                        .orElse(null);
-                        if (member != null) {
+                if (info != null && TokenService.ROLE_USER.equals(info.getRole())) {
+                        memberRepository.findByUsername(info.getUsername()).ifPresent(member -> {
                                 model.addAttribute("currentMember", member);
-                                memberActionLogRepository.save(new com.toy.store.model.MemberActionLog(
+
+                                // 初始化今日任務並獲取進度
+                                missionService.initDailyMissions(member.getId());
+                                model.addAttribute("dailyMissions",
+                                                memberMissionRepository.findByMemberIdAndMissionDate(member.getId(),
+                                                                LocalDate.now()));
+
+                                // 獲取今日簽到狀況
+                                model.addAttribute("signInInfo",
+                                                memberSignInRepository
+                                                                .findByMemberIdAndSignInDate(member.getId(),
+                                                                                LocalDate.now())
+                                                                .orElse(null));
+
+                                memberActionLogRepository.save(new MemberActionLog(
                                                 member.getId(), member.getUsername(), "VIEW_HOME",
-                                                "Viewed Active Activities",
-                                                true));
-                        }
+                                                "Viewed Active Activities", true));
+                        });
                 }
 
                 // Fetch active activities from DB
-                List<com.toy.store.model.Activity> activities = activityRepository.findAll().stream()
-                                .filter(a -> a.isActive())
-                                .collect(java.util.stream.Collectors.toList());
+                List<Activity> activities = activityRepository.findAll().stream()
+                                .filter(Activity::isActive)
+                                .collect(Collectors.toList());
 
                 model.addAttribute("activities", activities);
 
                 // Platform Data
                 model.addAttribute("carouselSlides", carouselSlideRepository.findAllByOrderBySortOrderAsc());
                 model.addAttribute("newArrivals", featuredItemRepository
-                                .findByItemTypeOrderBySortOrderAsc(com.toy.store.model.FeaturedItem.Type.NEW_ARRIVAL));
+                                .findByItemTypeOrderBySortOrderAsc(FeaturedItem.Type.NEW_ARRIVAL));
                 model.addAttribute("bestSellers", featuredItemRepository
-                                .findByItemTypeOrderBySortOrderAsc(com.toy.store.model.FeaturedItem.Type.BEST_SELLER));
+                                .findByItemTypeOrderBySortOrderAsc(FeaturedItem.Type.BEST_SELLER));
 
                 // Commercial Optimization Data
-                List<com.toy.store.model.GachaRecord> records = gachaRecordRepository.findTop20ByOrderByCreatedAtDesc();
-                List<java.util.Map<String, Object>> latestWinners = records.stream().map(record -> {
-                        java.util.Map<String, Object> map = new java.util.HashMap<>();
+                List<GachaRecord> records = gachaRecordRepository.findTop20ByOrderByCreatedAtDesc();
+                List<Map<String, Object>> latestWinners = records.stream().map(record -> {
+                        Map<String, Object> map = new HashMap<>();
                         Long memberId = record.getMemberId();
                         String nickname = (memberId != null) ? memberRepository.findById(memberId)
                                         .map(m -> m.getNickname() != null ? m.getNickname() : m.getUsername())
@@ -85,21 +94,21 @@ public class HomeController {
                         map.put("prizeName", record.getPrizeName());
                         map.put("prizeRank", record.getPrizeRank());
                         return map;
-                }).collect(java.util.stream.Collectors.toList());
+                }).collect(Collectors.toList());
 
                 model.addAttribute("latestWinners", latestWinners);
 
                 // Fetch top 4 active Ichiban boxes
                 model.addAttribute("hotIchiban", ichibanBoxRepository.findAll().stream()
-                                .filter(b -> b.getStatus() == com.toy.store.model.IchibanBox.Status.ACTIVE)
+                                .filter(b -> b.getStatus() == IchibanBox.Status.ACTIVE)
                                 .limit(4)
-                                .collect(java.util.stream.Collectors.toList()));
+                                .collect(Collectors.toList()));
 
                 // Fetch top 4 active Bingo games
                 model.addAttribute("hotBingo", bingoGameRepository.findAll().stream()
-                                .filter(b -> b.getStatus() == com.toy.store.model.BingoGame.Status.ACTIVE)
+                                .filter(b -> b.getStatus() == BingoGame.Status.ACTIVE)
                                 .limit(4)
-                                .collect(java.util.stream.Collectors.toList()));
+                                .collect(Collectors.toList()));
 
                 return "index";
         }

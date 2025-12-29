@@ -13,12 +13,33 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.HashMap;
 
 @Component
 public class AuthenticationFilter implements Filter {
 
     @Autowired
     private TokenService tokenService;
+
+    private static final Map<String, String> PATH_PERMISSION_MAP = new HashMap<>();
+
+    static {
+        PATH_PERMISSION_MAP.put("/admin/overview", "DASHBOARD_VIEW");
+        PATH_PERMISSION_MAP.put("/admin/mystery", "GACHA_MANAGE");
+        PATH_PERMISSION_MAP.put("/admin/gacha", "GACHA_MANAGE");
+        PATH_PERMISSION_MAP.put("/admin/ichiban", "GACHA_MANAGE");
+        PATH_PERMISSION_MAP.put("/admin/bingo", "GACHA_MANAGE");
+        PATH_PERMISSION_MAP.put("/admin/roulette", "GACHA_MANAGE");
+        PATH_PERMISSION_MAP.put("/admin/products", "PRODUCT_MANAGE");
+        PATH_PERMISSION_MAP.put("/admin/categories", "PRODUCT_MANAGE");
+        PATH_PERMISSION_MAP.put("/admin/members", "MEMBER_MANAGE");
+        PATH_PERMISSION_MAP.put("/admin/levels", "MEMBER_MANAGE");
+        PATH_PERMISSION_MAP.put("/admin/coupons", "FINANCE_MANAGE");
+        PATH_PERMISSION_MAP.put("/admin/transactions", "FINANCE_MANAGE");
+        PATH_PERMISSION_MAP.put("/admin/settings", "SYSTEM_SETTING");
+        PATH_PERMISSION_MAP.put("/admin/audit", "ADMIN_MANAGE");
+    }
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -73,6 +94,26 @@ public class AuthenticationFilter implements Filter {
 
             if (adminInfo == null || !TokenService.ROLE_ADMIN.equals(adminInfo.getRole())) {
                 httpResponse.sendRedirect("/admin/login");
+                return;
+            }
+
+            // 2.1 Permission Check
+            String requiredPermission = PATH_PERMISSION_MAP.entrySet().stream()
+                    .filter(entry -> path.startsWith(entry.getKey()))
+                    .map(Map.Entry::getValue)
+                    .findFirst()
+                    .orElse(null);
+
+            if (requiredPermission != null && !adminInfo.hasPermission(requiredPermission)) {
+                // 如果是 API 請求，返回 403 JSON，否則導向無權限頁面或 Dashboard
+                if (path.contains("/api/")) {
+                    httpResponse.setStatus(403);
+                    httpResponse.setContentType("application/json;charset=UTF-8");
+                    httpResponse.getWriter()
+                            .write("{\"success\":false, \"message\":\"無此權限 (" + requiredPermission + ")\"}");
+                } else {
+                    httpResponse.sendRedirect("/admin?error=no_permission");
+                }
                 return;
             }
         }

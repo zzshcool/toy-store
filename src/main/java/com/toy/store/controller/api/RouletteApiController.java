@@ -90,10 +90,11 @@ public class RouletteApiController {
             return ApiResponse.error("請先登入");
         }
 
-        MemberLuckyValue luckyValue = rouletteService.getMemberLuckyValue(memberId);
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new AppException("會員不存在"));
         Map<String, Object> result = new HashMap<>();
-        result.put("luckyValue", luckyValue.getLuckyValue());
-        result.put("shardBalance", luckyValue.getShardBalance());
+        result.put("luckyValue", member.getLuckyValue());
+        result.put("shardBalance", member.getPoints());
         return ApiResponse.ok(result);
     }
 
@@ -128,5 +129,58 @@ public class RouletteApiController {
         map.put("color", slot.getColor());
         map.put("isJackpot", slot.isJackpot());
         return map;
+    }
+
+    // ============== 試抽功能 (無需登入，不扣代幣) ==============
+
+    /**
+     * 試轉 - 模擬轉盤體驗
+     * 不需登入，不扣代幣，隨機返回結果
+     */
+    @PostMapping("/{id}/trial")
+    public ApiResponse<Map<String, Object>> trial(@PathVariable Long id) {
+        RouletteGame game = rouletteService.getGameWithSlots(id);
+        if (game == null) {
+            return ApiResponse.error("轉盤不存在");
+        }
+
+        List<RouletteSlot> slots = rouletteService.getSlots(id);
+        if (slots.isEmpty()) {
+            return ApiResponse.error("轉盤尚未設定獎格");
+        }
+
+        // 隨機選擇一個獎格（依權重）
+        java.util.Random random = new java.util.Random();
+        int totalWeight = slots.stream().mapToInt(RouletteSlot::getWeight).sum();
+        int roll = random.nextInt(totalWeight);
+        int cumulative = 0;
+        RouletteSlot selectedSlot = slots.get(0);
+
+        for (RouletteSlot slot : slots) {
+            cumulative += slot.getWeight();
+            if (roll < cumulative) {
+                selectedSlot = slot;
+                break;
+            }
+        }
+
+        int mockShards = random.nextInt(20) + 1;
+        boolean isMockFreeSpin = selectedSlot.getSlotType() == RouletteSlot.SlotType.FREE_SPIN;
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("isTrial", true);
+        response.put("gameName", game.getName());
+        response.put("pricePerSpin", game.getPricePerSpin());
+        response.put("slot", slotToMap(selectedSlot));
+        response.put("shardsEarned", mockShards);
+        response.put("isFreeSpin", isMockFreeSpin);
+        response.put("isGuarantee", false);
+        response.put("currentLuckyValue", 0);
+        response.put("luckyThreshold", 100);
+        response.put("luckyPercentage", 0);
+        response.put("message", "這是試轉結果，正式抽獎需要登入並使用代幣");
+
+        String message = selectedSlot.isJackpot() ? "🎉 試轉中獎！體驗大獎的感覺～" : "試轉完成！";
+        return ApiResponse.ok(response, message);
     }
 }

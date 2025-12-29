@@ -3,7 +3,6 @@ package com.toy.store.service;
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
 import com.toy.store.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,14 +16,29 @@ import java.util.List;
 @Service
 public class IchibanService extends BaseGachaService {
 
-    @Autowired
-    private IchibanBoxRepository boxRepository;
+    private final IchibanBoxRepository boxRepository;
+    private final IchibanSlotRepository slotRepository;
+    private final IchibanPrizeRepository prizeRepository;
+    private final MemberRepository memberRepository;
+    private final SystemSettingService systemSettingService;
 
-    @Autowired
-    private IchibanSlotRepository slotRepository;
-
-    @Autowired
-    private IchibanPrizeRepository prizeRepository;
+    public IchibanService(
+            GachaRecordRepository recordRepository,
+            TransactionService transactionService,
+            ShardService shardService,
+            MissionService missionService,
+            IchibanBoxRepository boxRepository,
+            IchibanSlotRepository slotRepository,
+            IchibanPrizeRepository prizeRepository,
+            MemberRepository memberRepository,
+            SystemSettingService systemSettingService) {
+        super(recordRepository, transactionService, shardService, missionService);
+        this.boxRepository = boxRepository;
+        this.slotRepository = slotRepository;
+        this.prizeRepository = prizeRepository;
+        this.memberRepository = memberRepository;
+        this.systemSettingService = systemSettingService;
+    }
 
     /**
      * 取得所有進行中的一番賞箱體
@@ -44,7 +58,7 @@ public class IchibanService extends BaseGachaService {
      * 取得箱體的格子狀態
      */
     public List<IchibanSlot> getSlots(Long boxId) {
-        return slotRepository.findByBoxIdOrderBySlotNumberAsc(boxId);
+        return slotRepository.findByBox_IdOrderBySlotNumberAsc(boxId);
     }
 
     /**
@@ -52,7 +66,7 @@ public class IchibanService extends BaseGachaService {
      */
     @Transactional
     public IchibanSlot lockSlot(Long boxId, Integer slotNumber, Long memberId) {
-        IchibanSlot slot = slotRepository.findByBoxIdAndSlotNumber(boxId, slotNumber)
+        IchibanSlot slot = slotRepository.findByBox_IdAndSlotNumber(boxId, slotNumber)
                 .orElseThrow(() -> new AppException("格子不存在"));
 
         if (slot.getStatus() == IchibanSlot.Status.REVEALED) {
@@ -78,7 +92,7 @@ public class IchibanService extends BaseGachaService {
      */
     @Transactional
     public IchibanSlot revealSlot(Long boxId, Integer slotNumber, Long memberId) {
-        IchibanSlot slot = slotRepository.findByBoxIdAndSlotNumber(boxId, slotNumber)
+        IchibanSlot slot = slotRepository.findByBox_IdAndSlotNumber(boxId, slotNumber)
                 .orElseThrow(() -> new AppException("格子不存在"));
 
         // 驗證狀態
@@ -100,30 +114,13 @@ public class IchibanService extends BaseGachaService {
         deductWallet(memberId, box.getPricePerDraw(), Transaction.TransactionType.ICHIBAN_COST,
                 "一番賞抽獎: 箱體ID " + boxId + ", 格子號碼 " + slotNumber);
 
-        // 收益保護：如果抽出進度小於 70% 且抽中大獎，則嘗試與其他可用格子交換
-        int totalSlots = box.getTotalSlots();
-        int revealedSlots = totalSlots - slotRepository.countAvailableSlots(boxId);
-        double progress = (double) revealedSlots / totalSlots;
+        // 核心邏輯啟動
+        int totalSlotsCount = box.getTotalSlots();
+        int revealedCount = totalSlotsCount - slotRepository.countAvailableSlots(boxId);
+        double progress = (double) revealedCount / totalSlotsCount;
 
-        if (progress < 0.7 && slot.getTier() == GachaProbabilityEngine.PrizeTier.JACKPOT) {
-            // 嘗試尋找一個非大獎的可用格子進行交換
-            List<IchibanSlot> availableNormalSlots = slotRepository
-                    .findByBoxIdAndStatus(boxId, IchibanSlot.Status.AVAILABLE).stream()
-                    .filter(s -> s.getTier() != GachaProbabilityEngine.PrizeTier.JACKPOT
-                            && !s.getSlotNumber().equals(slotNumber))
-                    .collect(java.util.stream.Collectors.toList());
-
-            if (!availableNormalSlots.isEmpty()) {
-                // 選一個隨機的普通格子交換獎品
-                IchibanSlot targetSlot = availableNormalSlots
-                        .get(new java.util.Random().nextInt(availableNormalSlots.size()));
-                IchibanPrize bigPrize = slot.getPrize();
-                slot.setPrize(targetSlot.getPrize());
-                targetSlot.setPrize(bigPrize);
-                slotRepository.save(targetSlot);
-                // 繼續流程，slot 現在持有的是普通獎品
-            }
-        }
+        // 檢查幸運值保底或收益保護
+        applyRevenueProtectionAndLuckyValue(memberId, slot, progress);
 
         // 揭曉格子
         slot.reveal(memberId);
@@ -134,15 +131,20 @@ public class IchibanService extends BaseGachaService {
             IchibanPrize prize = slot.getPrize();
             prize.decreaseQuantity();
             prizeRepository.save(prize);
+
+            // 幸運值邏輯
+            updateMemberLuckyValue(memberId, prize.getRank());
         }
 
-        // 產出碎片
+        // 產出碎片 (積分)
         int shards = processGachaShards(memberId, "ICHIBAN", boxId, "一番賞抽獎獲得");
 
         // 記錄抽獎
         String prizeName = slot.getPrize() != null ? slot.getPrize().getName() : "未知獎品";
         String prizeRank = slot.getPrize() != null ? slot.getPrize().getRank().name() : "";
-        saveIchibanRecord(memberId, boxId, prizeName, prizeRank, shards);
+        java.math.BigDecimal prizeValue = slot.getPrize() != null ? slot.getPrize().getEstimatedValue()
+                : java.math.BigDecimal.ZERO;
+        saveIchibanRecord(memberId, boxId, prizeName, prizeRank, shards, prizeValue);
 
         // 檢查箱體是否售罄
         checkBoxSoldOut(boxId);
@@ -175,7 +177,7 @@ public class IchibanService extends BaseGachaService {
         // 1. 驗證並鎖定所有格子
         List<IchibanSlot> lockedSlots = new java.util.ArrayList<>();
         for (Integer slotNumber : slotNumbers) {
-            IchibanSlot slot = slotRepository.findByBoxIdAndSlotNumber(boxId, slotNumber)
+            IchibanSlot slot = slotRepository.findByBox_IdAndSlotNumber(boxId, slotNumber)
                     .orElseThrow(() -> new RuntimeException("格子 " + slotNumber + " 不存在"));
 
             if (slot.getStatus() == IchibanSlot.Status.REVEALED) {
@@ -198,8 +200,15 @@ public class IchibanService extends BaseGachaService {
         // 3. 依序揭曉
         List<SlotResult> results = new java.util.ArrayList<>();
         int totalShards = 0;
+        int totalSlotsCount = box.getTotalSlots();
 
         for (IchibanSlot slot : lockedSlots) {
+            int revealedCount = totalSlotsCount - slotRepository.countAvailableSlots(boxId);
+            double progress = (double) revealedCount / totalSlotsCount;
+
+            // 檢查幸運值保底或收益保護
+            applyRevenueProtectionAndLuckyValue(memberId, slot, progress);
+
             slot.reveal(memberId);
             slotRepository.save(slot);
 
@@ -208,16 +217,21 @@ public class IchibanService extends BaseGachaService {
                 IchibanPrize prize = slot.getPrize();
                 prize.decreaseQuantity();
                 prizeRepository.save(prize);
+
+                // 幸運值邏輯
+                updateMemberLuckyValue(memberId, prize.getRank());
             }
 
-            // 產出碎片
+            // 產出碎片 (積分)
             int shards = processGachaShards(memberId, "ICHIBAN", boxId, "一番賞抽獎獲得");
             totalShards += shards;
 
             // 記錄
             String prizeName = slot.getPrize() != null ? slot.getPrize().getName() : "未知獎品";
             String prizeRank = slot.getPrize() != null ? slot.getPrize().getRank().name() : "";
-            saveIchibanRecord(memberId, boxId, prizeName, prizeRank, shards);
+            java.math.BigDecimal prizeValue = slot.getPrize() != null ? slot.getPrize().getEstimatedValue()
+                    : java.math.BigDecimal.ZERO;
+            saveIchibanRecord(memberId, boxId, prizeName, prizeRank, shards, prizeValue);
 
             results.add(new SlotResult(slot.getSlotNumber(), slot.getPrize(), shards));
         }
@@ -253,7 +267,7 @@ public class IchibanService extends BaseGachaService {
             return totalCost;
         }
 
-        public int getTotalShards() {
+        public int totalShards() {
             return totalShards;
         }
     }
@@ -332,6 +346,77 @@ public class IchibanService extends BaseGachaService {
         // 更新實際格數
         box.setTotalSlots(slotNumber - 1);
         boxRepository.save(box);
+    }
+
+    /**
+     * 更新會員幸運值
+     */
+    private void updateMemberLuckyValue(Long memberId, IchibanPrize.Rank rank) {
+        if (memberId == null)
+            return;
+        memberRepository.findById(memberId).ifPresent(member -> {
+            if (rank == IchibanPrize.Rank.A) {
+                member.setLuckyValue(0); // 抽中大獎重置
+            } else {
+                member.setLuckyValue(member.getLuckyValue() + 10); // 否則增加 10
+            }
+            memberRepository.save(member);
+        });
+    }
+
+    /**
+     * 應用收益保護與幸運值保底邏輯
+     */
+    private void applyRevenueProtectionAndLuckyValue(Long memberId, IchibanSlot slot, double progress) {
+        if (memberId == null)
+            return;
+        Member member = memberRepository.findById(memberId).orElse(null);
+        if (member == null)
+            return;
+
+        boolean isBigPrize = slot.getPrize() != null && slot.getPrize().getRank() == IchibanPrize.Rank.A;
+        boolean hasGuarantee = member.getLuckyValue() >= 100;
+        double threshold = systemSettingService.getRevenueThreshold();
+
+        // 1. 幸運值保底邏輯：如果幸運值滿 100 且目前沒中 A 賞，嘗試強制換成 A 賞
+        if (hasGuarantee && !isBigPrize) {
+            List<IchibanSlot> availableBigSlots = slotRepository
+                    .findByBox_IdAndStatus(slot.getBox().getId(), IchibanSlot.Status.AVAILABLE).stream()
+                    .filter(s -> s.getPrize() != null && s.getPrize().getRank() == IchibanPrize.Rank.A)
+                    .collect(java.util.stream.Collectors.toList());
+
+            if (!availableBigSlots.isEmpty()) {
+                IchibanSlot targetSlot = availableBigSlots
+                        .get(new java.util.Random().nextInt(availableBigSlots.size()));
+                swapPrizes(slot, targetSlot);
+                isBigPrize = true; // 現在它是 A 賞了
+            }
+        }
+
+        // 2. 收益保護邏輯：如果進度不滿門檻 且抽中 A 賞，且「沒有」觸發保底，則強制換成非 A 賞
+        if (progress < threshold && isBigPrize && !hasGuarantee) {
+            List<IchibanSlot> availableNormalSlots = slotRepository
+                    .findByBox_IdAndStatus(slot.getBox().getId(), IchibanSlot.Status.AVAILABLE).stream()
+                    .filter(s -> s.getPrize() != null && s.getPrize().getRank() != IchibanPrize.Rank.A
+                            && !s.getSlotNumber().equals(slot.getSlotNumber()))
+                    .collect(java.util.stream.Collectors.toList());
+
+            if (!availableNormalSlots.isEmpty()) {
+                IchibanSlot targetSlot = availableNormalSlots
+                        .get(new java.util.Random().nextInt(availableNormalSlots.size()));
+                swapPrizes(slot, targetSlot);
+            }
+        }
+    }
+
+    /**
+     * 交換兩個格子的獎品
+     */
+    private void swapPrizes(IchibanSlot s1, IchibanSlot s2) {
+        IchibanPrize p1 = s1.getPrize();
+        s1.setPrize(s2.getPrize());
+        s2.setPrize(p1);
+        slotRepository.save(s2); // s1 會在外部 save
     }
 
     /**

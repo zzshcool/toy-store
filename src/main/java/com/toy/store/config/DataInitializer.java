@@ -27,16 +27,26 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired
     private com.toy.store.repository.AdminUserRepository adminUserRepository;
 
+    @Autowired
+    private com.toy.store.repository.AdminPermissionRepository adminPermissionRepository;
+
+    @Autowired
+    private com.toy.store.repository.AdminRoleRepository adminRoleRepository;
+
     @Override
     public void run(String... args) throws Exception {
         // Create Admin Account (Backstage)
         if (adminUserRepository.findByUsername("admin").isEmpty()) {
+            seedPermissions();
+            com.toy.store.model.AdminRole superAdminRole = seedSuperAdminRole();
+
             com.toy.store.model.AdminUser admin = new com.toy.store.model.AdminUser();
             admin.setUsername("admin");
             admin.setEmail("admin@toystore.com");
             admin.setPassword(passwordEncoder.encode("admin123"));
+            admin.getRoles().add(superAdminRole);
             adminUserRepository.save(admin);
-            System.out.println("Admin account created: admin / admin123");
+            System.out.println("Admin account created: admin / admin123 (with Super Admin role)");
         }
 
         // Cleanup legacy Admin in Member table
@@ -184,14 +194,16 @@ public class DataInitializer implements CommandLineRunner {
 
     private void seedMemberLevels() {
         if (memberLevelRepository.count() == 0) {
-            createLevel("平民", 1, 0, "無");
-            createLevel("良民", 2, 10000, "送抽獎3次");
-            createLevel("青銅", 3, 50000, "送抽獎5次");
-            createLevel("黃銅", 4, 100000, "送抽獎10次");
-            createLevel("金銅", 5, 150000, "送抽獎15次");
-            createLevel("白銀", 6, 300000, "送抽獎20次");
-            createLevel("白金", 7, 400000, "送抽獎30次");
-            createLevel("黃金", 8, 500000, "送抽獎35次");
+            createLevel("VIP1 青銅", 1, 0, "基礎返利");
+            createLevel("VIP2 白銀", 2, 5000, "消費返利 1%");
+            createLevel("VIP3 黃金", 3, 25000, "消費返利 2%");
+            createLevel("VIP4 鉑金", 4, 50000, "消費返利 3%");
+            createLevel("VIP5 鑽石", 5, 80000, "消費返利 5%");
+            createLevel("VIP6 大師", 6, 150000, "消費返利 7%");
+            createLevel("VIP7 宗師", 7, 300000, "消費返利 10%");
+            createLevel("VIP8 傳奇", 8, 600000, "消費返利 12%");
+            createLevel("VIP9 神話", 9, 1200000, "消費返利 15%");
+            createLevel("VIP10 至尊", 10, 2500000, "消費返利 20%");
         }
     }
 
@@ -323,5 +335,30 @@ public class DataInitializer implements CommandLineRunner {
                 slot.setShardAmount(100);
             rouletteSlotRepository.save(slot);
         }
+    }
+
+    private void seedPermissions() {
+        createPermission("DASHBOARD_VIEW", "查看儀錶板");
+        createPermission("GACHA_MANAGE", "管理扭蛋與一番賞機台");
+        createPermission("PRODUCT_MANAGE", "管理商品與分類");
+        createPermission("MEMBER_MANAGE", "管理會員資料與餘額");
+        createPermission("FINANCE_MANAGE", "財務與訂單審核");
+        createPermission("ADMIN_MANAGE", "系統管理員與權限設定");
+        createPermission("SYSTEM_SETTING", "系統參數設定");
+    }
+
+    private void createPermission(String code, String name) {
+        if (adminPermissionRepository.findByCode(code).isEmpty()) {
+            adminPermissionRepository.save(new com.toy.store.model.AdminPermission(code, name));
+        }
+    }
+
+    private com.toy.store.model.AdminRole seedSuperAdminRole() {
+        return adminRoleRepository.findByName("超級管理員")
+                .orElseGet(() -> {
+                    com.toy.store.model.AdminRole role = new com.toy.store.model.AdminRole("超級管理員");
+                    role.getPermissions().addAll(adminPermissionRepository.findAll());
+                    return adminRoleRepository.save(role);
+                });
     }
 }

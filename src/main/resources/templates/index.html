@@ -82,6 +82,9 @@
                 <div class="user-welcome">
                     歡迎回來，<span
                         th:text="${currentMember.nickname != null ? currentMember.nickname : currentMember.username}">玩家</span>！
+                    <span th:if="${currentMember.level != null}" class="badge"
+                        style="background: var(--premium-gold); color: #000; margin-left: 10px; font-weight: bold; border-radius: 4px; padding: 2px 8px;"
+                        th:text="${currentMember.level.name}">VIP1 青銅</span>
                 </div>
                 <div class="user-assets">
                     <div class="asset-item">
@@ -89,17 +92,61 @@
                         <span class="asset-value gold" th:text="'$' + ${currentMember.platformWalletBalance}">$0</span>
                     </div>
                     <div class="asset-item">
-                        <span class="asset-label">累積碎片</span>
-                        <span class="asset-value shards" th:text="${currentMember.shards}">0</span>
+                        <span class="asset-label">累積積分</span>
+                        <span class="asset-value points" th:text="${currentMember.points}">0</span>
+                    </div>
+                    <div class="asset-item">
+                        <span class="asset-label">成長值</span>
+                        <span class="asset-value" style="color: #ba68c8;"
+                            th:text="${currentMember.growthValue}">0</span>
                     </div>
                     <div class="asset-item">
                         <span class="asset-label">幸運值</span>
-                        <span class="asset-value" style="color: #ff6b6b;" th:text="${currentMember.luckyValue}">0</span>
+                        <span class="asset-value lucky" th:text="${currentMember.luckyValue}">0</span>
                     </div>
                 </div>
                 <div class="user-actions">
                     <a th:href="@{/transactions}" class="btn btn-sm"
-                        style="background: var(--premium-gold); color: #000; border-radius: 20px;">儲值點數</a>
+                        style="background: var(--premium-gold); color: #000; border-radius: 20px; font-weight: bold; padding: 5px 15px;">儲值點數</a>
+                </div>
+
+                <!-- Loyalty System (Sign-in & Missions) -->
+                <div class="loyalty-container">
+                    <!-- Sign-in Streak -->
+                    <div class="sign-in-section" th:if="${signInInfo != null}">
+                        <div class="loyalty-label">連續簽到：<span th:text="${signInInfo.consecutiveDays}">1</span> 天</div>
+                        <div class="streak-grid">
+                            <div th:each="i : ${#numbers.sequence(1, 7)}"
+                                th:class="'streak-box ' + (${signInInfo.consecutiveDays >= i} ? 'active' : '')">
+                                <div class="day-num" th:text="${i}">1</div>
+                                <div class="bonus-tag" th:text="${i == 7 ? '+50' : '+10'}"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Daily Missions -->
+                    <div class="mission-section" th:if="${!#lists.isEmpty(dailyMissions)}">
+                        <div class="loyalty-label">今日任務</div>
+                        <div class="mission-list">
+                            <div th:each="mission : ${dailyMissions}" class="mission-card">
+                                <div class="mission-header">
+                                    <span class="m-name"
+                                        th:text="${mission.type == T(com.toy.store.model.MemberMission.MissionType).DAILY_LOGIN ? '每日登入' : (mission.type == T(com.toy.store.model.MemberMission.MissionType).SPEND_AMOUNT ? '累計消費' : '累計抽獎')}">任務</span>
+                                    <span class="m-reward"
+                                        th:text="'+' + ${mission.rewardBonusPoints} + ' 點'">+10</span>
+                                </div>
+                                <div class="m-progress-bg">
+                                    <div class="m-progress-fill"
+                                        th:style="'width: ' + (${mission.currentValue * 100.0 / mission.targetValue > 100 ? 100 : mission.currentValue * 100.0 / mission.targetValue}) + '%'">
+                                    </div>
+                                </div>
+                                <div class="m-footer">
+                                    <span th:text="${mission.currentValue} + ' / ' + ${mission.targetValue}">0/1</span>
+                                    <span th:if="${mission.completed}" class="done-tag">已完成</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

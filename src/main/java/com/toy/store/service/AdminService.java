@@ -1,10 +1,10 @@
 package com.toy.store.service;
 
+import com.toy.store.exception.AppException;
+import com.toy.store.exception.ResourceNotFoundException;
 import com.toy.store.model.*;
 import com.toy.store.repository.*;
-import com.toy.store.exception.AppException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -13,81 +13,44 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
+/**
+ * 後台管理服務
+ */
 @Service
+@RequiredArgsConstructor
 public class AdminService {
 
-        @Autowired
-        private MemberRepository memberRepository;
-
-        @Autowired
-        private TransactionRepository transactionRepository;
-
-        @Autowired
-        private AdminActionLogRepository adminActionLogRepository;
-
-        @Autowired
-        private MemberActionLogRepository memberActionLogRepository;
-
-        @Autowired
-        private GachaThemeRepository gachaThemeRepository;
-
-        @Autowired
-        private ProductService productService;
-
-        @Autowired
-        private CategoryRepository categoryRepository;
-
-        @Autowired
-        private MemberLevelRepository memberLevelRepository;
-
-        @Autowired
-        private CouponRepository couponRepository;
-
-        @Autowired
-        private CarouselSlideRepository carouselSlideRepository;
-
-        @Autowired
-        private FeaturedItemRepository featuredItemRepository;
-
-        @Autowired
-        private NotificationRepository notificationRepository;
-
-        @Autowired
-        private GachaIpRepository gachaIpRepository;
-
-        @Autowired
-        private IchibanBoxRepository ichibanBoxRepository;
-
-        @Autowired
-        private RouletteGameRepository rouletteGameRepository;
-
-        @Autowired
-        private BingoGameRepository bingoGameRepository;
-
-        @Autowired
-        private RedeemShopItemRepository redeemShopItemRepository;
-
-        @Autowired
-        private CouponService couponService;
-
-        @Autowired
-        private SubCategoryRepository subCategoryRepository;
-
-        @Autowired
-        private GachaItemRepository gachaItemRepository;
-
-        @Autowired
-        private ActivityRepository activityRepository;
-
-        @Autowired
-        private ProductRepository productRepository;
+        private final MemberRepository memberRepository;
+        private final TransactionRepository transactionRepository;
+        private final GachaRecordRepository recordRepository;
+        private final AdminActionLogRepository adminActionLogRepository;
+        private final MemberActionLogRepository memberActionLogRepository;
+        private final GachaThemeRepository gachaThemeRepository;
+        private final ProductService productService;
+        private final CategoryRepository categoryRepository;
+        private final MemberLevelRepository memberLevelRepository;
+        private final CouponRepository couponRepository;
+        private final CarouselSlideRepository carouselSlideRepository;
+        private final FeaturedItemRepository featuredItemRepository;
+        private final NotificationRepository notificationRepository;
+        private final GachaIpRepository gachaIpRepository;
+        private final IchibanBoxRepository ichibanBoxRepository;
+        private final RouletteGameRepository rouletteGameRepository;
+        private final BingoGameRepository bingoGameRepository;
+        private final RedeemShopItemRepository redeemShopItemRepository;
+        private final CouponService couponService;
+        private final SubCategoryRepository subCategoryRepository;
+        private final GachaItemRepository gachaItemRepository;
+        private final ActivityRepository activityRepository;
+        private final ProductRepository productRepository;
 
         /**
-         * 獲取儀表板所需的匯總數據 (Get summary data for dashboard)
+         * 獲取儀表板所需的匯總數據
          */
         public Map<String, Object> getDashboardData(
                         int memberPage, int memberSize,
@@ -138,10 +101,8 @@ public class AdminService {
 
         @Transactional
         public void toggleMemberStatus(Long id, String adminName) {
-                if (id == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 Member member = memberRepository.findById(id)
-                                .orElseThrow(() -> new AppException("找不到該會員 (Member not found)"));
+                                .orElseThrow(() -> new ResourceNotFoundException("會員", id));
                 member.setEnabled(!member.isEnabled());
                 memberRepository.save(member);
 
@@ -154,10 +115,8 @@ public class AdminService {
         @Transactional
         public void updateMember(Long id, String email, String nickname, boolean enabled, MemberLevel level,
                         String adminName) {
-                if (id == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 Member member = memberRepository.findById(id)
-                                .orElseThrow(() -> new AppException("找不到該會員 (Member not found)"));
+                                .orElseThrow(() -> new ResourceNotFoundException("會員", id));
 
                 String oldEmail = member.getEmail();
                 String oldNickname = member.getNickname();
@@ -183,8 +142,6 @@ public class AdminService {
 
         @Transactional
         public void deleteProduct(Long id, String adminName) {
-                if (id == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 productService.deleteProduct(id);
                 adminActionLogRepository.save(new AdminActionLog(adminName, "DELETE_PRODUCT",
                                 "Product ID: " + id, ""));
@@ -199,10 +156,8 @@ public class AdminService {
 
         @Transactional
         public void createSubCategory(Long categoryId, String name, String adminName) {
-                if (categoryId == null)
-                        throw new AppException("分類 ID 不能為空 (Category ID cannot be null)");
                 Category cat = categoryRepository.findById(categoryId)
-                                .orElseThrow(() -> new AppException("找不到主分類 (Category not found)"));
+                                .orElseThrow(() -> new ResourceNotFoundException("主分類", categoryId));
                 SubCategory sub = new SubCategory();
                 sub.setName(name);
                 sub.setCategory(cat);
@@ -214,10 +169,8 @@ public class AdminService {
 
         @Transactional
         public void updateCategory(Long id, String name, String adminName) {
-                if (id == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 Category cat = categoryRepository.findById(id)
-                                .orElseThrow(() -> new AppException("找不到分類 (Category not found)"));
+                                .orElseThrow(() -> new ResourceNotFoundException("分類", id));
                 String oldName = cat.getName();
                 cat.setName(name);
                 categoryRepository.save(cat);
@@ -227,8 +180,6 @@ public class AdminService {
 
         @Transactional
         public void deleteCategory(Long id, String adminName) {
-                if (id == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 categoryRepository.deleteById(id);
                 adminActionLogRepository.save(new AdminActionLog(adminName, "DELETE_CATEGORY",
                                 "Category ID: " + id, ""));
@@ -236,10 +187,8 @@ public class AdminService {
 
         @Transactional
         public void updateSubCategory(Long id, String name, String adminName) {
-                if (id == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 SubCategory sub = subCategoryRepository.findById(id)
-                                .orElseThrow(() -> new AppException("找不到次分類 (SubCategory not found)"));
+                                .orElseThrow(() -> new ResourceNotFoundException("次分類", id));
                 String oldName = sub.getName();
                 sub.setName(name);
                 subCategoryRepository.save(sub);
@@ -249,8 +198,6 @@ public class AdminService {
 
         @Transactional
         public void deleteSubCategory(Long id, String adminName) {
-                if (id == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 subCategoryRepository.deleteById(id);
                 adminActionLogRepository.save(new AdminActionLog(adminName, "DELETE_SUBCATEGORY",
                                 "SubCategory ID: " + id, ""));
@@ -265,10 +212,8 @@ public class AdminService {
 
         @Transactional
         public void updateTheme(Long id, String name, BigDecimal price, String adminName) {
-                if (id == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 GachaTheme theme = gachaThemeRepository.findById(id)
-                                .orElseThrow(() -> new AppException("找不到主題 (Theme not found)"));
+                                .orElseThrow(() -> new ResourceNotFoundException("主題", id));
                 theme.setName(name);
                 theme.setPrice(price);
                 gachaThemeRepository.save(theme);
@@ -279,8 +224,6 @@ public class AdminService {
 
         @Transactional
         public void deleteTheme(Long id, String adminName) {
-                if (id == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 gachaThemeRepository.deleteById(id);
                 adminActionLogRepository.save(new AdminActionLog(adminName, "DELETE_THEME",
                                 "Theme ID: " + id, ""));
@@ -288,10 +231,8 @@ public class AdminService {
 
         @Transactional
         public void createGachaItem(Long themeId, GachaItem item, String adminName) {
-                if (themeId == null)
-                        throw new AppException("主題 ID 不能為空 (Theme ID cannot be null)");
                 GachaTheme theme = gachaThemeRepository.findById(themeId)
-                                .orElseThrow(() -> new AppException("找不到主題 (Theme not found)"));
+                                .orElseThrow(() -> new ResourceNotFoundException("主題", themeId));
                 item.setTheme(theme);
                 gachaItemRepository.save(item);
                 adminActionLogRepository.save(new AdminActionLog(adminName, "CREATE_GACHA_ITEM",
@@ -300,8 +241,6 @@ public class AdminService {
 
         @Transactional
         public void deleteGachaItem(Long id, String adminName) {
-                if (id == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 gachaItemRepository.deleteById(id);
                 adminActionLogRepository.save(new AdminActionLog(adminName, "DELETE_GACHA_ITEM",
                                 "Item ID: " + id, ""));
@@ -309,10 +248,8 @@ public class AdminService {
 
         @Transactional
         public void updateGachaItem(Long id, String name, BigDecimal estimatedValue, Integer weight, String adminName) {
-                if (id == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 GachaItem item = gachaItemRepository.findById(id)
-                                .orElseThrow(() -> new AppException("找不到獎項 (Item not found)"));
+                                .orElseThrow(() -> new ResourceNotFoundException("獎項", id));
                 item.setName(name);
                 item.setEstimatedValue(estimatedValue);
                 item.setWeight(weight);
@@ -325,10 +262,8 @@ public class AdminService {
         @Transactional
         public void updateActivity(Long id, String title, String description, String type,
                         String startDate, String expiryDate, String adminName) {
-                if (id == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 Activity activity = activityRepository.findById(id)
-                                .orElseThrow(() -> new AppException("找不到活動 (Activity not found)"));
+                                .orElseThrow(() -> new ResourceNotFoundException("活動", id));
                 activity.setTitle(title);
                 activity.setDescription(description);
                 activity.setType(type);
@@ -345,10 +280,8 @@ public class AdminService {
 
         @Transactional
         public void toggleActivity(Long id, String adminName) {
-                if (id == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 Activity activity = activityRepository.findById(id)
-                                .orElseThrow(() -> new AppException("找不到活動 (Activity not found)"));
+                                .orElseThrow(() -> new ResourceNotFoundException("活動", id));
                 activity.setActive(!activity.isActive());
                 activityRepository.save(activity);
                 adminActionLogRepository.save(new AdminActionLog(adminName, "TOGGLE_ACTIVITY",
@@ -399,7 +332,7 @@ public class AdminService {
         public FeaturedItem addFeaturedItem(Long productId, FeaturedItem.Type type, Integer sortOrder,
                         String adminName) {
                 Product product = productRepository.findById(productId)
-                                .orElseThrow(() -> new AppException("找不到產品 (Product not found)"));
+                                .orElseThrow(() -> new ResourceNotFoundException("產品", productId));
                 FeaturedItem item = new FeaturedItem();
                 item.setProduct(product);
                 item.setItemType(type);
@@ -429,12 +362,10 @@ public class AdminService {
                 Map<String, Object> history = new HashMap<>();
 
                 Member member = memberRepository.findById(memberId)
-                                .orElseThrow(() -> new AppException("找不到該會員 (Member not found)"));
+                                .orElseThrow(() -> new ResourceNotFoundException("會員", memberId));
 
                 history.put("member", member);
                 history.put("transactions", transactionRepository.findByMemberIdOrderByTimestampDesc(memberId));
-
-                // 補足會員日誌 (補完功能)
                 history.put("actionLogs", memberActionLogRepository.findByMemberIdOrderByTimestampDesc(memberId));
 
                 return history;
@@ -454,8 +385,6 @@ public class AdminService {
 
         @Transactional
         public void distributeToLevel(Long couponId, Long levelId, String adminName) {
-                if (couponId == null || levelId == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 couponService.distributeToLevel(couponId, levelId);
                 adminActionLogRepository.save(new AdminActionLog(adminName, "DISTRIBUTE_COUPON_LEVEL",
                                 "Coupon ID: " + couponId + " to Level ID: " + levelId, ""));
@@ -463,10 +392,82 @@ public class AdminService {
 
         @Transactional
         public void distributeToMember(Long couponId, Long memberId, String adminName) {
-                if (couponId == null || memberId == null)
-                        throw new AppException("ID 不能為空 (ID cannot be null)");
                 couponService.distributeToMember(couponId, memberId);
                 adminActionLogRepository.save(new AdminActionLog(adminName, "DISTRIBUTE_COUPON_MEMBER",
                                 "Coupon ID: " + couponId + " to Member ID: " + memberId, ""));
+        }
+
+        /**
+         * 計算各機台的即時 RTP (Return to Player)
+         */
+        public List<Map<String, Object>> getRtpStats() {
+                List<GachaRecord> allRecords = recordRepository.findAll();
+
+                // 分組計算
+                Map<String, List<GachaRecord>> grouped = allRecords.stream()
+                                .collect(java.util.stream.Collectors
+                                                .groupingBy(r -> r.getGachaType() + "_" + r.getGameId()));
+
+                List<Map<String, Object>> stats = new ArrayList<>();
+
+                grouped.forEach((key, records) -> {
+                        String[] parts = key.split("_");
+                        GachaRecord.GachaType type = GachaRecord.GachaType.valueOf(parts[0]);
+                        Long gameId = Long.parseLong(parts[1]);
+
+                        BigDecimal totalOutcome = records.stream()
+                                        .map(GachaRecord::getPrizeValue)
+                                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                        BigDecimal pricePerDraw = BigDecimal.ZERO;
+                        String gameName = "Unknown";
+
+                        // 根據類型獲取單價與名稱
+                        if (null != type)
+                                switch (type) {
+                                        case ICHIBAN -> {
+                                                IchibanBox box = ichibanBoxRepository.findById(gameId).orElse(null);
+                                                if (box != null) {
+                                                        pricePerDraw = box.getPricePerDraw();
+                                                        gameName = box.getName();
+                                                }
+                                        }
+                                        case ROULETTE -> {
+                                                RouletteGame game = rouletteGameRepository.findById(gameId)
+                                                                .orElse(null);
+                                                if (game != null) {
+                                                        pricePerDraw = game.getPricePerSpin();
+                                                        gameName = game.getName();
+                                                }
+                                        }
+                                        case BINGO -> {
+                                                BingoGame game = bingoGameRepository.findById(gameId).orElse(null);
+                                                if (game != null) {
+                                                        pricePerDraw = game.getPricePerDig();
+                                                        gameName = game.getName();
+                                                }
+                                        }
+                                        default -> {
+                                        }
+                                }
+
+                        BigDecimal totalIncome = pricePerDraw.multiply(new BigDecimal(records.size()));
+                        double rtp = 0;
+                        if (totalIncome.compareTo(BigDecimal.ZERO) > 0) {
+                                rtp = totalOutcome.divide(totalIncome, 4, java.math.RoundingMode.HALF_UP).doubleValue()
+                                                * 100;
+                        }
+
+                        Map<String, Object> stat = new HashMap<>();
+                        stat.put("gameName", gameName);
+                        stat.put("type", type != null ? type.getDisplayName() : "未知");
+                        stat.put("totalDraws", records.size());
+                        stat.put("totalIncome", totalIncome);
+                        stat.put("totalOutcome", totalOutcome);
+                        stat.put("rtp", rtp);
+                        stats.add(stat);
+                });
+
+                return stats;
         }
 }

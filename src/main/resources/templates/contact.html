@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='聯絡我們', content=~{::content})}">
+
+<body>
+    <div th:fragment="content">
+        <div class="container section">
+            <h2 class="section-title">📞 聯絡我們</h2>
+
+            <div class="contact-grid">
+                <!-- 聯繫方式 -->
+                <div class="contact-methods">
+                    <h3>聯繫方式</h3>
+
+                    <div class="contact-card">
+                        <div class="contact-icon">📧</div>
+                        <div class="contact-info">
+                            <h4>電子郵件</h4>
+                            <p>support@toysoul.com</p>
+                            <span class="contact-note">24 小時內回覆</span>
+                        </div>
+                    </div>
+
+                    <div class="contact-card">
+                        <div class="contact-icon">📱</div>
+                        <div class="contact-info">
+                            <h4>客服專線</h4>
+                            <p>0800-123-456</p>
+                            <span class="contact-note">週一至週五 10:00-18:00</span>
+                        </div>
+                    </div>
+
+                    <div class="contact-card">
+                        <div class="contact-icon">💬</div>
+                        <div class="contact-info">
+                            <h4>線上客服</h4>
+                            <p>即時聊天支援</p>
+                            <span class="contact-note">營業時間內即時回覆</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 聯絡表單 -->
+                <div class="contact-form-section">
+                    <h3>傳送訊息</h3>
+                    <form id="contactForm" class="contact-form">
+                        <div class="form-group">
+                            <label for="contactName">您的姓名 *</label>
+                            <input type="text" id="contactName" required placeholder="請輸入姓名">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="contactEmail">電子郵件 *</label>
+                            <input type="email" id="contactEmail" required placeholder="請輸入電子郵件">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="contactSubject">主旨</label>
+                            <select id="contactSubject">
+                                <option value="general">一般詢問</option>
+                                <option value="order">訂單問題</option>
+                                <option value="shipping">發貨相關</option>
+                                <option value="payment">付款問題</option>
+                                <option value="technical">技術支援</option>
+                                <option value="feedback">建議回饋</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="contactMessage">訊息內容 *</label>
+                            <textarea id="contactMessage" rows="5" required placeholder="請詳細描述您的問題或建議"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-gacha submit-btn">送出訊息</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 公司資訊 -->
+            <div class="company-info" style="margin-top: 50px;">
+                <h3 class="section-title">公司資訊</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">公司名稱</div>
+                        <div class="info-value">ToySoul 玩具靈魂有限公司</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">統一編號</div>
+                        <div class="info-value">12345678</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">公司地址</div>
+                        <div class="info-value">台北市信義區信義路五段 7 號</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">營業時間</div>
+                        <div class="info-value">週一至週五 10:00 - 18:00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.getElementById('contactForm').onsubmit = function (e) {
+                e.preventDefault();
+
+                const btn = this.querySelector('.submit-btn');
+                btn.disabled = true;
+                btn.textContent = '傳送中...';
+
+                // 模擬提交
+                setTimeout(() => {
+                    if (typeof showToast !== 'undefined') {
+                        showToast('✅ 訊息已送出，我們會盡快回覆您！', 'success');
+                    } else {
+                        alert('訊息已送出，我們會盡快回覆您！');
+                    }
+                    this.reset();
+                    btn.disabled = false;
+                    btn.textContent = '送出訊息';
+                }, 1000);
+            };
+        </script>
+
+        <style>
+            .contact-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 40px;
+            }
+
+            @media (max-width: 768px) {
+                .contact-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            .contact-methods h3,
+            .contact-form-section h3 {
+                margin-bottom: 25px;
+                color: #333;
+            }
+
+            .contact-card {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                background: white;
+                padding: 20px;
+                border-radius: 15px;
+                margin-bottom: 15px;
+                box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
+                transition: transform 0.3s;
+            }
+
+            .contact-card:hover {
+                transform: translateX(5px);
+            }
+
+            .contact-icon {
+                font-size: 2rem;
+                width: 60px;
+                height: 60px;
+                background: linear-gradient(145deg, #667eea, #764ba2);
+                border-radius: 15px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .contact-info h4 {
+                margin-bottom: 5px;
+                color: #333;
+            }
+
+            .contact-info p {
+                color: #667eea;
+                font-weight: bold;
+            }
+
+            .contact-note {
+                font-size: 0.8rem;
+                color: #999;
+            }
+
+            .contact-form {
+                background: white;
+                padding: 30px;
+                border-radius: 20px;
+                box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+            }
+
+            .contact-form .form-group {
+                margin-bottom: 20px;
+            }
+
+            .contact-form label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 500;
+                color: #333;
+            }
+
+            .contact-form input,
+            .contact-form select,
+            .contact-form textarea {
+                width: 100%;
+                padding: 14px;
+                border: 2px solid #eee;
+                border-radius: 10px;
+                font-size: 1rem;
+                transition: border-color 0.3s;
+            }
+
+            .contact-form input:focus,
+            .contact-form select:focus,
+            .contact-form textarea:focus {
+                outline: none;
+                border-color: #667eea;
+            }
+
+            .submit-btn {
+                width: 100%;
+                padding: 16px;
+                font-size: 1.1rem;
+            }
+
+            .info-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+                background: #f8f9fa;
+                padding: 30px;
+                border-radius: 15px;
+            }
+
+            .info-item {
+                padding: 15px 0;
+            }
+
+            .info-label {
+                color: #999;
+                font-size: 0.9rem;
+                margin-bottom: 5px;
+            }
+
+            .info-value {
+                color: #333;
+                font-weight: 500;
+            }
+        </style>
+    </div>
+</body>
+
+</html>

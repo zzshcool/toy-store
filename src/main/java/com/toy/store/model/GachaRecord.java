@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 /**
  * 抽獎紀錄實體
@@ -43,6 +44,8 @@ public class GachaRecord {
 
     private Boolean isDuplicate = false; // 是否為重複款
 
+    private BigDecimal prizeValue = BigDecimal.ZERO; // 獎品當前價值 (用於 RTP 計算)
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public enum GachaType {
@@ -64,7 +67,7 @@ public class GachaRecord {
 
     // 建立一番賞紀錄
     public static GachaRecord createIchibanRecord(Long memberId, Long boxId, String prizeName,
-            String rank, int shards) {
+            String rank, int shards, BigDecimal value) {
         GachaRecord record = new GachaRecord();
         record.setMemberId(memberId);
         record.setGachaType(GachaType.ICHIBAN);
@@ -72,12 +75,13 @@ public class GachaRecord {
         record.setPrizeName(prizeName);
         record.setPrizeRank(rank);
         record.setShardsEarned(shards);
+        record.setPrizeValue(value);
         return record;
     }
 
     // 建立轉盤紀錄
     public static GachaRecord createRouletteRecord(Long memberId, Long gameId, String prizeName,
-            int shards, int luckyValue, boolean isGuarantee) {
+            int shards, int luckyValue, boolean isGuarantee, BigDecimal value) {
         GachaRecord record = new GachaRecord();
         record.setMemberId(memberId);
         record.setGachaType(GachaType.ROULETTE);
@@ -86,17 +90,20 @@ public class GachaRecord {
         record.setShardsEarned(shards);
         record.setLuckyValueEarned(luckyValue);
         record.setIsGuarantee(isGuarantee);
+        record.setPrizeValue(value);
         return record;
     }
 
     // 建立九宮格紀錄
-    public static GachaRecord createBingoRecord(Long memberId, Long gameId, String prizeName, int shards) {
+    public static GachaRecord createBingoRecord(Long memberId, Long gameId, String prizeName, int shards,
+            BigDecimal value) {
         GachaRecord record = new GachaRecord();
         record.setMemberId(memberId);
         record.setGachaType(GachaType.BINGO);
         record.setGameId(gameId);
         record.setPrizeName(prizeName);
         record.setShardsEarned(shards);
+        record.setPrizeValue(value);
         return record;
     }
 }

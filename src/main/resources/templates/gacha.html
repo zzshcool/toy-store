@@ -198,27 +198,42 @@
                 const handle = document.getElementById('gachaHandle');
                 const capsuleExit = document.getElementById('capsuleExit');
                 const capsule = document.getElementById('capsule');
+                const balls = document.querySelectorAll('.ball-mini');
 
                 if (btn) btn.disabled = true;
                 if (trialBtn) trialBtn.disabled = true;
 
-                // 1. 旋轉手把
-                handle.classList.add('rotating');
-                playHandleSound();
+                // 1. GSAP 總體 TimeLine
+                const masterTl = gsap.timeline();
 
-                setTimeout(() => {
-                    handle.classList.remove('rotating');
+                // 2. 轉動手把動畫
+                masterTl.to(handle, {
+                    rotation: 360,
+                    duration: 0.8,
+                    ease: "back.inOut(1.7)",
+                    onStart: () => playHandleSound()
+                });
 
-                    // 2. 扭蛋掉落
-                    capsuleExit.style.display = 'block';
-                    capsule.classList.add('capsule-pro');
+                // 3. 球艙抖動動畫
+                masterTl.to(balls, {
+                    x: "random(-10, 10)",
+                    y: "random(-10, 10)",
+                    rotation: "random(-45, 45)",
+                    duration: 0.1,
+                    repeat: 6,
+                    yoyo: true,
+                    ease: "none"
+                }, 0.2);
 
-                    // 非同步請求結果
-                    const params = new URLSearchParams();
-                    params.append('themeId', selectedTheme.id);
-                    if (isTrial) {
-                        params.append('isTrial', 'true');
-                    }
+                // 4. 發送回後台 API 請求
+                const params = new URLSearchParams();
+                params.append('themeId', selectedTheme.id);
+                if (isTrial) {
+                    params.append('isTrial', 'true');
+                }
+
+                // 5. 等待手把轉完後掉落
+                masterTl.add(() => {
                     fetch('/gacha/draw', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -233,31 +248,39 @@
                                 return;
                             }
 
-                            const item = data.wonItem;
-                            const prizeName = item.name || '未知獎品';
-                            const prizeWeight = item.weight || '?';
-                            const prizeValue = item.estimatedValue || '?';
+                            // 6. 掉落動畫
+                            capsuleExit.style.display = 'block';
 
-                            // 3. 延時開殼並顯示結果
-                            setTimeout(() => {
-                                GameUtils.playWinSound();
-                                GameUtils.spawnConfetti();
-                                showAjaxResult(prizeName, prizeWeight, prizeValue, isTrial);
+                            gsap.fromTo(capsule,
+                                { y: -400, rotation: 0, scale: 0.5, opacity: 0 },
+                                {
+                                    y: 0,
+                                    rotation: 720,
+                                    scale: 1,
+                                    opacity: 1,
+                                    duration: 1.2,
+                                    ease: "bounce.out",
+                                    onComplete: () => {
+                                        setTimeout(() => {
+                                            GameUtils.playWinSound();
+                                            GameUtils.spawnConfetti();
+                                            showAjaxResult(data.wonItem.name, data.wonItem.weight, data.wonItem.estimatedValue, isTrial);
 
-                                // 重置狀態
-                                if (btn) btn.disabled = false;
-                                if (trialBtn) trialBtn.disabled = false;
-                                capsuleExit.style.display = 'none';
-                                capsule.classList.remove('capsule-pro');
-                            }, 2000); // 掉落動畫結束後再過一會開獎
+                                            // 重置
+                                            if (btn) btn.disabled = false;
+                                            if (trialBtn) trialBtn.disabled = false;
+                                            capsuleExit.style.display = 'none';
+                                        }, 500);
+                                    }
+                                }
+                            );
                         })
                         .catch(err => {
                             console.error('Error:', err);
-                            alert('網路異常或系統錯誤，請確認餘額後重試');
+                            alert('網路異常或系統錯誤，請重試');
                             GameUtils.hideMask();
                         });
-
-                }, 800); // 手把轉完一圈的時間
+                }, 0.8);
             }
 
             function playHandleSound() {

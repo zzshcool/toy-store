@@ -2,22 +2,21 @@ package com.toy.store.service;
 
 import com.toy.store.model.SystemSetting;
 import com.toy.store.repository.SystemSettingRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 系統設定服務
  * 管理功能開關與遊戲參數配置
  */
 @Service
+@RequiredArgsConstructor
 public class SystemSettingService {
 
-    @Autowired
-    private SystemSettingRepository settingRepository;
+    private final SystemSettingRepository settingRepository;
 
     /**
      * 初始化預設設定（應用程式啟動時執行）
@@ -39,6 +38,7 @@ public class SystemSettingService {
         createIfNotExists(SystemSetting.GACHA_SHARD_MAX, "50", "碎片最大掉落量");
         createIfNotExists(SystemSetting.GACHA_DUPLICATE_SHARD, "300", "重複款轉換碎片數");
         createIfNotExists(SystemSetting.GACHA_REDEEM_COST, "10000", "S賞兌換所需碎片");
+        createIfNotExists(SystemSetting.GACHA_REVENUE_THRESHOLD, "70", "機台收益保護門檻 (百分比，如 70 代表 70%)");
 
         // 驗證碼設定（預設關閉）
         createIfNotExists(SystemSetting.CAPTCHA_ENABLED, "false", "圖形驗證碼開關");
@@ -88,14 +88,12 @@ public class SystemSettingService {
      */
     @Transactional
     public void updateSetting(String key, String value) {
-        Optional<SystemSetting> settingOpt = settingRepository.findBySettingKey(key);
-        if (settingOpt.isPresent()) {
-            SystemSetting setting = settingOpt.get();
+        settingRepository.findBySettingKey(key).ifPresentOrElse(setting -> {
             setting.setSettingValue(value);
             settingRepository.save(setting);
-        } else {
+        }, () -> {
             settingRepository.save(new SystemSetting(key, value, null));
-        }
+        });
     }
 
     /**
@@ -132,5 +130,9 @@ public class SystemSettingService {
 
     public int getLuckyThreshold() {
         return getIntSetting(SystemSetting.GACHA_LUCKY_THRESHOLD, 1000);
+    }
+
+    public double getRevenueThreshold() {
+        return getIntSetting(SystemSetting.GACHA_REVENUE_THRESHOLD, 70) / 100.0;
     }
 }

@@ -51,9 +51,10 @@ public class AdminController {
         Optional<com.toy.store.model.AdminUser> adminOpt = adminUserRepository.findByUsername(username);
 
         if (adminOpt.isPresent()) {
-            if (passwordEncoder.matches(password, adminOpt.get().getPassword())) {
+            com.toy.store.model.AdminUser admin = adminOpt.get();
+            if (passwordEncoder.matches(password, admin.getPassword())) {
                 // Success
-                String token = tokenService.createToken(username, TokenService.ROLE_ADMIN);
+                String token = tokenService.createToken(username, TokenService.ROLE_ADMIN, admin.getPermissions());
                 Cookie cookie = new Cookie("ADMIN_TOKEN", token);
                 cookie.setHttpOnly(true);
                 cookie.setPath("/");
@@ -421,5 +422,11 @@ public class AdminController {
             @CurrentUser TokenService.TokenInfo info) {
         adminService.distributeToMember(couponId, memberId, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=coupons";
+    }
+
+    @GetMapping("/api/rtp-stats")
+    @ResponseBody
+    public List<Map<String, Object>> getRtpStats() {
+        return adminService.getRtpStats();
     }
 }

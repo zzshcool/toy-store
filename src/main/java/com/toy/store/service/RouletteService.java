@@ -3,7 +3,6 @@ package com.toy.store.service;
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
 import com.toy.store.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,20 +15,29 @@ import java.util.List;
 @Service
 public class RouletteService extends BaseGachaService {
 
-    @Autowired
-    private RouletteGameRepository gameRepository;
+    private final RouletteGameRepository gameRepository;
+    private final RouletteSlotRepository slotRepository;
+    private final GachaProbabilityEngine probabilityEngine;
+    private final MemberRepository memberRepository;
+    private final SystemSettingService systemSettingService;
 
-    @Autowired
-    private RouletteSlotRepository slotRepository;
-
-    @Autowired
-    private GachaProbabilityEngine probabilityEngine;
-
-    @Autowired
-    private MemberLuckyValueRepository luckyValueRepository;
-
-    @Autowired
-    private SystemSettingService settingService;
+    public RouletteService(
+            GachaRecordRepository recordRepository,
+            TransactionService transactionService,
+            ShardService shardService,
+            MissionService missionService,
+            RouletteGameRepository gameRepository,
+            RouletteSlotRepository slotRepository,
+            GachaProbabilityEngine probabilityEngine,
+            MemberRepository memberRepository,
+            SystemSettingService systemSettingService) {
+        super(recordRepository, transactionService, shardService, missionService);
+        this.gameRepository = gameRepository;
+        this.slotRepository = slotRepository;
+        this.probabilityEngine = probabilityEngine;
+        this.memberRepository = memberRepository;
+        this.systemSettingService = systemSettingService;
+    }
 
     /**
      * 取得所有進行中的轉盤遊戲
@@ -51,7 +59,7 @@ public class RouletteService extends BaseGachaService {
      * 取得轉盤的獎格列表
      */
     public List<RouletteSlot> getSlots(Long gameId) {
-        return slotRepository.findByGameIdOrderBySlotOrderAsc(gameId);
+        return slotRepository.findByGame_IdOrderBySlotOrderAsc(gameId);
     }
 
     /**
@@ -61,6 +69,8 @@ public class RouletteService extends BaseGachaService {
      */
     @Transactional
     public SpinResult spin(Long gameId, Long memberId) {
+        if (memberId == null || gameId == null)
+            throw new AppException("ID不能為空");
         RouletteGame game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new AppException("轉盤遊戲不存在"));
 
@@ -68,13 +78,15 @@ public class RouletteService extends BaseGachaService {
         deductWallet(memberId, game.getPricePerSpin(), Transaction.TransactionType.ROULETTE_COST,
                 "轉盤消費: " + game.getName());
 
-        // 取得會員幸運值
-        MemberLuckyValue luckyValue = getOrCreateLuckyValue(memberId);
-        int threshold = settingService.getLuckyThreshold();
-        boolean isGuarantee = luckyValue.hasReachedGuarantee(threshold);
+        // 取得會員模型 (中央幸運值管理)
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new AppException("會員不存在"));
+
+        int threshold = 100; // 規格書定義
+        boolean isGuarantee = member.getLuckyValue() >= threshold;
 
         // 取得獎格列表
-        List<RouletteSlot> slots = slotRepository.findByGameIdOrderBySlotOrderAsc(gameId);
+        List<RouletteSlot> slots = slotRepository.findByGame_IdOrderBySlotOrderAsc(gameId);
         if (slots.isEmpty()) {
             throw new AppException("轉盤沒有獎格");
         }
@@ -82,29 +94,30 @@ public class RouletteService extends BaseGachaService {
         // 選擇中獎格子
         RouletteSlot winningSlot;
         if (isGuarantee) {
-            // 保底：必定中大獎
+            // 保底：必定中大獎 (無視 70% 規則)
             winningSlot = selectJackpotSlot(slots);
-            luckyValue.resetLuckyValue();
+            member.setLuckyValue(0); // 重置
         } else {
-            // 收益保護核心邏輯：計算進度 (此處模擬 100 次為一個收益週期)
-            double revenueThreshold = 0.7; // 70% 門檻
+            // 收益保護核心邏輯：模擬 100 次為一個收益週期
+            double revenueThreshold = systemSettingService.getRevenueThreshold();
             double progress = (game.getTotalDraws() % 100) / 100.0;
 
             winningSlot = probabilityEngine.draw(slots, progress, revenueThreshold);
 
-            if (!winningSlot.isJackpot()) {
+            if (winningSlot.getSlotType() != RouletteSlot.SlotType.JACKPOT &&
+                    winningSlot.getSlotType() != RouletteSlot.SlotType.RARE) {
                 // 未中大獎，累積幸運值
-                luckyValue.addLuckyValue(10);
+                member.setLuckyValue(member.getLuckyValue() + 10);
             } else {
                 // 中大獎，重置幸運值
-                luckyValue.resetLuckyValue();
+                member.setLuckyValue(0);
             }
         }
 
-        // 更新累計抽獎次數
+        // 更新數據
         game.setTotalDraws(game.getTotalDraws() + 1);
         gameRepository.save(game);
-        luckyValueRepository.save(luckyValue);
+        memberRepository.save(member);
 
         // 處理獎勵
         int shardsEarned = 0;
@@ -119,18 +132,22 @@ public class RouletteService extends BaseGachaService {
 
         // 記錄抽獎
         saveRouletteRecord(memberId, gameId, winningSlot.getPrizeName(), shardsEarned,
-                isGuarantee ? 0 : 10, isGuarantee);
+                isGuarantee ? 0 : 10, isGuarantee,
+                winningSlot.getPrizeValue() != null ? winningSlot.getPrizeValue() : java.math.BigDecimal.ZERO);
 
         return new SpinResult(winningSlot, isGuarantee, isFreeSpin, shardsEarned,
-                luckyValue.getLuckyValue(), threshold);
+                member.getLuckyValue(), threshold);
     }
 
     /**
-     * 取得會員幸運值資訊
+     * 取得會員幸運值 (向後兼容)
      */
-    public MemberLuckyValue getMemberLuckyValue(Long memberId) {
-        return luckyValueRepository.findByMemberId(memberId)
-                .orElse(new MemberLuckyValue(memberId));
+    public int getMemberLuckyValue(Long memberId) {
+        if (memberId == null)
+            return 0;
+        return memberRepository.findById(memberId)
+                .map(Member::getLuckyValue)
+                .orElse(0);
     }
 
     /**
@@ -145,11 +162,6 @@ public class RouletteService extends BaseGachaService {
                         .filter(s -> s.getSlotType() == RouletteSlot.SlotType.RARE)
                         .findFirst()
                         .orElse(slots.get(0)));
-    }
-
-    private MemberLuckyValue getOrCreateLuckyValue(Long memberId) {
-        return luckyValueRepository.findByMemberId(memberId)
-                .orElse(new MemberLuckyValue(memberId));
     }
 
     /**

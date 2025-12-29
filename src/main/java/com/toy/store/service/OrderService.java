@@ -1,9 +1,11 @@
 package com.toy.store.service;
 
+import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
+import com.toy.store.repository.MemberCouponRepository;
 import com.toy.store.repository.OrderRepository;
 import com.toy.store.repository.ProductRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,22 +13,14 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class OrderService {
 
-    @Autowired
-    private OrderRepository orderRepository;
-
-    @Autowired
-    private CartService cartService;
-
-    @Autowired
-    private TransactionService transactionService;
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private com.toy.store.repository.MemberCouponRepository memberCouponRepository;
+    private final OrderRepository orderRepository;
+    private final CartService cartService;
+    private final TransactionService transactionService;
+    private final ProductRepository productRepository;
+    private final MemberCouponRepository memberCouponRepository;
 
     @Transactional
     public Order checkout(Long memberId, Long couponId) {
@@ -34,7 +28,7 @@ public class OrderService {
         List<CartItem> cartItems = cart.getItems();
 
         if (cartItems.isEmpty()) {
-            throw new RuntimeException("購物車是空的");
+            throw new AppException("購物車是空的");
         }
 
         BigDecimal totalAmount = BigDecimal.ZERO;
@@ -42,7 +36,7 @@ public class OrderService {
         for (CartItem item : cartItems) {
             Product product = item.getProduct();
             if (product.getStock() < item.getQuantity()) {
-                throw new RuntimeException(
+                throw new AppException(
                         "商品 " + product.getName() + " 庫存不足 (需求: " + item.getQuantity() + ")");
             }
             totalAmount = totalAmount.add(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
@@ -70,14 +64,14 @@ public class OrderService {
     @Transactional
     public void refundOrder(Long orderId, Long memberId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("找不到訂單"));
+                .orElseThrow(() -> new AppException("找不到訂單"));
 
         if (!order.getMember().getId().equals(memberId)) {
-            throw new RuntimeException("無權限申請退款");
+            throw new AppException("無權限申請退款");
         }
 
         if (order.getStatus() == Order.OrderStatus.REFUNDED || order.getStatus() == Order.OrderStatus.CANCELLED) {
-            throw new RuntimeException("訂單已退款或取消");
+            throw new AppException("訂單已退款或取消");
         }
 
         // 1. Refund Amount to Wallet

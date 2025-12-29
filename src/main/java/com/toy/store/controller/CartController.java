@@ -7,7 +7,7 @@ import com.toy.store.repository.MemberRepository;
 import com.toy.store.service.CartService;
 import com.toy.store.service.CouponService;
 import com.toy.store.service.TokenService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -15,75 +15,63 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/cart")
+@RequiredArgsConstructor
 public class CartController {
 
-    @Autowired
-    private CartService cartService;
+    private final CartService cartService;
+    private final MemberRepository memberRepository;
+    private final CouponService couponService;
 
-    @Autowired
-    private MemberRepository memberRepository;
-
-    @Autowired
-    private CouponService couponService;
-
-    private Member getMember(TokenService.TokenInfo info) {
+    private Optional<Member> getMember(TokenService.TokenInfo info) {
         if (info == null)
-            return null;
-        return memberRepository.findByUsername(info.getUsername()).orElse(null);
+            return Optional.empty();
+        return memberRepository.findByUsername(info.getUsername());
     }
 
     @GetMapping
     public String getCart(@CurrentUser TokenService.TokenInfo info, Model model) {
-        Member member = getMember(info);
-        if (member == null)
-            return "redirect:/login";
-
-        Cart cart = cartService.getCartByMemberId(member.getId());
-        model.addAttribute("cart", cart);
-        model.addAttribute("totalPrice", cart.getItems().stream()
-                .map(item -> item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-        model.addAttribute("availableCoupons", couponService.getMemberCoupons(member.getId()));
-        return "cart";
+        return getMember(info).map(member -> {
+            Cart cart = cartService.getCartByMemberId(member.getId());
+            model.addAttribute("cart", cart);
+            model.addAttribute("totalPrice", cart.getItems().stream()
+                    .map(item -> item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add));
+            model.addAttribute("availableCoupons", couponService.getMemberCoupons(member.getId()));
+            return "cart";
+        }).orElse("redirect:/login");
     }
 
     @PostMapping("/add")
     public String addToCart(@CurrentUser TokenService.TokenInfo info,
             @RequestParam Long productId,
             @RequestParam Integer quantity) {
-        Member member = getMember(info);
-        if (member == null)
-            return "redirect:/login";
-
-        cartService.addToCart(member.getId(), productId, quantity);
-        return "redirect:/cart";
+        return getMember(info).map(member -> {
+            cartService.addToCart(member.getId(), productId, quantity);
+            return "redirect:/cart";
+        }).orElse("redirect:/login");
     }
 
     @PostMapping("/update")
     public String updateQuantity(@CurrentUser TokenService.TokenInfo info,
             @RequestParam Long itemId,
             @RequestParam Integer quantity) {
-        Member member = getMember(info);
-        if (member == null)
-            return "redirect:/login";
-
-        cartService.updateQuantity(member.getId(), itemId, quantity);
-        return "redirect:/cart";
+        return getMember(info).map(member -> {
+            cartService.updateQuantity(member.getId(), itemId, quantity);
+            return "redirect:/cart";
+        }).orElse("redirect:/login");
     }
 
     @PostMapping("/remove")
     public String removeFromCart(@CurrentUser TokenService.TokenInfo info,
             @RequestParam Long itemId) {
-        Member member = getMember(info);
-        if (member == null)
-            return "redirect:/login";
-
-        // Quantity 0 triggers removal in service
-        cartService.updateQuantity(member.getId(), itemId, 0);
-        return "redirect:/cart";
+        return getMember(info).map(member -> {
+            cartService.updateQuantity(member.getId(), itemId, 0);
+            return "redirect:/cart";
+        }).orElse("redirect:/login");
     }
 
     // AJAX Endpoints
@@ -91,21 +79,18 @@ public class CartController {
     @ResponseBody
     public ResponseEntity<?> removeFromCartAjax(@CurrentUser TokenService.TokenInfo info,
             @RequestParam Long itemId) {
-        Member member = getMember(info);
-        if (member == null) {
-            return ResponseEntity.status(401)
-                    .body(Map.of("success", false, "message", "請先登入"));
-        }
-        try {
-            // Quantity 0 triggers removal
-            cartService.updateQuantity(member.getId(), itemId, 0);
-            Cart cart = cartService.getCartByMemberId(member.getId());
-            int totalItems = cart.getItems().stream().mapToInt(item -> item.getQuantity()).sum();
-            return ResponseEntity.ok(Map.of("success", true, "totalItems", totalItems));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("success", false, "message", e.getMessage()));
-        }
+        return getMember(info).map(member -> {
+            try {
+                cartService.updateQuantity(member.getId(), itemId, 0);
+                Cart cart = cartService.getCartByMemberId(member.getId());
+                int totalItems = cart.getItems().stream().mapToInt(item -> item.getQuantity()).sum();
+                return ResponseEntity.ok(Map.of("success", true, "totalItems", totalItems));
+            } catch (Exception e) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", e.getMessage()));
+            }
+        }).orElseGet(() -> ResponseEntity.status(401)
+                .body(Map.of("success", false, "message", "請先登入")));
     }
 
     @PostMapping("/api/add")
@@ -113,32 +98,29 @@ public class CartController {
     public ResponseEntity<?> addToCartAjax(@CurrentUser TokenService.TokenInfo info,
             @RequestParam Long productId,
             @RequestParam Integer quantity) {
-        Member member = getMember(info);
-        if (member == null) {
-            return ResponseEntity.status(401)
-                    .body(Map.of("success", false, "message", "請先登入"));
-        }
-        try {
-            cartService.addToCart(member.getId(), productId, quantity);
-            Cart cart = cartService.getCartByMemberId(member.getId());
-            int totalItems = cart.getItems().stream().mapToInt(item -> item.getQuantity()).sum();
-            return ResponseEntity.ok(Map.of("success", true, "totalItems", totalItems));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("success", false, "message", e.getMessage()));
-        }
+        return getMember(info).map(member -> {
+            try {
+                cartService.addToCart(member.getId(), productId, quantity);
+                Cart cart = cartService.getCartByMemberId(member.getId());
+                int totalItems = cart.getItems().stream().mapToInt(item -> item.getQuantity()).sum();
+                return ResponseEntity.ok(Map.of("success", true, "totalItems", totalItems));
+            } catch (Exception e) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", e.getMessage()));
+            }
+        }).orElseGet(() -> ResponseEntity.status(401)
+                .body(Map.of("success", false, "message", "請先登入")));
     }
 
     @GetMapping("/api/items")
     public String getCartItemsFragment(@CurrentUser TokenService.TokenInfo info, Model model) {
-        Member member = getMember(info);
-        if (member == null)
-            return "";
-        Cart cart = cartService.getCartByMemberId(member.getId());
-        model.addAttribute("cart", cart);
-        model.addAttribute("totalPrice", cart.getItems().stream()
-                .map(item -> item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-        return "fragments/cart-items :: cart-items";
+        return getMember(info).map(member -> {
+            Cart cart = cartService.getCartByMemberId(member.getId());
+            model.addAttribute("cart", cart);
+            model.addAttribute("totalPrice", cart.getItems().stream()
+                    .map(item -> item.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add));
+            return "fragments/cart-items :: cart-items";
+        }).orElse("");
     }
 }

@@ -3,33 +3,28 @@ package com.toy.store.service;
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
 import com.toy.store.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Random;
 
 /**
  * 碎片服務
  * 處理碎片查詢、兌換等邏輯
  */
 @Service
+@RequiredArgsConstructor
 public class ShardService {
 
-    @Autowired
-    private MemberLuckyValueRepository luckyValueRepository;
+    private final MemberLuckyValueRepository luckyValueRepository;
+    private final ShardTransactionRepository shardTransactionRepository;
+    private final RedeemShopItemRepository redeemShopRepository;
+    private final GachaRecordRepository recordRepository;
+    private final SystemSettingService settingService;
 
-    @Autowired
-    private ShardTransactionRepository shardTransactionRepository;
-
-    @Autowired
-    private RedeemShopItemRepository redeemShopRepository;
-
-    @Autowired
-    private GachaRecordRepository recordRepository;
-
-    @Autowired
-    private SystemSettingService settingService;
+    private final Random random = new Random();
 
     /**
      * 取得會員碎片餘額
@@ -142,8 +137,6 @@ public class ShardService {
     // 統一碎片操作（供 Roulette/Bingo/Ichiban 調用）
     // =====================================================
 
-    private final java.util.Random random = new java.util.Random();
-
     /**
      * 產生隨機碎片數量（從系統設定讀取範圍）
      */
@@ -155,12 +148,6 @@ public class ShardService {
 
     /**
      * 抽獎獲得碎片（統一入口）
-     * 
-     * @param memberId    會員ID
-     * @param amount      碎片數量
-     * @param sourceType  來源類型（ROULETTE/BINGO/ICHIBAN）
-     * @param sourceId    來源ID
-     * @param description 描述
      */
     @Transactional
     public void addGachaShards(Long memberId, int amount, String sourceType, Long sourceId, String description) {

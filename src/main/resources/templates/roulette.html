@@ -425,35 +425,48 @@
 
             function animateWheel(targetIndex, callback) {
                 const canvas = document.getElementById('wheelCanvas');
+                const container = canvas.closest('.roulette-container');
                 const totalSlots = wheelSlots.length;
                 const sliceAngle = 360 / totalSlots;
 
-                // 計算目標角度（讓目標格子停在頂部指針位置）
-                const targetAngle = 360 * 5 + (360 - targetIndex * sliceAngle - sliceAngle / 2);
+                // 1. 計算目標旋轉角度 (多轉幾圈 + 偏移到目標格子)
+                // 讓目標格子正對指針 (指針在上方，即 -90度或 270度方向)
+                const currentAngle = gsap.getProperty(canvas, "rotation") || 0;
+                const extraSpins = 5;
+                const targetRotation = currentAngle + (360 * extraSpins) + (360 - (targetIndex * sliceAngle + sliceAngle / 2));
 
-                let currentAngle = 0;
-                const duration = 5000;
-                const startTime = Date.now();
-
-                function animate() {
-                    const elapsed = Date.now() - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-
-                    // 緩動函數
-                    const easeOut = 1 - Math.pow(1 - progress, 3);
-                    currentAngle = easeOut * targetAngle;
-
-                    canvas.style.transform = `rotate(${currentAngle}deg)`;
-
-                    if (progress < 1) {
-                        requestAnimationFrame(animate);
-                    } else {
+                // 2. GSAP 動態補間
+                const tl = gsap.timeline({
+                    onComplete: () => {
                         isSpinning = false;
                         document.getElementById('spinBtn').disabled = false;
+                        // 移除 3D 傾斜與發光
+                        gsap.to(container, { rotationX: 0, rotationY: 0, duration: 0.5 });
+                        gsap.to(canvas, { boxShadow: "0 0 30px rgba(0,0,0,0.3)", duration: 0.5 });
                         if (callback) callback();
                     }
-                }
-                animate();
+                });
+
+                // 3D 傾斜效果
+                tl.to(container, {
+                    rotationX: 15,
+                    rotationY: 5,
+                    duration: 1,
+                    ease: "power2.out"
+                }, 0);
+
+                // 發光效果
+                tl.to(canvas, {
+                    boxShadow: "0 0 60px rgba(108, 92, 231, 0.6)",
+                    duration: 1
+                }, 0);
+
+                // 旋轉
+                tl.to(canvas, {
+                    rotation: targetRotation,
+                    duration: 5,
+                    ease: "expo.inOut"
+                }, 0);
             }
 
             function showResult(result, message) {

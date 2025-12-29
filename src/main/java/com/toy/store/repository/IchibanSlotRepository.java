@@ -13,11 +13,11 @@ import java.util.Optional;
 @Repository
 public interface IchibanSlotRepository extends JpaRepository<IchibanSlot, Long> {
 
-    List<IchibanSlot> findByBoxIdOrderBySlotNumberAsc(Long boxId);
+    List<IchibanSlot> findByBox_IdOrderBySlotNumberAsc(Long boxId);
 
-    Optional<IchibanSlot> findByBoxIdAndSlotNumber(Long boxId, Integer slotNumber);
+    Optional<IchibanSlot> findByBox_IdAndSlotNumber(Long boxId, Integer slotNumber);
 
-    List<IchibanSlot> findByBoxIdAndStatus(Long boxId, IchibanSlot.Status status);
+    List<IchibanSlot> findByBox_IdAndStatus(Long boxId, IchibanSlot.Status status);
 
     // 查詢過期的鎖定格子
     @Query("SELECT s FROM IchibanSlot s WHERE s.status = 'LOCKED' AND s.lockedAt < :expireTime")

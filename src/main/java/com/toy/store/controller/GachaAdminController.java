@@ -1,9 +1,10 @@
 package com.toy.store.controller;
 
+import com.toy.store.exception.ResourceNotFoundException;
 import com.toy.store.model.*;
 import com.toy.store.repository.*;
 import com.toy.store.service.SystemSettingService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -19,37 +20,19 @@ import java.util.Map;
  */
 @Controller
 @RequestMapping("/admin/gacha")
+@RequiredArgsConstructor
 public class GachaAdminController {
 
-    @Autowired
-    private SystemSettingService settingService;
-
-    @Autowired
-    private GachaIpRepository ipRepository;
-
-    @Autowired
-    private IchibanBoxRepository boxRepository;
-
-    @Autowired
-    private IchibanPrizeRepository prizeRepository;
-
-    @Autowired
-    private IchibanSlotRepository slotRepository;
-
-    @Autowired
-    private RouletteGameRepository rouletteGameRepository;
-
-    @Autowired
-    private RouletteSlotRepository rouletteSlotRepository;
-
-    @Autowired
-    private BingoGameRepository bingoGameRepository;
-
-    @Autowired
-    private BingoCellRepository bingoCellRepository;
-
-    @Autowired
-    private RedeemShopItemRepository redeemShopRepository;
+    private final SystemSettingService settingService;
+    private final GachaIpRepository ipRepository;
+    private final IchibanBoxRepository boxRepository;
+    private final IchibanPrizeRepository prizeRepository;
+    private final IchibanSlotRepository slotRepository;
+    private final RouletteGameRepository rouletteGameRepository;
+    private final RouletteSlotRepository rouletteSlotRepository;
+    private final BingoGameRepository bingoGameRepository;
+    private final BingoCellRepository bingoCellRepository;
+    private final RedeemShopItemRepository redeemShopRepository;
 
     // ==================== IP 管理 ====================
 
@@ -125,13 +108,12 @@ public class GachaAdminController {
 
     @GetMapping("/ichiban/{id}/prizes")
     public String editBoxPrizes(@PathVariable Long id, Model model) {
-        IchibanBox box = boxRepository.findById(id).orElse(null);
-        if (box == null)
-            return "redirect:/admin/gacha/ichiban";
+        IchibanBox box = boxRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("一番賞箱體", id));
 
         model.addAttribute("activePage", "ichiban");
         model.addAttribute("box", box);
-        model.addAttribute("prizes", prizeRepository.findByBoxIdOrderBySortOrderAsc(id));
+        model.addAttribute("prizes", prizeRepository.findByBox_IdOrderBySortOrderAsc(id));
         model.addAttribute("ranks", IchibanPrize.Rank.values());
         return "admin/gacha-ichiban-prizes";
     }
@@ -145,9 +127,8 @@ public class GachaAdminController {
             @RequestParam BigDecimal estimatedValue,
             @RequestParam Integer quantity,
             RedirectAttributes ra) {
-        IchibanBox box = boxRepository.findById(id).orElse(null);
-        if (box == null)
-            return "redirect:/admin/gacha/ichiban";
+        IchibanBox box = boxRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("一番賞箱體", id));
 
         IchibanPrize prize = new IchibanPrize();
         prize.setBox(box);
@@ -158,7 +139,7 @@ public class GachaAdminController {
         prize.setEstimatedValue(estimatedValue);
         prize.setTotalQuantity(quantity);
         prize.setRemainingQuantity(quantity);
-        prize.setSortOrder(rank.getOrder()); // 修正：使用 getOrder()
+        prize.setSortOrder(rank.getOrder());
         prizeRepository.save(prize);
 
         ra.addFlashAttribute("success", "獎品已新增");
@@ -167,11 +148,10 @@ public class GachaAdminController {
 
     @PostMapping("/ichiban/{id}/activate")
     public String activateBox(@PathVariable Long id, RedirectAttributes ra) {
-        IchibanBox box = boxRepository.findById(id).orElse(null);
-        if (box == null)
-            return "redirect:/admin/gacha/ichiban";
+        IchibanBox box = boxRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("一番賞箱體", id));
 
-        List<IchibanPrize> prizes = prizeRepository.findByBoxIdOrderBySortOrderAsc(id);
+        List<IchibanPrize> prizes = prizeRepository.findByBox_IdOrderBySortOrderAsc(id);
         int slotNumber = 1;
         for (IchibanPrize prize : prizes) {
             for (int i = 0; i < prize.getTotalQuantity() && slotNumber <= box.getTotalSlots(); i++) {
@@ -209,11 +189,8 @@ public class GachaAdminController {
             @RequestParam BigDecimal pricePerSpin,
             @RequestParam Integer totalSlots,
             RedirectAttributes ra) {
-        GachaIp ip = ipRepository.findById(ipId).orElse(null);
-        if (ip == null) {
-            ra.addFlashAttribute("error", "請選擇有效的 IP");
-            return "redirect:/admin/gacha/roulette";
-        }
+        GachaIp ip = ipRepository.findById(ipId)
+                .orElseThrow(() -> new ResourceNotFoundException("IP 主題", ipId));
 
         RouletteGame game = new RouletteGame();
         game.setIp(ip);
@@ -230,11 +207,10 @@ public class GachaAdminController {
 
     @GetMapping("/roulette/{id}/slots")
     public String editRouletteSlots(@PathVariable Long id, Model model) {
-        RouletteGame game = rouletteGameRepository.findById(id).orElse(null);
-        if (game == null)
-            return "redirect:/admin/gacha/roulette";
+        RouletteGame game = rouletteGameRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("轉盤遊戲", id));
 
-        List<RouletteSlot> slots = rouletteSlotRepository.findByGameIdOrderBySlotOrderAsc(id);
+        List<RouletteSlot> slots = rouletteSlotRepository.findByGame_IdOrderBySlotOrderAsc(id);
         int totalWeight = slots.stream().mapToInt(RouletteSlot::getWeight).sum();
 
         model.addAttribute("activePage", "roulette");
@@ -254,11 +230,10 @@ public class GachaAdminController {
             @RequestParam(required = false) Integer shardAmount,
             @RequestParam(required = false) String color,
             RedirectAttributes ra) {
-        RouletteGame game = rouletteGameRepository.findById(id).orElse(null);
-        if (game == null)
-            return "redirect:/admin/gacha/roulette";
+        RouletteGame game = rouletteGameRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("轉盤遊戲", id));
 
-        int currentCount = rouletteSlotRepository.findByGameIdOrderBySlotOrderAsc(id).size();
+        int currentCount = rouletteSlotRepository.findByGame_IdOrderBySlotOrderAsc(id).size();
         if (currentCount >= game.getTotalSlots()) {
             ra.addFlashAttribute("error", "已達到最大獎格數量");
             return "redirect:/admin/gacha/roulette/" + id + "/slots";
@@ -283,7 +258,7 @@ public class GachaAdminController {
     public String deleteRouletteSlot(@PathVariable Long gid, @PathVariable Long sid, RedirectAttributes ra) {
         rouletteSlotRepository.deleteById(sid);
         // 重新排序
-        List<RouletteSlot> slots = rouletteSlotRepository.findByGameIdOrderBySlotOrderAsc(gid);
+        List<RouletteSlot> slots = rouletteSlotRepository.findByGame_IdOrderBySlotOrderAsc(gid);
         int order = 1;
         for (RouletteSlot slot : slots) {
             slot.setSlotOrder(order++);
@@ -295,9 +270,8 @@ public class GachaAdminController {
 
     @PostMapping("/roulette/{id}/activate")
     public String activateRouletteGame(@PathVariable Long id, RedirectAttributes ra) {
-        RouletteGame game = rouletteGameRepository.findById(id).orElse(null);
-        if (game == null)
-            return "redirect:/admin/gacha/roulette";
+        RouletteGame game = rouletteGameRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("轉盤遊戲", id));
 
         game.setStatus(RouletteGame.Status.ACTIVE);
         rouletteGameRepository.save(game);
@@ -324,11 +298,8 @@ public class GachaAdminController {
             @RequestParam(required = false) String bingoRewardName,
             @RequestParam(required = false) BigDecimal bingoRewardValue,
             RedirectAttributes ra) {
-        GachaIp ip = ipRepository.findById(ipId).orElse(null);
-        if (ip == null) {
-            ra.addFlashAttribute("error", "請選擇有效的 IP");
-            return "redirect:/admin/gacha/bingo";
-        }
+        GachaIp ip = ipRepository.findById(ipId)
+                .orElseThrow(() -> new ResourceNotFoundException("IP 主題", ipId));
 
         BingoGame game = new BingoGame();
         game.setIp(ip);
@@ -347,11 +318,10 @@ public class GachaAdminController {
 
     @GetMapping("/bingo/{id}/cells")
     public String editBingoCells(@PathVariable Long id, Model model) {
-        BingoGame game = bingoGameRepository.findById(id).orElse(null);
-        if (game == null)
-            return "redirect:/admin/gacha/bingo";
+        BingoGame game = bingoGameRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("九宮格遊戲", id));
 
-        List<BingoCell> cells = bingoCellRepository.findByGameIdOrderByPositionAsc(id);
+        List<BingoCell> cells = bingoCellRepository.findByGame_IdOrderByPositionAsc(id);
         Map<Integer, BingoCell> cellMap = new HashMap<>();
         for (BingoCell cell : cells) {
             cellMap.put(cell.getPosition(), cell);
@@ -370,9 +340,8 @@ public class GachaAdminController {
             @RequestParam String prizeName,
             @RequestParam(required = false) String prizeDescription,
             RedirectAttributes ra) {
-        BingoGame game = bingoGameRepository.findById(id).orElse(null);
-        if (game == null)
-            return "redirect:/admin/gacha/bingo";
+        BingoGame game = bingoGameRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("九宮格遊戲", id));
 
         int gridSize = game.getGridSize();
         int row = (position - 1) / gridSize;
@@ -394,11 +363,10 @@ public class GachaAdminController {
 
     @PostMapping("/bingo/{id}/cells/auto-fill")
     public String autoFillBingoCells(@PathVariable Long id, RedirectAttributes ra) {
-        BingoGame game = bingoGameRepository.findById(id).orElse(null);
-        if (game == null)
-            return "redirect:/admin/gacha/bingo";
+        BingoGame game = bingoGameRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("九宮格遊戲", id));
 
-        List<BingoCell> existing = bingoCellRepository.findByGameIdOrderByPositionAsc(id);
+        List<BingoCell> existing = bingoCellRepository.findByGame_IdOrderByPositionAsc(id);
         Map<Integer, BingoCell> cellMap = new HashMap<>();
         for (BingoCell cell : existing) {
             cellMap.put(cell.getPosition(), cell);
@@ -431,11 +399,10 @@ public class GachaAdminController {
 
     @PostMapping("/bingo/{id}/activate")
     public String activateBingoGame(@PathVariable Long id, RedirectAttributes ra) {
-        BingoGame game = bingoGameRepository.findById(id).orElse(null);
-        if (game == null)
-            return "redirect:/admin/gacha/bingo";
+        BingoGame game = bingoGameRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("九宮格遊戲", id));
 
-        int cellCount = bingoCellRepository.findByGameIdOrderByPositionAsc(id).size();
+        int cellCount = bingoCellRepository.findByGame_IdOrderByPositionAsc(id).size();
         int required = game.getGridSize() * game.getGridSize();
         if (cellCount < required) {
             ra.addFlashAttribute("error", "請先設定完所有格子（需要 " + required + " 格，目前 " + cellCount + " 格）");
