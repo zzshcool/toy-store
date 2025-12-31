@@ -27,11 +27,11 @@ public class IchibanBoxDto {
         dto.setId(box.getId());
         dto.setName(box.getName());
         dto.setDescription(box.getDescription());
-        dto.setImageUrl(box.getThumbnailUrl());
-        dto.setBannerUrl(box.getBannerUrl());
+//        dto.setImageUrl(box.getThumbnailUrl());
+//        dto.setBannerUrl(box.getBannerUrl());
         dto.setPricePerDraw(box.getPricePerDraw());
         dto.setTotalSlots(box.getTotalSlots());
-        dto.setAvailableSlots(box.getAvailableSlots());
+//        dto.setAvailableSlots(box.getAvailableSlots());
         dto.setStatus(box.getStatus() != null ? box.getStatus().name() : null);
         dto.setIpName(box.getIp() != null ? box.getIp().getName() : null);
         dto.setCreatedAt(box.getCreatedAt());

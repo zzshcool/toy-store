@@ -31,6 +31,8 @@ public class Member {
     @Enumerated(EnumType.STRING)
     private Role role = Role.USER;
 
+    private String avatarUrl;
+
     private String nickname;
 
     private String phone;

@@ -27,7 +27,7 @@ public class BingoGameDto {
         dto.setId(game.getId());
         dto.setName(game.getName());
         dto.setDescription(game.getDescription());
-        dto.setImageUrl(game.getThumbnailUrl());
+//        dto.setImageUrl(game.getThumbnailUrl());
         dto.setPricePerDig(game.getPricePerDig());
         dto.setGridSize(game.getGridSize());
         dto.setTotalCells(game.getTotalCells());

@@ -49,6 +49,8 @@ public class IchibanSlot implements GachaProbabilityEngine.ProbableItem {
     @JoinColumn(name = "prize_id")
     private IchibanPrize prize;
 
+    private LocalDateTime lockTime;
+
     public enum Status {
         AVAILABLE, // 可選擇
         LOCKED, // 鎖定中（3分鐘內）

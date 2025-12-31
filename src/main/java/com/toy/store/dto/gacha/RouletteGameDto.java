@@ -25,7 +25,7 @@ public class RouletteGameDto {
         dto.setId(game.getId());
         dto.setName(game.getName());
         dto.setDescription(game.getDescription());
-        dto.setImageUrl(game.getThumbnailUrl());
+//        dto.setImageUrl(game.getThumbnailUrl());
         dto.setPricePerSpin(game.getPricePerSpin());
         dto.setTotalDraws(game.getTotalDraws());
         dto.setStatus(game.getStatus() != null ? game.getStatus().name() : null);
