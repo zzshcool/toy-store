@@ -12,6 +12,43 @@
         return;
     }
 
+    // ================= 稀有度配置 =================
+    const RARITY_CONFIG = {
+        'SSR': {
+            colors: ['#FFD700', '#FFA500', '#FF6347'],
+            glow: '0 0 40px rgba(255, 215, 0, 0.9), 0 0 80px rgba(255, 165, 0, 0.6)',
+            particleCount: 50,
+            label: '✨ SSR',
+            bgGradient: 'linear-gradient(145deg, #FFD700, #FFA500)'
+        },
+        'SR': {
+            colors: ['#9B59B6', '#8E44AD', '#E056FD'],
+            glow: '0 0 30px rgba(155, 89, 182, 0.8), 0 0 60px rgba(142, 68, 173, 0.5)',
+            particleCount: 35,
+            label: '💎 SR',
+            bgGradient: 'linear-gradient(145deg, #9B59B6, #8E44AD)'
+        },
+        'R': {
+            colors: ['#3498DB', '#2980B9', '#74B9FF'],
+            glow: '0 0 20px rgba(52, 152, 219, 0.7)',
+            particleCount: 20,
+            label: '🔷 R',
+            bgGradient: 'linear-gradient(145deg, #3498DB, #2980B9)'
+        },
+        'N': {
+            colors: ['#95A5A6', '#7F8C8D', '#BDC3C7'],
+            glow: '0 0 10px rgba(149, 165, 166, 0.5)',
+            particleCount: 10,
+            label: 'N',
+            bgGradient: 'linear-gradient(145deg, #95A5A6, #7F8C8D)'
+        }
+    };
+
+    // 獲取稀有度配置
+    function getRarityConfig(rarity) {
+        return RARITY_CONFIG[rarity] || RARITY_CONFIG['N'];
+    }
+
     // ================= 撕票動效 (一番賞) =================
 
     window.ToyAnimations = {
@@ -282,6 +319,114 @@
                 'NORMAL': 'linear-gradient(145deg, #95A5A6, #7F8C8D)'
             };
             return colors[rarity] || colors['NORMAL'];
+        },
+
+        /**
+         * 增強版獎品揭曉動畫 (支援稀有度光效 & 跳過按鈕)
+         * @param {Object} prizeData - {name, rarity, imageUrl, rank}
+         * @param {Function} callback - 完成後回調
+         */
+        prizeRevealEnhanced: function (prizeData, callback) {
+            const config = getRarityConfig(prizeData.rarity || 'N');
+            let isSkipped = false;
+
+            const container = document.createElement('div');
+            container.className = 'prize-reveal-enhanced';
+            container.innerHTML = `
+                <div class="reveal-backdrop"></div>
+                <div class="reveal-card" style="--glow-effect: ${config.glow}">
+                    <div class="card-flip-inner">
+                        <div class="card-front">
+                            <div class="mystery-icon">?</div>
+                            <div class="suspense-text">正在揭曉...</div>
+                        </div>
+                        <div class="card-back" style="background: ${config.bgGradient}">
+                            ${prizeData.imageUrl ? `<img src="${prizeData.imageUrl}" alt="${prizeData.name}">` : ''}
+                            <div class="rarity-badge">${config.label}</div>
+                            <div class="prize-title">${prizeData.name}</div>
+                            ${prizeData.rank ? `<div class="prize-rank-label">${prizeData.rank}</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <button class="skip-animation-btn">跳過動畫 ▶▶</button>
+                <div class="reveal-particles"></div>
+            `;
+            document.body.appendChild(container);
+
+            const tl = gsap.timeline({
+                onComplete: () => {
+                    if (!isSkipped) {
+                        setTimeout(() => this.closeReveal(container, callback, prizeData), 2500);
+                    }
+                }
+            });
+
+            // 跳過按鈕
+            container.querySelector('.skip-animation-btn').onclick = () => {
+                isSkipped = true;
+                tl.progress(1);
+                this.closeReveal(container, callback, prizeData);
+            };
+
+            // 入場
+            tl.from('.reveal-backdrop', { opacity: 0, duration: 0.3 })
+                .from('.reveal-card', { scale: 0.5, opacity: 0, duration: 0.4, ease: 'back.out(1.5)' })
+                // 懸念等待
+                .to('.mystery-icon', { scale: 1.2, duration: 0.3, yoyo: true, repeat: 2 }, '+=0.3')
+                // 3D 翻轉
+                .to('.card-flip-inner', { rotateY: 180, duration: 0.8, ease: 'power2.inOut' })
+                // 光效爆發
+                .to('.reveal-card', { boxShadow: config.glow, duration: 0.3 }, '-=0.3')
+                // 粒子
+                .add(() => this.createParticlesEnhanced('.reveal-particles', config), '-=0.2');
+        },
+
+        /**
+         * 關閉揭曉彈窗
+         */
+        closeReveal: function (container, callback, prizeData) {
+            gsap.to(container, {
+                opacity: 0,
+                duration: 0.3,
+                onComplete: () => {
+                    container.remove();
+                    if (callback) callback(prizeData);
+                }
+            });
+        },
+
+        /**
+         * 增強版粒子效果 (使用稀有度配置)
+         */
+        createParticlesEnhanced: function (containerSelector, config) {
+            const el = document.querySelector(containerSelector);
+            if (!el) return;
+
+            for (let i = 0; i < config.particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'reveal-particle';
+                particle.style.cssText = `
+                    position: absolute;
+                    width: ${Math.random() * 12 + 6}px;
+                    height: ${Math.random() * 12 + 6}px;
+                    background: ${config.colors[Math.floor(Math.random() * config.colors.length)]};
+                    border-radius: 50%;
+                    left: 50%;
+                    top: 50%;
+                    box-shadow: 0 0 6px currentColor;
+                `;
+                el.appendChild(particle);
+
+                gsap.to(particle, {
+                    x: (Math.random() - 0.5) * 500,
+                    y: (Math.random() - 0.5) * 500,
+                    opacity: 0,
+                    scale: 0,
+                    duration: 1.8,
+                    ease: 'power2.out',
+                    onComplete: () => particle.remove()
+                });
+            }
         },
 
         /**

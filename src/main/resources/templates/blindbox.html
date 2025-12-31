@@ -142,6 +142,61 @@
             </div>
         </div>
 
+        <!-- 玩法說明彈窗 -->
+        <div id="blindboxRulesModal"
+            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 10002; overflow-y: auto;">
+            <div
+                style="max-width: 500px; margin: 50px auto; background: white; border-radius: 20px; padding: 30px; position: relative;">
+                <button onclick="closeBlindboxRulesModal()"
+                    style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+
+                <h3 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    📖 <span id="blindboxRulesGameName">遊戲名稱</span> - 玩法說明
+                </h3>
+
+                <!-- 價格資訊 -->
+                <div
+                    style="background: linear-gradient(145deg, #ff6b6b, #feca57); border-radius: 15px; padding: 20px; color: white; margin-bottom: 20px;">
+                    <div style="font-size: 0.9rem; opacity: 0.9;">單盒價格</div>
+                    <div style="font-size: 2rem; font-weight: bold;">💰 $<span id="blindboxRulesPrice">0</span></div>
+                </div>
+
+                <!-- 玩法規則 -->
+                <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 15px;">
+                    <h4 style="margin-bottom: 10px; color: #ff6b6b;">🎲 盲盒玩法</h4>
+                    <ul style="margin: 0; padding-left: 20px; line-height: 1.8; color: #555;">
+                        <li>選擇喜歡的盲盒格子</li>
+                        <li>每個格子內含隱藏商品</li>
+                        <li>鎖定後需在倒數時間內決定</li>
+                        <li>購買後立即揭曉獎品</li>
+                        <li>支援全包購買（優惠價）</li>
+                    </ul>
+                </div>
+
+                <!-- 道具卡說明 -->
+                <div style="background: #e8f5e9; border-radius: 10px; padding: 15px; margin-bottom: 15px;">
+                    <h4 style="margin-bottom: 10px; color: #4caf50;">✨ 道具卡</h4>
+                    <div style="font-size: 0.9rem; color: #555; line-height: 1.6;">
+                        <div>🔮 <strong>透視卡</strong> - 查看盲盒內容</div>
+                        <div>🎯 <strong>必中卡</strong> - 必定獲得稀有獎品</div>
+                    </div>
+                </div>
+
+                <!-- 消費者須知 -->
+                <div style="background: #ffe4e1; border-radius: 10px; padding: 15px;">
+                    <h4 style="margin-bottom: 10px; color: #c0392b;">⚠️ 消費者須知</h4>
+                    <ul style="margin: 0; padding-left: 20px; line-height: 1.6; color: #666; font-size: 0.85rem;">
+                        <li>虛擬商品購買後不可退款</li>
+                        <li>實體獎品依現貨狀況配送</li>
+                        <li>獎品圖片僅供參考，以實物為準</li>
+                    </ul>
+                </div>
+
+                <button class="btn-gacha" onclick="closeBlindboxRulesModal()"
+                    style="width: 100%; margin-top: 20px; background: linear-gradient(145deg, #ff6b6b, #feca57);">我知道了</button>
+            </div>
+        </div>
+
         <script th:inline="javascript">
             let currentBoxId = null;
             let selectedItemNumber = null;
@@ -150,6 +205,20 @@
             document.addEventListener('DOMContentLoaded', function () {
                 loadBoxList();
             });
+
+            // 顯示玩法說明彈窗
+            function showBlindboxRules(boxId, name, price) {
+                document.getElementById('blindboxRulesGameName').textContent = name;
+                document.getElementById('blindboxRulesPrice').textContent = price;
+                document.getElementById('blindboxRulesModal').style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            }
+
+            // 關閉玩法說明彈窗
+            function closeBlindboxRulesModal() {
+                document.getElementById('blindboxRulesModal').style.display = 'none';
+                document.body.style.overflow = '';
+            }
 
             function loadBoxList() {
                 // 顯示骨架屏
@@ -182,10 +251,21 @@
                 const html = boxes.map(box => {
                     const isSoldOut = box.status === 'SOLD_OUT' || box.remainingCount === 0;
                     return `
-                    <div class="card ${isSoldOut ? 'sold-out' : ''}" style="cursor: pointer; position: relative;" onclick="selectBox(${box.id})">
+                    <div class="card game-box-card ${isSoldOut ? 'sold-out' : ''}" style="cursor: pointer; position: relative;" onclick="selectBox(${box.id})">
                         ${isSoldOut ? `<div class="sold-out-badge">售完</div>` : ''}
+                        <!-- IP 圖示標識 -->
+                        <div class="ip-badge-container" style="position: absolute; top: 10px; left: 10px; z-index: 2;">
+                            ${box.ipImageUrl ? `<img src="${box.ipImageUrl}" alt="${box.ipName}" class="ip-icon" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">` :
+                            `<span class="ip-icon-placeholder" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(145deg, #ff6b6b, #feca57); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.8rem;">${(box.ipName || '?').charAt(0)}</span>`}
+                        </div>
+                        <!-- 規則說明按鈕 -->
+                        <button class="rules-btn" onclick="event.stopPropagation(); showBlindboxRules(${box.id}, '${box.name}', ${box.pricePerBox})" 
+                                style="position: absolute; top: 10px; right: 10px; z-index: 2; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 0.9rem;" title="玩法說明">
+                            ℹ️
+                        </button>
                         <div class="img-placeholder" style="background: linear-gradient(145deg, #ff6b6b, #feca57); ${isSoldOut ? 'filter: grayscale(0.5);' : ''}">
-                            <span style="color: white; font-size: 3rem;">📦</span>
+                            ${box.imageUrl ? `<img src="${box.imageUrl}" style="width: 100%; height: 100%; object-fit: cover;">` :
+                            `<span style="color: white; font-size: 3rem;">📦</span>`}
                         </div>
                         <div style="padding: 20px;">
                             <span style="background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem;">
@@ -193,11 +273,14 @@
                             </span>
                             <h3 style="margin: 10px 0;">${box.name}</h3>
                             <p style="color: var(--text-secondary); font-size: 0.9rem;">${box.description || ''}</p>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
-                                <span style="color: var(--accent-color); font-weight: bold;">$${box.pricePerBox}</span>
-                                <span style="color: ${isSoldOut ? '#ff6b6b' : '#666'}; font-size: 0.9rem;">
-                                    ${isSoldOut ? '已售完' : `剩餘 ${box.remainingCount} / ${box.totalBoxes}`}
-                                </span>
+                            <!-- 價格資訊區塊 -->
+                            <div class="price-info-block" style="background: #f8f9fa; border-radius: 10px; padding: 10px; margin-top: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="color: var(--accent-color); font-weight: bold; font-size: 1.3rem;">💰 $${box.pricePerBox}/盒</span>
+                                    <span style="color: ${isSoldOut ? '#ff6b6b' : '#666'}; font-size: 0.85rem;">
+                                        ${isSoldOut ? '已售完' : `剩餘 ${box.remainingCount}/${box.totalBoxes}`}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>

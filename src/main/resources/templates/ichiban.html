@@ -43,6 +43,27 @@
                         </div>
                     </div>
 
+                    <!-- 保底機制進度條 -->
+                    <div id="pityCounter"
+                        style="display: none; background: rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="color: #aaa; font-size: 0.9rem;">🎯 距離保底</span>
+                            <span style="color: #ffd700; font-weight: bold;">
+                                <span id="pityRemaining">0</span> / <span id="pityTotal">50</span> 抽
+                            </span>
+                        </div>
+                        <div
+                            style="background: rgba(255,255,255,0.2); border-radius: 10px; height: 10px; overflow: hidden;">
+                            <div id="pityProgressBar"
+                                style="background: linear-gradient(to right, #667eea, #ffd700); height: 100%; width: 0%; transition: width 0.5s ease; border-radius: 10px;">
+                            </div>
+                        </div>
+                        <div style="text-align: center; margin-top: 8px;">
+                            <span id="pityMessage" style="color: #4ecdc4; font-size: 0.85rem;"></span>
+                        </div>
+                    </div>
+
                     <!-- 格子網格 -->
                     <div class="ichiban-grid" id="slotGrid">
                         <!-- 格子將由 JS 動態生成 -->
@@ -63,6 +84,23 @@
                             <button id="purchaseBtnTrigger" class="btn-gacha" onclick="confirmPurchase()"
                                 style="background: #ffd700; color: #333;">確認購買</button>
                         </div>
+                    </div>
+
+                    <!-- 快速選擇工具列 -->
+                    <div class="quick-select-bar"
+                        style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
+                        <button class="btn btn-outline" onclick="randomSelect(1)"
+                            style="color: white; border-color: rgba(255,255,255,0.5);">
+                            🎲 隨機 1 抽
+                        </button>
+                        <button class="btn btn-outline" onclick="randomSelect(5)"
+                            style="color: white; border-color: rgba(255,255,255,0.5);">
+                            🎲 隨機 5 抽
+                        </button>
+                        <button class="btn-gacha" onclick="randomSelect(10)"
+                            style="background: linear-gradient(145deg, #ff6b6b, #feca57);">
+                            🔥 10 連抽
+                        </button>
                     </div>
 
                     <div style="text-align: center; margin-top: 20px;">
@@ -129,6 +167,63 @@
             </div>
         </div>
 
+        <!-- 玩法說明彈窗 -->
+        <div id="rulesModal"
+            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 10002; overflow-y: auto;">
+            <div
+                style="max-width: 500px; margin: 50px auto; background: white; border-radius: 20px; padding: 30px; position: relative;">
+                <button onclick="closeRulesModal()"
+                    style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+
+                <h3 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    📖 <span id="rulesGameName">遊戲名稱</span> - 玩法說明
+                </h3>
+
+                <!-- 價格資訊 -->
+                <div
+                    style="background: linear-gradient(145deg, #667eea, #764ba2); border-radius: 15px; padding: 20px; color: white; margin-bottom: 20px;">
+                    <div style="font-size: 0.9rem; opacity: 0.9;">單抽價格</div>
+                    <div style="font-size: 2rem; font-weight: bold;">💰 $<span id="rulesPricePerDraw">0</span></div>
+                </div>
+
+                <!-- 玩法規則 -->
+                <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 15px;">
+                    <h4 style="margin-bottom: 10px; color: #667eea;">🎯 一番賞玩法</h4>
+                    <ul style="margin: 0; padding-left: 20px; line-height: 1.8; color: #555;">
+                        <li>選擇喜歡的號碼格子</li>
+                        <li>可一次選擇多個格子</li>
+                        <li>每個格子對應一個隱藏獎品</li>
+                        <li>確認購買後立即揭曉獎品</li>
+                        <li>已開過的格子無法再選</li>
+                    </ul>
+                </div>
+
+                <!-- 獎品機率 -->
+                <div style="background: #fff3cd; border-radius: 10px; padding: 15px; margin-bottom: 15px;">
+                    <h4 style="margin-bottom: 10px; color: #856404;">🎁 獎品分級</h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 0.9rem;">
+                        <div><span style="color: #FFD700; font-weight: bold;">A賞</span> - 大獎</div>
+                        <div><span style="color: #C0C0C0; font-weight: bold;">B賞</span> - 特獎</div>
+                        <div><span style="color: #CD7F32; font-weight: bold;">C賞</span> - 優選</div>
+                        <div><span style="color: #667eea; font-weight: bold;">D~F賞</span> - 普通</div>
+                    </div>
+                </div>
+
+                <!-- 消費者須知 -->
+                <div style="background: #ffe4e1; border-radius: 10px; padding: 15px;">
+                    <h4 style="margin-bottom: 10px; color: #c0392b;">⚠️ 消費者須知</h4>
+                    <ul style="margin: 0; padding-left: 20px; line-height: 1.6; color: #666; font-size: 0.85rem;">
+                        <li>虛擬商品購買後不可退款</li>
+                        <li>實體獎品依現貨狀況配送</li>
+                        <li>獎品圖片僅供參考，以實物為準</li>
+                    </ul>
+                </div>
+
+                <button class="btn-gacha" onclick="closeRulesModal()"
+                    style="width: 100%; margin-top: 20px;">我知道了</button>
+            </div>
+        </div>
+
         <script th:inline="javascript">
             let currentBoxId = null;
             let selectedSlots = [];
@@ -138,6 +233,20 @@
             document.addEventListener('DOMContentLoaded', function () {
                 loadBoxList();
             });
+
+            // 顯示玩法說明彈窗
+            function showGameRules(boxId, name, price) {
+                document.getElementById('rulesGameName').textContent = name;
+                document.getElementById('rulesPricePerDraw').textContent = price;
+                document.getElementById('rulesModal').style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            }
+
+            // 關閉玩法說明彈窗
+            function closeRulesModal() {
+                document.getElementById('rulesModal').style.display = 'none';
+                document.body.style.overflow = '';
+            }
 
             // 載入箱體列表
             function loadBoxList() {
@@ -171,9 +280,20 @@
             function renderBoxList(boxes) {
                 const isLoggedIn = /*[[${currentUser != null}]]*/ false;
                 const html = boxes.map(box => `
-                    <div class="card" style="cursor: pointer;" onclick="selectBox(${box.id}, ${box.pricePerDraw})">
+                    <div class="card game-box-card" style="cursor: pointer; position: relative;" onclick="selectBox(${box.id}, ${box.pricePerDraw})">
+                        <!-- IP 圖示標識 -->
+                        <div class="ip-badge-container" style="position: absolute; top: 10px; left: 10px; z-index: 2;">
+                            ${box.ipImageUrl ? `<img src="${box.ipImageUrl}" alt="${box.ipName}" class="ip-icon" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">` :
+                        `<span class="ip-icon-placeholder" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(145deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.8rem;">${(box.ipName || '?').charAt(0)}</span>`}
+                        </div>
+                        <!-- 規則說明按鈕 -->
+                        <button class="rules-btn" onclick="event.stopPropagation(); showGameRules(${box.id}, '${box.name}', ${box.pricePerDraw})" 
+                                style="position: absolute; top: 10px; right: 10px; z-index: 2; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 0.9rem;" title="玩法說明">
+                            ℹ️
+                        </button>
                         <div class="img-placeholder" style="background: linear-gradient(145deg, #667eea, #764ba2);">
-                            <span style="color: white; font-size: 3rem;">🎁</span>
+                            ${box.imageUrl ? `<img src="${box.imageUrl}" style="width: 100%; height: 100%; object-fit: cover;">` :
+                        `<span style="color: white; font-size: 3rem;">🎁</span>`}
                         </div>
                         <div style="padding: 20px;">
                             <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -184,9 +304,12 @@
                             </div>
                             <h3 style="margin: 10px 0;">${box.name}</h3>
                             <p style="color: var(--text-secondary); font-size: 0.9rem;">${box.description || ''}</p>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
-                                <span style="color: var(--accent-color); font-weight: bold; font-size: 1.2rem;">$${box.pricePerDraw}</span>
-                                <span style="color: #666; font-size: 0.9rem;">剩餘 ${box.remainingSlots} / ${box.totalSlots}</span>
+                            <!-- 價格資訊區塊 -->
+                            <div class="price-info-block" style="background: #f8f9fa; border-radius: 10px; padding: 10px; margin-top: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="color: var(--accent-color); font-weight: bold; font-size: 1.3rem;">💰 $${box.pricePerDraw}/抽</span>
+                                    <span style="color: #666; font-size: 0.85rem;">剩餘 ${box.remainingSlots}/${box.totalSlots}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -264,7 +387,47 @@
                     if (slotsRes.success) {
                         renderSlots(slotsRes.data);
                     }
+                    // 更新保底進度 (模擬：50抽保底，根據已開格子數計算)
+                    updatePityCounter(slotsRes.data);
                 }).catch(err => console.error('Error:', err));
+            }
+
+            // 更新保底機制進度條
+            function updatePityCounter(slots) {
+                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
+                const pityCounter = document.getElementById('pityCounter');
+
+                if (!isLoggedIn) {
+                    pityCounter.style.display = 'none';
+                    return;
+                }
+
+                // 顯示保底進度
+                pityCounter.style.display = 'block';
+
+                // 模擬數據 (實際應從 API 取得用戶保底進度)
+                const pityLimit = 50; // 保底次數
+                const openedCount = slots.filter(s => s.status === 'SOLD').length;
+                const userDraws = openedCount; // 模擬：用戶已抽次數
+                const remaining = Math.max(0, pityLimit - (userDraws % pityLimit));
+                const progress = ((pityLimit - remaining) / pityLimit) * 100;
+
+                document.getElementById('pityTotal').textContent = pityLimit;
+                document.getElementById('pityRemaining').textContent = remaining;
+                document.getElementById('pityProgressBar').style.width = progress + '%';
+
+                // 提示訊息
+                const pityMessage = document.getElementById('pityMessage');
+                if (remaining <= 10) {
+                    pityMessage.textContent = '🔥 即將觸發保底！';
+                    pityMessage.style.color = '#ff6b6b';
+                } else if (remaining <= 25) {
+                    pityMessage.textContent = '💪 已過半！繼續加油！';
+                    pityMessage.style.color = '#ffd700';
+                } else {
+                    pityMessage.textContent = '🎯 累積抽獎進度以解鎖保底';
+                    pityMessage.style.color = '#4ecdc4';
+                }
             }
 
             // 渲染格子（支援多選）
@@ -345,6 +508,51 @@
                     .then(r => r.json())
                     .then(response => {
                         if (response.success) renderSlots(response.data);
+                    });
+            }
+
+            // 隨機選擇 N 個格子 (1抽 / 5抽 / 10連抽)
+            function randomSelect(count) {
+                // 獲取所有可選格子
+                fetch(`/api/ichiban/${currentBoxId}/slots`)
+                    .then(r => r.json())
+                    .then(response => {
+                        if (!response.success) {
+                            Toast.error('載入格子失敗');
+                            return;
+                        }
+
+                        // 篩選可用格子 (未被購買且未被選中)
+                        const availableSlots = response.data
+                            .filter(s => s.status === 'AVAILABLE' && !selectedSlots.includes(s.slotNumber))
+                            .map(s => s.slotNumber);
+
+                        if (availableSlots.length === 0) {
+                            Toast.warning('已無可選格子');
+                            return;
+                        }
+
+                        // 計算實際可選數量
+                        const remaining = 10 - selectedSlots.length;
+                        const actualCount = Math.min(count, remaining, availableSlots.length);
+
+                        if (actualCount <= 0) {
+                            Toast.warning('已達單次選擇上限 (10格)');
+                            return;
+                        }
+
+                        // 隨機選擇
+                        const shuffled = availableSlots.sort(() => Math.random() - 0.5);
+                        const newSelections = shuffled.slice(0, actualCount);
+
+                        // 加入選擇
+                        selectedSlots.push(...newSelections);
+
+                        // 更新 UI
+                        updateCartBar();
+                        renderSlots(response.data);
+
+                        Toast.success(`已隨機選擇 ${actualCount} 格！`);
                     });
             }
 
