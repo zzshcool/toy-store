@@ -53,16 +53,21 @@ public class AdminService {
          * 獲取儀表板所需的匯總數據
          */
         public Map<String, Object> getDashboardData(
-                        int memberPage, int memberSize,
+                        int memberPage, int memberSize, String memberSearch,
                         int txPage, int txSize,
                         int logPage, int logSize,
                         int gachaPage, int gachaSize) {
 
                 Map<String, Object> data = new HashMap<>();
 
-                // Paginated members
+                // Paginated members with optional search
                 Pageable memberPageable = PageRequest.of(memberPage, memberSize, Sort.by(Sort.Direction.DESC, "id"));
-                data.put("membersPage", memberRepository.findAll(memberPageable));
+                if (memberSearch != null && !memberSearch.trim().isEmpty()) {
+                        String search = "%" + memberSearch.trim().toLowerCase() + "%";
+                        data.put("membersPage", memberRepository.searchByKeyword(search, memberPageable));
+                } else {
+                        data.put("membersPage", memberRepository.findAll(memberPageable));
+                }
 
                 // Paginated transactions
                 Pageable txPageable = PageRequest.of(txPage, txSize, Sort.by(Sort.Direction.DESC, "timestamp"));

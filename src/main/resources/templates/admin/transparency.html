@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Transparency Verification Fragment -->
+    <div th:fragment="content" id="transparency" class="tab-content" style="display:none;">
+        <h3>開獎透明驗證</h3>
+
+        <div class="card" style="padding: 20px;">
+            <h4>已完售遊戲驗證記錄</h4>
+            <button class="btn btn-secondary" onclick="loadTransparencyData()" style="margin-bottom: 15px;">刷新</button>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>遊戲類型</th>
+                        <th>遊戲 ID</th>
+                        <th>遊戲名稱</th>
+                        <th>完成時間</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="transparency-table">
+                    <!-- 動態載入 -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 驗證 Modal -->
+        <div id="hashVerifyModal" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 600px;">
+                <span class="modal-close" onclick="closeHashModal()">&times;</span>
+                <h3>哈希驗證</h3>
+                <p id="hashDisplayValue"
+                    style="word-break: break-all; background: #f5f5f5; padding: 10px; border-radius: 4px;"></p>
+                <div style="margin-top: 15px;">
+                    <input type="text" id="hashVerifyInput" placeholder="輸入哈希值進行驗證" class="form-control" />
+                    <button class="btn btn-primary" onclick="verifyHash()" style="margin-top: 10px;">驗證</button>
+                </div>
+                <p id="hashVerifyResult" style="margin-top: 15px;"></p>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

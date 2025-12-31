@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Categories Management Fragment -->
+    <div th:fragment="content" id="categories" class="tab-content" style="display:none;">
+        <h3>分類管理</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="card">
+                <h4>分類列表</h4>
+                <ul style="list-style-type: none; padding-left: 0;">
+                    <li th:each="cat : ${categories}"
+                        style="margin-bottom: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; background: #f0f0f0; padding: 5px;">
+                            <strong th:text="${cat.name}">Category</strong>
+                            <div>
+                                <button class="btn btn-sm btn-info"
+                                    th:onclick="editCategory([[${cat.id}]], '[[${cat.name}]]')">✏️</button>
+                                <form th:action="@{/admin/categories/delete/{id}(id=${cat.id})}" method="post"
+                                    style="display:inline;" onsubmit="return confirm('刪除主分類將連同子分類一起刪除，確定？');">
+                                    <button type="submit" style="background:none;border:none;cursor:pointer;"
+                                        title="刪除">🗑️</button>
+                                </form>
+                            </div>
+                        </div>
+                        <ul style="margin-top: 5px; padding-left: 20px;">
+                            <li th:each="sub : ${cat.subCategories}"
+                                style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee;">
+                                <span th:text="${sub.name}">Sub</span>
+                                <div>
+                                    <button class="btn btn-sm" style="font-size:0.8em;"
+                                        th:onclick="editSubCategory([[${sub.id}]], '[[${sub.name}]]')">✏️</button>
+                                    <form th:action="@{/admin/subcategories/delete/{id}(id=${sub.id})}" method="post"
+                                        style="display:inline;" onsubmit="return confirm('確定刪除子分類？');">
+                                        <button type="submit"
+                                            style="font-size:0.8em;background:none;border:none;cursor:pointer;"
+                                            title="刪除">🗑️</button>
+                                    </form>
+                                </div>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div class="card">
+                <h4>新增分類</h4>
+                <form th:action="@{/admin/categories}" method="post" style="margin-bottom: 20px;">
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" name="name" placeholder="大分類名稱" class="form-control" required>
+                        <button type="submit" class="btn btn-primary">新增大分類</button>
+                    </div>
+                </form>
+
+                <h4>新增子分類</h4>
+                <form th:action="@{/admin/subcategories}" method="post">
+                    <div style="display: flex; gap: 5px;">
+                        <select name="categoryId" class="form-control" required>
+                            <option value="">選擇所屬大分類</option>
+                            <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.name}">
+                            </option>
+                        </select>
+                        <input type="text" name="name" placeholder="子分類名稱" class="form-control" required>
+                        <button type="submit" class="btn btn-primary">新增</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Category Edit Modal -->
+        <div id="editCategoryModal" class="modal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+            <div class="card" style="margin: 15% auto; width: 30%; padding: 20px;">
+                <h4>編輯分類</h4>
+                <form th:action="@{/admin/categories/update}" method="post">
+                    <input type="hidden" id="editCatId" name="id">
+                    <input type="text" id="editCatName" name="name" class="form-control" required>
+                    <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" class="btn btn-secondary"
+                            onclick="document.getElementById('editCategoryModal').style.display='none'">取消</button>
+                        <button type="submit" class="btn btn-primary">儲存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- SubCategory Edit Modal -->
+        <div id="editSubCategoryModal" class="modal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+            <div class="card" style="margin: 15% auto; width: 30%; padding: 20px;">
+                <h4>編輯子分類</h4>
+                <form th:action="@{/admin/subcategories/update}" method="post">
+                    <input type="hidden" id="editSubCatId" name="id">
+                    <input type="text" id="editSubCatName" name="name" class="form-control" required>
+                    <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" class="btn btn-secondary"
+                            onclick="document.getElementById('editSubCategoryModal').style.display='none'">取消</button>
+                        <button type="submit" class="btn btn-primary">儲存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

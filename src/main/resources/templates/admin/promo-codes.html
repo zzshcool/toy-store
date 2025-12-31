@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Promo Codes Management Fragment -->
+    <div th:fragment="content" id="promo-codes" class="tab-content" style="display:none;">
+        <h3>禮包碼管理</h3>
+
+        <!-- 建立禮包碼 -->
+        <div class="card" style="padding: 20px; margin-bottom: 20px;">
+            <h4>建立新禮包碼</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="promo-name" placeholder="禮包名稱" class="form-control" />
+                <select id="promo-reward-type" class="form-control">
+                    <option value="TOKENS">代幣</option>
+                    <option value="BONUS">紅利點數</option>
+                    <option value="SHARDS">碎片</option>
+                </select>
+                <input type="number" id="promo-reward-value" placeholder="獎勵數量" class="form-control" />
+                <input type="number" id="promo-max-uses" placeholder="最大使用次數" class="form-control" value="100" />
+                <input type="datetime-local" id="promo-valid-until" class="form-control" />
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="promo-description" placeholder="描述（可選）" class="form-control" style="flex: 1;" />
+                <button class="btn btn-primary" onclick="createPromoCode()">建立禮包碼</button>
+            </div>
+        </div>
+
+        <!-- 禮包碼列表 -->
+        <div class="card" style="padding: 20px;">
+            <h4>禮包碼列表</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>代碼</th>
+                        <th>名稱</th>
+                        <th>類型</th>
+                        <th>獎勵</th>
+                        <th>使用/上限</th>
+                        <th>狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="promo-codes-table">
+                    <!-- 動態載入 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+
+</html>

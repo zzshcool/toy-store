@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Transactions Fragment -->
+    <div th:fragment="content" id="transactions" class="tab-content" style="display:none;">
+        <h3>交易紀錄</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>會員</th>
+                    <th>類型</th>
+                    <th>金額</th>
+                    <th>描述</th>
+                    <th>時間</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="tx : ${transactionsPage.content}">
+                    <td th:text="${tx.id}">1</td>
+                    <td th:text="${tx.member != null ? tx.member.username : 'Unknown'}">User</td>
+                    <td th:text="${tx.type}">PURCHASE</td>
+                    <td th:text="${tx.amount}" th:style="${tx.amount > 0 ? 'color:green' : 'color:red'}">100</td>
+                    <td th:text="${tx.description}">Desc</td>
+                    <td th:text="${#temporals.format(tx.timestamp, 'yyyy-MM-dd HH:mm')}">Time</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 交易分頁控制 -->
+        <div th:if="${transactionsPage != null}"
+            style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+            <span>共 <strong th:text="${transactionsPage.totalElements}">0</strong> 筆，第 <strong
+                    th:text="${transactionsPage.number + 1}">1</strong>/<strong
+                    th:text="${transactionsPage.totalPages}">1</strong> 頁</span>
+            <div style="display: flex; gap: 5px;">
+                <a th:if="${transactionsPage.hasPrevious()}"
+                    th:href="@{/admin(txPage=${transactionsPage.number - 1}, txSize=${transactionsPage.size})}"
+                    class="btn btn-sm btn-outline">« 上一頁</a>
+                <a th:if="${transactionsPage.hasNext()}"
+                    th:href="@{/admin(txPage=${transactionsPage.number + 1}, txSize=${transactionsPage.size})}"
+                    class="btn btn-sm btn-outline">下一頁 »</a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

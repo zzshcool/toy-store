@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Payment Orders Management Fragment -->
+    <div th:fragment="content" id="payment-orders" class="tab-content" style="display:none;">
+        <h3>金流訂單管理</h3>
+
+        <!-- 統計摘要 -->
+        <div id="payment-summary"
+            style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px;">
+            <div class="card" style="padding: 15px; text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;" id="po-total">-</div>
+                <div style="color: #888;">總訂單數</div>
+            </div>
+            <div class="card" style="padding: 15px; text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: #f39c12;" id="po-pending">-</div>
+                <div style="color: #888;">待處理</div>
+            </div>
+            <div class="card" style="padding: 15px; text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: #27ae60;" id="po-paid">-</div>
+                <div style="color: #888;">已付款</div>
+            </div>
+            <div class="card" style="padding: 15px; text-align: center;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: #e74c3c;" id="po-failed">-</div>
+                <div style="color: #888;">失敗</div>
+            </div>
+        </div>
+
+        <!-- 訂單列表 -->
+        <div class="card" style="padding: 20px;">
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button class="btn btn-secondary" onclick="loadPaymentOrders()">刷新</button>
+                <select id="po-filter" class="form-control" style="width: 150px;" onchange="filterOrders()">
+                    <option value="all">全部狀態</option>
+                    <option value="PENDING">待處理</option>
+                    <option value="PAID">已付款</option>
+                    <option value="FAILED">失敗</option>
+                </select>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>訂單號</th>
+                        <th>會員 ID</th>
+                        <th>金額</th>
+                        <th>付款方式</th>
+                        <th>狀態</th>
+                        <th>建立時間</th>
+                    </tr>
+                </thead>
+                <tbody id="payment-orders-table">
+                    <!-- 動態載入 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Logistics Management Fragment -->
+    <div th:fragment="content" id="logistics" class="tab-content" style="display:none;">
+        <h3>📦 物流管理</h3>
+        <div class="card" style="padding: 20px; margin-bottom: 20px;">
+            <h4>批次匯入物流單號</h4>
+            <p style="color: #888; margin-bottom: 15px;">CSV 格式: 出貨申請ID, 物流單號, 物流公司(可選)</p>
+            <textarea id="csv-import-content" class="form-control" rows="5"
+                placeholder="1001,9876543210,黑貓&#10;1002,1234567890,新竹"></textarea>
+            <button class="btn btn-primary" style="margin-top: 10px;" onclick="importLogisticsCSV()">匯入</button>
+            <div id="import-result" style="margin-top: 10px; display: none;"></div>
+        </div>
+        <h4>待處理發貨申請</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>會員ID</th>
+                    <th>收件人</th>
+                    <th>電話</th>
+                    <th>地址</th>
+                    <th>件數</th>
+                    <th>狀態</th>
+                    <th>物流單號</th>
+                </tr>
+            </thead>
+            <tbody id="pending-shipments-tbody">
+                <tr th:each="ship : ${pendingShipments}" th:if="${pendingShipments != null}">
+                    <td th:text="${ship.id}">1</td>
+                    <td th:text="${ship.memberId}">1001</td>
+                    <td th:text="${ship.recipientName}">王小明</td>
+                    <td th:text="${ship.recipientPhone}">0912345678</td>
+                    <td th:text="${ship.recipientAddress}">台北市...</td>
+                    <td th:text="${ship.itemCount}">5</td>
+                    <td>
+                        <span
+                            th:class="${ship.status.name() == 'PENDING' ? 'badge badge-warning' : 'badge badge-success'}"
+                            th:text="${ship.status.getDisplayName()}">待處理</span>
+                    </td>
+                    <td th:text="${ship.trackingNumber != null ? ship.trackingNumber : '-'}">-</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>

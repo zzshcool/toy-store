@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Member Tags Management Fragment -->
+    <div th:fragment="content" id="member-tags" class="tab-content" style="display:none;">
+        <h3>會員標籤管理</h3>
+
+        <!-- 建立標籤 -->
+        <div class="card" style="padding: 20px; margin-bottom: 20px;">
+            <h4>建立新標籤</h4>
+            <div style="display: flex; gap: 10px; align-items: end;">
+                <div>
+                    <label>標籤名稱</label>
+                    <input type="text" id="tag-name" placeholder="如：活躍用戶" class="form-control" />
+                </div>
+                <div>
+                    <label>顏色</label>
+                    <input type="color" id="tag-color" value="#667eea" class="form-control"
+                        style="width: 60px; height: 38px;" />
+                </div>
+                <div>
+                    <label>說明</label>
+                    <input type="text" id="tag-description" placeholder="選填" class="form-control" />
+                </div>
+                <button class="btn btn-primary" onclick="createMemberTag()">建立標籤</button>
+            </div>
+        </div>
+
+        <!-- 標籤列表 -->
+        <div class="card" style="padding: 20px;">
+            <h4>標籤列表</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>標籤</th>
+                        <th>說明</th>
+                        <th>類型</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="member-tags-table">
+                    <!-- 動態載入 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+
+</html>

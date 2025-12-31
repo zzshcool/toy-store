@@ -85,6 +85,7 @@ public class AdminController {
             @RequestParam(defaultValue = "overview") String tab,
             @RequestParam(defaultValue = "0") int memberPage,
             @RequestParam(defaultValue = "20") int memberSize,
+            @RequestParam(required = false) String memberSearch,
             @RequestParam(defaultValue = "0") int txPage,
             @RequestParam(defaultValue = "20") int txSize,
             @RequestParam(defaultValue = "0") int logPage,
@@ -95,7 +96,7 @@ public class AdminController {
         model.addAttribute("activeTab", tab);
 
         Map<String, Object> data = adminService.getDashboardData(
-                memberPage, memberSize, txPage, txSize, logPage, logSize, gachaPage, gachaSize);
+                memberPage, memberSize, memberSearch, txPage, txSize, logPage, logSize, gachaPage, gachaSize);
         model.addAllAttributes(data);
 
         model.addAttribute("newProduct", new Product());

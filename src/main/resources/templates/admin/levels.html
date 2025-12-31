@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Member Levels Management Fragment -->
+    <div th:fragment="content" id="levels" class="tab-content" style="display:none;">
+        <h3>會員等級管理</h3>
+        <div class="card" style="padding: 20px; margin-bottom: 20px;">
+            <h4>新增等級</h4>
+            <form th:action="@{/admin/member-levels}" method="post">
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">
+                    <input type="text" name="name" placeholder="等級名稱" class="form-control" required />
+                    <input type="number" name="sortOrder" placeholder="排序 (1=最低)" class="form-control" required />
+                    <input type="number" step="0.01" name="threshold" placeholder="累積儲值門檻" class="form-control"
+                        required />
+                    <input type="text" name="monthlyReward" placeholder="每月獎勵" class="form-control" />
+                    <button type="submit" class="btn btn-primary">新增</button>
+                </div>
+            </form>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>排序</th>
+                    <th>名稱</th>
+                    <th>門檻</th>
+                    <th>每月獎勵</th>
+                    <th>狀態</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="lvl : ${memberLevels}">
+                    <td th:text="${lvl.sortOrder}">1</td>
+                    <td th:text="${lvl.name}">Common</td>
+                    <td th:text="${lvl.threshold}">0</td>
+                    <td th:text="${lvl.monthlyReward}">-</td>
+                    <td th:text="${lvl.enabled ? '啟用' : '停用'}">Active</td>
+                    <td>
+                        <button class="btn btn-sm btn-info"
+                            th:onclick="editLevel([[${lvl.id}]], '[[${lvl.name}]]', [[${lvl.sortOrder}]], [[${lvl.threshold}]], '[[${lvl.monthlyReward}]]', [[${lvl.enabled}]])">✏️</button>
+                        <form th:action="@{/admin/member-levels/delete/{id}(id=${lvl.id})}" method="post"
+                            style="display:inline;" onsubmit="return confirm('確定刪除等級？');">
+                            <button type="submit" style="background:none;border:none;cursor:pointer;"
+                                title="刪除">🗑️</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>

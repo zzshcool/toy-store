@@ -275,7 +275,7 @@
                             badge.style.display = 'none';
                         }
                     } else {
-                        alert('加入失敗: ' + (data ? data.message : 'Unknown error'));
+                        Toast.error('加入失敗: ' + (data ? data.message : 'Unknown error'));
                     }
                 })
                 .catch(error => console.error('Error:', error));
@@ -308,7 +308,7 @@
                             badge.style.display = 'none';
                         }
                     } else {
-                        alert('移除失敗: ' + (data ? data.message : 'Unknown error'));
+                        Toast.error('移除失敗: ' + (data ? data.message : 'Unknown error'));
                     }
                 })
                 .catch(error => console.error('Error:', error));
@@ -355,10 +355,653 @@
             setInterval(loadMarquee, 30000); // 每 30 秒更新
         });
     </script>
-    <!-- 全域 UI 遮罩 (用於抽獎時鎖定操作) -->
     <div id="ui-mask"
         style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0); z-index:9000; cursor:not-allowed;">
     </div>
+
+    <!-- ============== Skeleton Loader 骨架屏系統 ============== -->
+    <style>
+        /* 骨架屏基礎樣式 */
+        .skeleton {
+            background: linear-gradient(90deg, #1a1a2e 25%, #2a2a4a 50%, #1a1a2e 75%);
+            background-size: 200% 100%;
+            animation: skeletonShimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes skeletonShimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* 骨架卡片 */
+        .skeleton-card {
+            background: rgba(30, 30, 50, 0.6);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .skeleton-image {
+            width: 100%;
+            height: 160px;
+            border-radius: 12px;
+        }
+
+        .skeleton-title {
+            height: 24px;
+            width: 70%;
+        }
+
+        .skeleton-text {
+            height: 16px;
+            width: 60%;
+        }
+
+        .skeleton-text-short {
+            height: 16px;
+            width: 40%;
+        }
+
+        .skeleton-button {
+            height: 40px;
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        /* 骨架清單容器 */
+        .skeleton-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        /* 骨架列表行 */
+        .skeleton-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: rgba(30, 30, 50, 0.4);
+            border-radius: 12px;
+        }
+
+        .skeleton-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .skeleton-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+    </style>
+    <script>
+        /**
+         * Skeleton Loader 工具
+         * 用法: Skeleton.show(container, count); Skeleton.hide(container);
+         */
+        const Skeleton = {
+            cardTemplate: `
+                <div class="skeleton-card">
+                    <div class="skeleton skeleton-image"></div>
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton skeleton-text"></div>
+                    <div class="skeleton skeleton-button"></div>
+                </div>
+            `,
+            rowTemplate: `
+                <div class="skeleton-row">
+                    <div class="skeleton skeleton-avatar"></div>
+                    <div class="skeleton-content">
+                        <div class="skeleton skeleton-title"></div>
+                        <div class="skeleton skeleton-text-short"></div>
+                    </div>
+                </div>
+            `,
+            /**
+             * 顯示骨架屏
+             * @param {HTMLElement|string} container - 容器元素或選擇器
+             * @param {number} count - 骨架卡片數量
+             * @param {string} type - 'card' 或 'row'
+             */
+            show(container, count = 4, type = 'card') {
+                const el = typeof container === 'string' ? document.querySelector(container) : container;
+                if (!el) return;
+
+                const template = type === 'row' ? this.rowTemplate : this.cardTemplate;
+                const wrapper = type === 'row' ? '' : 'skeleton-grid';
+
+                let html = wrapper ? `<div class="${wrapper}">` : '';
+                for (let i = 0; i < count; i++) {
+                    html += template;
+                }
+                html += wrapper ? '</div>' : '';
+
+                el.innerHTML = html;
+                el.dataset.skeletonActive = 'true';
+            },
+            /**
+             * 隱藏骨架屏（清除內容）
+             * @param {HTMLElement|string} container - 容器元素或選擇器
+             */
+            hide(container) {
+                const el = typeof container === 'string' ? document.querySelector(container) : container;
+                if (el && el.dataset.skeletonActive) {
+                    el.innerHTML = '';
+                    delete el.dataset.skeletonActive;
+                }
+            },
+            /**
+             * 檢查是否正在顯示骨架屏
+             */
+            isActive(container) {
+                const el = typeof container === 'string' ? document.querySelector(container) : container;
+                return el && el.dataset.skeletonActive === 'true';
+            }
+        };
+    </script>
+
+    <!-- ============== 流程防護系統 ============== -->
+    <style>
+        #process-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 9990;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+
+        #process-mask .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #6c5ce7;
+            border-radius: 50%;
+            animation: processSpin 0.8s linear infinite;
+        }
+
+        @keyframes processSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .btn-processing {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .btn-processing::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: inherit;
+        }
+    </style>
+    <div id="process-mask">
+        <div class="spinner"></div>
+    </div>
+    <script>
+        /**
+         * 流程防護工具
+         * ProcessSafety.start() - 開始處理，顯示遮罩
+         * ProcessSafety.end() - 完成處理，隱藏遮罩
+         * ProcessSafety.wrapButton(btn, asyncFn) - 防連點包裝
+         */
+        const ProcessSafety = {
+            _active: false,
+            start() {
+                if (this._active) return;
+                this._active = true;
+                document.getElementById('process-mask').style.display = 'flex';
+            },
+            end() {
+                this._active = false;
+                document.getElementById('process-mask').style.display = 'none';
+            },
+            isActive() {
+                return this._active;
+            },
+            /**
+             * 包裝按鈕防止連點
+             * @param {HTMLElement|string} btn - 按鈕元素或選擇器
+             * @param {Function} asyncFn - 異步處理函數
+             */
+            wrapButton(btn, asyncFn) {
+                const el = typeof btn === 'string' ? document.querySelector(btn) : btn;
+                if (!el) return;
+
+                el.addEventListener('click', async (e) => {
+                    if (el.classList.contains('btn-processing')) {
+                        e.preventDefault();
+                        return;
+                    }
+
+                    const originalText = el.textContent;
+                    el.classList.add('btn-processing');
+                    el.textContent = '處理中...';
+
+                    try {
+                        await asyncFn(e);
+                    } finally {
+                        el.classList.remove('btn-processing');
+                        el.textContent = originalText;
+                    }
+                });
+            },
+            /**
+             * 快速執行並保護
+             * @param {Function} asyncFn - 異步函數
+             * @param {Object} opts - 選項 { showMask: true }
+             */
+            async run(asyncFn, opts = { showMask: true }) {
+                if (this._active) return;
+
+                if (opts.showMask) this.start();
+                try {
+                    return await asyncFn();
+                } finally {
+                    if (opts.showMask) this.end();
+                }
+            }
+        };
+    </script>
+
+    <!-- ============== Toast 通知系統 ============== -->
+    <div id="toast-container"></div>
+    <style>
+        #toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 20000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast {
+            min-width: 280px;
+            max-width: 400px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            pointer-events: auto;
+            animation: toastSlideIn 0.4s ease-out;
+            backdrop-filter: blur(10px);
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .toast.info {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .toast.warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .toast-icon {
+            font-size: 1.4rem;
+        }
+
+        .toast-message {
+            flex: 1;
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0;
+            margin-left: 8px;
+        }
+
+        .toast-close:hover {
+            color: white;
+        }
+
+        .toast.hiding {
+            animation: toastSlideOut 0.3s ease-in forwards;
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes toastSlideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    </style>
+    <script>
+        /**
+         * 全域 Toast 通知系統
+         * 用法: Toast.success('訊息'); Toast.error('錯誤'); Toast.info('提示');
+         */
+        const Toast = {
+            _icons: {
+                success: '✅',
+                error: '❌',
+                info: 'ℹ️',
+                warning: '⚠️'
+            },
+            show(message, type = 'info', duration = 3500) {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.innerHTML = `
+                    <span class="toast-icon">${this._icons[type] || 'ℹ️'}</span>
+                    <span class="toast-message">${message}</span>
+                    <button class="toast-close" onclick="Toast.dismiss(this.parentElement)">&times;</button>
+                `;
+                container.appendChild(toast);
+
+                // Auto dismiss
+                setTimeout(() => this.dismiss(toast), duration);
+            },
+            dismiss(toast) {
+                if (!toast || toast.classList.contains('hiding')) return;
+                toast.classList.add('hiding');
+                setTimeout(() => toast.remove(), 300);
+            },
+            success(msg, duration) { this.show(msg, 'success', duration); },
+            error(msg, duration) { this.show(msg, 'error', duration); },
+            info(msg, duration) { this.show(msg, 'info', duration); },
+            warning(msg, duration) { this.show(msg, 'warning', duration); }
+        };
+
+        // 全域替換 alert (可選，謹慎使用)
+        // window._originalAlert = window.alert;
+        // window.alert = function(msg) { Toast.info(msg); };
+    </script>
+
+    <!-- ============== 沉浸式登入彈窗 ============== -->
+    <div id="login-modal" class="login-modal" style="display: none;">
+        <div class="login-modal-backdrop" onclick="LoginModal.hide()"></div>
+        <div class="login-modal-content">
+            <button class="login-modal-close" onclick="LoginModal.hide()">&times;</button>
+            <h2>🔐 請先登入</h2>
+            <p class="login-modal-subtitle">登入後即可繼續操作</p>
+            <form id="login-modal-form" onsubmit="LoginModal.submit(event)">
+                <div class="login-input-group">
+                    <label for="modal-username">帳號</label>
+                    <input type="text" id="modal-username" name="username" required placeholder="請輸入帳號">
+                </div>
+                <div class="login-input-group">
+                    <label for="modal-password">密碼</label>
+                    <input type="password" id="modal-password" name="password" required placeholder="請輸入密碼">
+                </div>
+                <div id="login-modal-error" class="login-error" style="display: none;"></div>
+                <button type="submit" class="login-submit-btn" id="login-submit-btn">登入</button>
+            </form>
+            <p class="login-register-link">還沒有帳號？<a href="/register">立即註冊</a></p>
+        </div>
+    </div>
+    <style>
+        .login-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
+
+        .login-modal-content {
+            position: relative;
+            background: linear-gradient(145deg, #1a1a2e, #16213e);
+            border-radius: 20px;
+            padding: 40px 35px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .login-modal-close {
+            position: absolute;
+            top: 15px;
+            right: 18px;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .login-modal-close:hover {
+            color: #fff;
+        }
+
+        .login-modal-content h2 {
+            margin: 0 0 8px;
+            color: #fff;
+            font-size: 1.6rem;
+            text-align: center;
+        }
+
+        .login-modal-subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 25px;
+            font-size: 0.9rem;
+        }
+
+        .login-input-group {
+            margin-bottom: 18px;
+        }
+
+        .login-input-group label {
+            display: block;
+            color: #aaa;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        .login-input-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #333;
+            border-radius: 10px;
+            background: #0f0f23;
+            color: #fff;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .login-input-group input:focus {
+            outline: none;
+            border-color: #6c5ce7;
+        }
+
+        .login-error {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .login-submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .login-submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(108, 92, 231, 0.4);
+        }
+
+        .login-submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .login-register-link {
+            text-align: center;
+            color: #888;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+
+        .login-register-link a {
+            color: #a29bfe;
+            text-decoration: none;
+        }
+    </style>
+    <script>
+        /**
+         * 全域沉浸式登入 Modal
+         * 用法: LoginModal.show(callback); - 登入成功後執行 callback
+         */
+        const LoginModal = {
+            _callback: null,
+            show(callback) {
+                this._callback = callback;
+                document.getElementById('login-modal').style.display = 'flex';
+                document.getElementById('modal-username').focus();
+                document.getElementById('login-modal-error').style.display = 'none';
+            },
+            hide() {
+                document.getElementById('login-modal').style.display = 'none';
+                document.getElementById('login-modal-form').reset();
+                this._callback = null;
+            },
+            submit(e) {
+                e.preventDefault();
+                const btn = document.getElementById('login-submit-btn');
+                const errorDiv = document.getElementById('login-modal-error');
+                btn.disabled = true;
+                btn.textContent = '登入中...';
+
+                const formData = new FormData(document.getElementById('login-modal-form'));
+                fetch('/api/member/login', {
+                    method: 'POST',
+                    body: new URLSearchParams(formData)
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            Toast.success('登入成功！');
+                            this.hide();
+                            // 更新頁面上的使用者資訊
+                            if (typeof refreshUserBalance === 'function') refreshUserBalance();
+                            // 執行回調
+                            if (this._callback) this._callback(data.data);
+                            // 重新載入頁面以更新導覽列（可選）
+                            setTimeout(() => location.reload(), 500);
+                        } else {
+                            errorDiv.textContent = data.message || '登入失敗';
+                            errorDiv.style.display = 'block';
+                        }
+                    })
+                    .catch(() => {
+                        errorDiv.textContent = '網路錯誤，請稍後再試';
+                        errorDiv.style.display = 'block';
+                    })
+                    .finally(() => {
+                        btn.disabled = false;
+                        btn.textContent = '登入';
+                    });
+            }
+        };
+
+        /**
+         * 檢查是否已登入，若未登入則顯示 Modal
+         * 用法: requireLogin(() => { // 登入成功後執行 });
+         */
+        function requireLogin(callback) {
+            // 檢查是否有登入 (透過頁面上的資訊判斷)
+            const isLoggedIn = document.querySelector('.nav-user') !== null ||
+                document.cookie.includes('authToken');
+            if (isLoggedIn) {
+                if (callback) callback();
+            } else {
+                LoginModal.show(callback);
+            }
+        }
+    </script>
+
 
     <script>
         function showMask() {

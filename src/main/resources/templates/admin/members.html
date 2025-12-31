@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Member Management Fragment -->
+    <div th:fragment="content" id="members" class="tab-content">
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0;">會員列表</h3>
+            <!-- 全域搜尋 -->
+            <form th:action="@{/admin}" method="get" style="display: flex; gap: 8px; align-items: center;">
+                <input type="hidden" name="tab" value="overview">
+                <input type="text" name="memberSearch" th:value="${param.memberSearch}" placeholder="搜尋帳號/暱稱/Email..."
+                    style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; width: 220px;">
+                <button type="submit" class="btn btn-primary btn-sm">🔍 搜尋</button>
+                <a th:href="@{/admin}" class="btn btn-outline btn-sm">重置</a>
+            </form>
+            <button class="btn btn-success" onclick="exportMembersCSV()">📥 匯出 CSV</button>
+        </div>
+        <table id="members-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>使用者名稱</th>
+                    <th>餘額</th>
+                    <th>等級</th>
+                    <th>最後登入</th>
+                    <th>註冊日期</th>
+                    <th>狀態</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="member : ${membersPage.content}">
+                    <td th:text="${member.id}">1</td>
+                    <td th:text="${member.username}">User</td>
+                    <td th:text="${member.platformWalletBalance}">1000</td>
+                    <td th:text="${member.level != null ? member.level.name : '平民'}">Level</td>
+                    <td
+                        th:text="${member.lastLoginTime != null ? #temporals.format(member.lastLoginTime, 'yyyy-MM-dd HH:mm') : '未登入'}">
+                        2023-01-01</td>
+                    <td
+                        th:text="${member.createdAt != null ? #temporals.format(member.createdAt, 'yyyy-MM-dd HH:mm') : '-'}">
+                        2023-01-01</td>
+                    <td>
+                        <span th:class="${member.enabled ? 'badge badge-success' : 'badge badge-danger'}"
+                            th:text="${member.enabled ? '正常' : '已封鎖'}">正常</span>
+                    </td>
+                    <td style="display: flex; gap: 5px;">
+                        <form th:action="@{/admin/members/{id}/toggle-status(id=${member.id})}" method="post"
+                            style="margin:0;">
+                            <button type="submit" class="btn btn-sm"
+                                th:classappend="${member.enabled ? 'btn-danger' : 'btn-success'}"
+                                th:text="${member.enabled ? '封鎖' : '啟用'}">封鎖</button>
+                        </form>
+                        <button class="btn btn-sm btn-info"
+                            th:onclick="'showHistory(' + ${member.id} + ')'">歷史紀錄</button>
+                        <button class="btn btn-sm btn-primary"
+                            th:onclick="editMember([[${member.id}]], '[[${member.email}]]', '[[${member.nickname}]]', [[${member.enabled}]], [[${member.level != null ? member.level.id : ''}]])">編輯</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 會員分頁控制 -->
+        <div th:if="${membersPage != null}"
+            style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+            <span>共 <strong th:text="${membersPage.totalElements}">0</strong> 筆，第 <strong
+                    th:text="${membersPage.number + 1}">1</strong>/<strong
+                    th:text="${membersPage.totalPages}">1</strong> 頁</span>
+            <div style="display: flex; gap: 5px;">
+                <a th:if="${membersPage.hasPrevious()}"
+                    th:href="@{/admin(memberPage=${membersPage.number - 1}, memberSize=${membersPage.size})}"
+                    class="btn btn-sm btn-outline">« 上一頁</a>
+                <a th:if="${membersPage.hasNext()}"
+                    th:href="@{/admin(memberPage=${membersPage.number + 1}, memberSize=${membersPage.size})}"
+                    class="btn btn-sm btn-outline">下一頁 »</a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

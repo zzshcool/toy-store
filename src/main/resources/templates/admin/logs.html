@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Operation Logs Fragment -->
+    <div th:fragment="content" id="logs" class="tab-content" style="display:none;">
+        <h3>操作日誌</h3>
+
+        <!-- 搜尋過濾區 -->
+        <div class="card" style="padding: 15px; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: end;">
+                <div>
+                    <label>操作者</label>
+                    <input type="text" id="log-search-user" placeholder="搜尋操作者" class="form-control"
+                        style="width: 150px;">
+                </div>
+                <div>
+                    <label>動作類型</label>
+                    <select id="log-filter-action" class="form-control" style="width: 150px;">
+                        <option value="">全部</option>
+                        <option value="LOGIN">登入</option>
+                        <option value="CREATE">建立</option>
+                        <option value="UPDATE">更新</option>
+                        <option value="DELETE">刪除</option>
+                    </select>
+                </div>
+                <div>
+                    <label>日期範圍</label>
+                    <input type="date" id="log-date-from" class="form-control" style="width: 140px;">
+                </div>
+                <div>
+                    <label style="visibility: hidden;">-</label>
+                    <input type="date" id="log-date-to" class="form-control" style="width: 140px;">
+                </div>
+                <button class="btn btn-primary" onclick="filterLogs()">搜尋</button>
+                <button class="btn btn-outline" onclick="clearLogFilters()">清除</button>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>操作者</th>
+                    <th>動作</th>
+                    <th>詳情</th>
+                    <th>請求參數</th>
+                    <th>時間</th>
+                </tr>
+            </thead>
+            <tbody id="logs-table-body">
+                <tr th:each="log : ${logs}">
+                    <td th:text="${log.id}">1</td>
+                    <td th:text="${log.adminUsername}">User</td>
+                    <td th:text="${log.action}">LOGIN</td>
+                    <td th:text="${log.details}">Success</td>
+                    <td th:text="${log.requestParams}"
+                        style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                        title="${log.requestParams}">Params</td>
+                    <td th:text="${log.timestamp != null ? #temporals.format(log.timestamp, 'yyyy-MM-dd HH:mm') : ''}">
+                        Time</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>

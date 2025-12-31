@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Announcements Management Fragment -->
+    <div th:fragment="content" id="announcements" class="tab-content" style="display:none;">
+        <h3>系統公告</h3>
+
+        <!-- 群發公告 -->
+        <div class="card" style="padding: 20px;">
+            <h4>發送公告</h4>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div>
+                    <label>公告標題</label>
+                    <input type="text" id="ann-title" placeholder="如：系統維護通知" class="form-control" />
+                </div>
+                <div>
+                    <label>公告內容</label>
+                    <textarea id="ann-content" class="form-control" rows="4" placeholder="請輸入公告內容..."></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label>發送對象：</label>
+                    <select id="ann-target" class="form-control" style="width: 200px;">
+                        <option value="all">所有會員</option>
+                    </select>
+                    <span id="ann-target-count" style="color: #888;"></span>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick="sendAnnouncement()">發送公告</button>
+                    <button class="btn btn-secondary" onclick="loadAnnouncementTags()">刷新標籤列表</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

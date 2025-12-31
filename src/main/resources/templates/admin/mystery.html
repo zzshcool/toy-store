@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Mystery Box (Gacha Theme) Management Fragment -->
+    <div th:fragment="content" id="mystery" class="tab-content" style="display:none;">
+        <h3>扭蛋管理</h3>
+        <div class="card" style="padding: 20px; margin-bottom: 20px;">
+            <h4>新增主題</h4>
+            <!-- Theme Form -->
+            <form th:action="@{/admin/gacha/themes}" method="post">
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" name="name" placeholder="主題名稱" class="form-control" required />
+                    <input type="number" step="0.01" name="price" placeholder="價格" class="form-control" required />
+                    <button type="submit" class="btn btn-primary">新增主題</button>
+                </div>
+            </form>
+        </div>
+
+        <div th:each="theme : ${gachaThemes}" class="card" style="margin-bottom: 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h4 th:text="${theme.name} + ' ($' + ${theme.price} + ')'">Gundam ($100)</h4>
+                <button class="btn btn-sm btn-info"
+                    th:onclick="editTheme([[${theme.id}]], '[[${theme.name}]]', [[${theme.price}]])">編輯主題</button>
+
+                <form th:action="@{/admin/gacha/themes/delete/{id}(id=${theme.id})}" method="post"
+                    style="display:inline;" onsubmit="return confirm('刪除主題將連同獎品一起刪除，確定？');">
+                    <button type="submit" class="btn btn-sm btn-danger">刪除主題</button>
+                </form>
+            </div>
+
+            <!-- Add Item to Theme -->
+            <form th:action="@{/admin/gacha/items}" method="post"
+                style="margin-bottom: 10px; background: #f9f9f9; padding: 10px;">
+                <input type="hidden" name="themeId" th:value="${theme.id}">
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" name="name" placeholder="獎品名稱" class="form-control" required>
+                    <input type="number" name="estimatedValue" placeholder="價值" class="form-control" required>
+                    <input type="number" name="weight" placeholder="權重(%)" class="form-control" required>
+                    <button type="submit" class="btn btn-sm btn-secondary">新增獎品</button>
+                </div>
+            </form>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>獎品名稱</th>
+                        <th>價值</th>
+                        <th>權重</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="item : ${theme.items}">
+                        <td th:text="${item.name}">Item</td>
+                        <td th:text="${item.estimatedValue}">50</td>
+                        <td th:text="${item.weight}">20</td>
+                        <td>
+                            <button class="btn btn-sm btn-info"
+                                th:onclick="editBoxItem([[${item.id}]], '[[${item.name}]]', [[${item.estimatedValue}]], [[${item.weight}]])">✏️</button>
+                            <form th:action="@{/admin/gacha/items/delete/{id}(id=${item.id})}" method="post"
+                                style="display:inline;" onsubmit="return confirm('確定刪除獎品？');">
+                                <button type="submit" style="background:none;border:none;cursor:pointer;"
+                                    title="刪除">🗑️</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Edit Theme Modal -->
+        <div id="editThemeModal" class="modal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+            <div class="card" style="margin: 15% auto; width: 30%; padding: 20px;">
+                <h4>編輯主題</h4>
+                <form th:action="@{/admin/gacha/themes/update}" method="post">
+                    <input type="hidden" id="editThemeId" name="id">
+                    <input type="text" id="editThemeName" name="name" class="form-control" placeholder="名稱" required>
+                    <input type="number" step="0.01" id="editThemePrice" name="price" class="form-control"
+                        placeholder="價格" required>
+                    <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" class="btn btn-secondary"
+                            onclick="document.getElementById('editThemeModal').style.display='none'">取消</button>
+                        <button type="submit" class="btn btn-primary">儲存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Box Item Modal -->
+        <div id="editBoxItemModal" class="modal"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+            <div class="card" style="margin: 15% auto; width: 30%; padding: 20px;">
+                <h4>編輯獎品</h4>
+                <form th:action="@{/admin/gacha/items/update}" method="post">
+                    <input type="hidden" id="editBoxItemId" name="id">
+                    <input type="text" id="editBoxItemName" name="name" class="form-control" placeholder="名稱" required>
+                    <input type="number" id="editBoxItemValue" name="estimatedValue" class="form-control"
+                        placeholder="價值" required>
+                    <input type="number" id="editBoxItemWeight" name="weight" class="form-control" placeholder="權重"
+                        required>
+                    <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" class="btn btn-secondary"
+                            onclick="document.getElementById('editBoxItemModal').style.display='none'">取消</button>
+                        <button type="submit" class="btn btn-primary">儲存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

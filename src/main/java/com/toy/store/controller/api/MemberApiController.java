@@ -48,6 +48,29 @@ public class MemberApiController {
     }
 
     /**
+     * 取得當前會員個人資料（用於發貨自動帶入）
+     */
+    @GetMapping("/profile")
+    public ApiResponse<Map<String, Object>> getProfile(HttpServletRequest request) {
+        TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
+        if (user == null) {
+            return ApiResponse.error("請先登入");
+        }
+
+        return memberRepository.findByUsername(user.getUsername())
+                .map(member -> {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("realName", member.getRealName());
+                    result.put("nickname", member.getNickname());
+                    result.put("phone", member.getPhone());
+                    result.put("address", member.getAddress());
+                    result.put("email", member.getEmail());
+                    return ApiResponse.ok(result);
+                })
+                .orElseGet(() -> ApiResponse.error("會員不存在"));
+    }
+
+    /**
      * 登入 API（供沉浸式登入 Modal 使用）
      */
     @PostMapping("/login")

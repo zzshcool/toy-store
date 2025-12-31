@@ -141,6 +141,9 @@
 
             // 載入箱體列表
             function loadBoxList() {
+                // 顯示骨架屏
+                Skeleton.show('#boxList', 4);
+
                 fetch('/api/ichiban')
                     .then(res => res.json())
                     .then(response => {
@@ -192,8 +195,8 @@
             }
 
             function promptLogin() {
-                alert('請先登入會員以進行抽獎！');
-                window.location.href = '/login';
+                Toast.warning('請先登入會員以進行抽獎！');
+                LoginModal.show();
             }
 
             // 選擇箱體
@@ -302,7 +305,7 @@
                     selectedSlots.splice(index, 1);
                 } else {
                     if (selectedSlots.length >= 10) {
-                        alert('單次最多選擇 10 格');
+                        Toast.warning('單次最多選擇 10 格');
                         return;
                     }
                     selectedSlots.push(slotNumber);
@@ -348,7 +351,7 @@
             // 確認購買
             function confirmPurchase() {
                 if (selectedSlots.length === 0) {
-                    alert('請至少選擇一個格子');
+                    Toast.warning('請至少選擇一個格子');
                     return;
                 }
 
@@ -411,13 +414,13 @@
                             selectedSlots = [];
                             updateCartBar();
                         } else {
-                            alert(response.message || '試抽失敗');
+                            Toast.error(response.message || '試抽失敗');
                             if (window.hideMask) window.hideMask();
                         }
                     })
                     .catch(err => {
                         console.error('Trial error:', err);
-                        alert('試抽失敗，請重試');
+                        Toast.error('試抽失敗，請重試');
                         if (window.hideMask) window.hideMask();
                     });
             }
@@ -452,13 +455,13 @@
                             updateCartBar();
                             loadBoxDetails(currentBoxId);
                         } else {
-                            alert(response.message || '購買失敗');
+                            Toast.error(response.message || '購買失敗');
                             if (window.hideMask) window.hideMask();
                         }
                     })
                     .catch(err => {
                         console.error('Error:', err);
-                        alert('購買失敗，請重試');
+                        Toast.error('購買失敗，請重試');
                         closePurchaseModal();
                         btn.disabled = false;
                         btn.textContent = '確認購買';
@@ -746,7 +749,7 @@
 
             function confirmPurchase() {
                 if (selectedSlots.length === 0) {
-                    alert('請先選擇要購買的格子');
+                    Toast.warning('請先選擇要購買的格子');
                     return;
                 }
 

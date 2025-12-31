@@ -152,6 +152,9 @@
             });
 
             function loadBoxList() {
+                // 顯示骨架屏
+                Skeleton.show('#boxList', 4);
+
                 fetch('/api/blindbox')
                     .then(res => res.json())
                     .then(response => {
@@ -284,7 +287,7 @@
                             showPurchaseModal(boxNumber);
                             loadBoxDetails(currentBoxId);
                         } else {
-                            alert(response.message);
+                            Toast.error(response.message);
                         }
                     });
             }
@@ -320,7 +323,7 @@
                     if (remaining <= 0) {
                         clearCountdown();
                         closePurchaseModal();
-                        alert('鎖定已過期，請重新選擇');
+                        Toast.warning('鎖定已過期，請重新選擇');
                         loadBoxDetails(currentBoxId);
                     }
                 }, 1000);
@@ -373,7 +376,7 @@
                             loadBoxDetails(currentBoxId);
                             if (typeof refreshUserBalance === 'function') refreshUserBalance();
                         } else {
-                            alert(response.message);
+                            Toast.error(response.message);
                         }
                     });
             }
@@ -401,7 +404,7 @@
             function fullPurchase() {
                 const isLoggedIn = /*[[${currentUser != null}]]*/ false;
                 if (!isLoggedIn) {
-                    alert('請先登入以使用全包功能');
+                    Toast.warning('請先登入以使用全包功能');
                     return;
                 }
 
@@ -479,7 +482,7 @@
             function useHintCard() {
                 const isLoggedIn = /*[[${currentUser != null}]]*/ false;
                 if (!isLoggedIn) {
-                    alert('請先登入以使用道具卡');
+                    Toast.warning('請先登入以使用道具卡');
                     return;
                 }
 

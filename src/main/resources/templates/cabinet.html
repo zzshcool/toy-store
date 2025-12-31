@@ -225,7 +225,7 @@
 
             function showShipModal() {
                 if (selectedItems.length === 0) {
-                    alert('請選擇要發貨的獎品');
+                    Toast.warning('請選擇要發貨的獎品');
                     return;
                 }
 
@@ -234,6 +234,19 @@
                 const isFree = selectedItems.length >= 5;
                 document.getElementById('freeShippingNote').textContent = isFree ? '✨ 滿 5 件免運！' : '';
                 document.getElementById('confirmShippingFee').textContent = isFree ? '免運' : '$60';
+
+                // 自動帶入會員資料
+                fetch('/api/member/profile')
+                    .then(res => res.json())
+                    .then(response => {
+                        if (response.success && response.data) {
+                            const profile = response.data;
+                            document.getElementById('recipientName').value = profile.realName || profile.nickname || '';
+                            document.getElementById('recipientPhone').value = profile.phone || '';
+                            document.getElementById('recipientAddress').value = profile.address || '';
+                        }
+                    })
+                    .catch(err => console.log('無法載入會員資料'));
 
                 document.getElementById('shipModal').style.display = 'flex';
             }

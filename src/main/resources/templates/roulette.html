@@ -202,6 +202,9 @@
             }
 
             function loadGameList() {
+                // 顯示骨架屏
+                Skeleton.show('#gameList', 4);
+
                 fetch('/api/roulette')
                     .then(r => r.json())
                     .then(response => {
@@ -243,8 +246,8 @@
             }
 
             function promptLogin() {
-                alert('請先登入會員以進行抽獎！');
-                window.location.href = '/login';
+                Toast.warning('請先登入會員以進行抽獎！');
+                LoginModal.show();
             }
 
             function selectGame(gameId) {
@@ -385,7 +388,7 @@
                                 GameUtils.hideMask(); // Call hideMask after result is shown
                             });
                         } else {
-                            alert(response.message || '旋轉失敗');
+                            Toast.error(response.message || '旋轉失敗');
                             isSpinning = false;
                             document.getElementById('spinBtn').disabled = false;
                             GameUtils.hideMask(); // Call hideMask on error
@@ -393,7 +396,7 @@
                     })
                     .catch(err => {
                         console.error('Error:', err);
-                        alert('操作失敗');
+                        Toast.error('操作失敗');
                         isSpinning = false;
                         document.getElementById('spinBtn').disabled = false;
                         GameUtils.hideMask(); // Call hideMask on error

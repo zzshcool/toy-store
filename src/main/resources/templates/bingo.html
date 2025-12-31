@@ -173,6 +173,9 @@
             }
 
             function loadGameList() {
+                // 顯示骨架屏
+                Skeleton.show('#gameList', 4);
+
                 fetch('/api/bingo')
                     .then(r => r.json())
                     .then(response => {
@@ -216,8 +219,8 @@
             }
 
             function promptLogin() {
-                alert('請先登入會員以進行挖寶！');
-                window.location.href = '/login';
+                Toast.warning('請先登入會員以進行挖寶！');
+                LoginModal.show();
             }
 
             function selectGame(gameId) {
