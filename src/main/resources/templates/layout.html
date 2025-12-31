@@ -27,21 +27,12 @@
                 <li><a th:href="@{/}" class="nav-link">🏠 首頁</a></li>
                 <li th:if="${@systemSettingService.isShoppingEnabled()}"><a th:href="@{/products}"
                         class="nav-link">商品列表</a></li>
-                <!-- 抽獎系統 - 直接顯示各入口 -->
-                <li th:if="${@systemSettingService.isIchibanEnabled()}">
-                    <a th:href="@{/ichiban}" class="nav-link">🎯 一番賞</a>
-                </li>
-                <li th:if="${@systemSettingService.isRouletteEnabled()}">
-                    <a th:href="@{/roulette}" class="nav-link">🎡 轉盤</a>
-                </li>
-                <li th:if="${@systemSettingService.isBingoEnabled()}">
-                    <a th:href="@{/bingo}" class="nav-link">🎲 九宮格</a>
+                <!-- 抽獎系統 - 動態渲染導航項目（依後台設定順序和開關） -->
+                <li th:each="navItem : ${@systemSettingService.getSortedNavItems()}">
+                    <a th:href="${navItem.url}" class="nav-link" th:text="${navItem.label}">遊戲</a>
                 </li>
                 <li th:if="${@systemSettingService.isRedeemEnabled()}">
                     <a th:href="@{/redeem-shop}" class="nav-link">💎 兌換</a>
-                </li>
-                <li th:if="${@systemSettingService.isGachaEnabled()}">
-                    <a th:href="@{/gacha}" class="nav-link">🎁 扭蛋</a>
                 </li>
 
                 <li th:if="${currentUser != null}"
@@ -189,6 +180,27 @@
     </button>
 
     <script>
+        // 全域餘額刷新函數 - 用於購買後即時更新導航欄餘額
+        function refreshUserBalance() {
+            fetch('/api/member/balance')
+                .then(res => res.json())
+                .then(response => {
+                    if (response.success && response.data) {
+                        // 更新導航欄餘額顯示
+                        const balanceElements = document.querySelectorAll('[data-balance-display]');
+                        balanceElements.forEach(el => {
+                            el.textContent = response.data.balance;
+                        });
+                        // 兼容舊版選擇器
+                        const navBalance = document.querySelector('.nav-menu span[style*="accent-color"]');
+                        if (navBalance && navBalance.textContent.includes('$')) {
+                            navBalance.innerHTML = '💰 $' + response.data.balance;
+                        }
+                    }
+                })
+                .catch(err => console.error('Failed to refresh balance:', err));
+        }
+
         function toggleMenu() {
             const menu = document.getElementById('navMenu');
             menu.classList.toggle('active');

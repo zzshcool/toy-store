@@ -14,4 +14,9 @@ public interface ShipmentRequestRepository extends JpaRepository<ShipmentRequest
     List<ShipmentRequest> findByStatusOrderByCreatedAtAsc(ShipmentRequest.Status status);
 
     List<ShipmentRequest> findByStatusInOrderByCreatedAtAsc(List<ShipmentRequest.Status> statuses);
+
+    // Dashboard 統計查詢
+    long countByStatus(ShipmentRequest.Status status);
+
+    long countByStatusIn(List<ShipmentRequest.Status> statuses);
 }

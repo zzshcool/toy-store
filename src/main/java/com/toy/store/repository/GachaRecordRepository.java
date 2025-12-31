@@ -3,6 +3,7 @@ package com.toy.store.repository;
 import com.toy.store.model.GachaRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -19,4 +20,9 @@ public interface GachaRecordRepository extends JpaRepository<GachaRecord, Long> 
 
     // 全站最新抽獎紀錄（跑馬燈用）
     List<GachaRecord> findTop20ByOrderByCreatedAtDesc();
+
+    // Dashboard 統計查詢
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    long countByCreatedAtAfter(LocalDateTime start);
 }

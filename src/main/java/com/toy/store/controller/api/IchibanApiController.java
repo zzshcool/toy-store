@@ -4,14 +4,13 @@ import com.toy.store.annotation.CurrentUser;
 import com.toy.store.exception.AppException;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.*;
+import com.toy.store.repository.MemberRepository;
 import com.toy.store.service.IchibanService;
 import com.toy.store.service.TokenService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -19,13 +18,11 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/ichiban")
+@RequiredArgsConstructor
 public class IchibanApiController {
 
-    @Autowired
-    private IchibanService ichibanService;
-
-    @Autowired
-    private com.toy.store.repository.MemberRepository memberRepository;
+    private final IchibanService ichibanService;
+    private final MemberRepository memberRepository;
 
     /**
      * 取得所有進行中的一番賞
@@ -101,7 +98,6 @@ public class IchibanApiController {
 
     /**
      * 多格購買（推薦使用此 API）
-     * Request Body: { "slotNumbers": [1, 3, 5, 7] }
      */
     @PostMapping("/{id}/purchase")
     public ApiResponse<Map<String, Object>> purchaseSlots(
@@ -160,8 +156,8 @@ public class IchibanApiController {
             map.put("prizes", box.getPrizes().stream().map(this::prizeToMap).collect(Collectors.toList()));
         }
 
-        // 計算剩餘格子
-        int remainingSlots = (int) box.getSlots().stream().filter(s -> s.getStatus() == IchibanSlot.Status.AVAILABLE)
+        int remainingSlots = (int) box.getSlots().stream()
+                .filter(s -> s.getStatus() == IchibanSlot.Status.AVAILABLE)
                 .count();
         map.put("remainingSlots", remainingSlots);
 
@@ -193,13 +189,6 @@ public class IchibanApiController {
 
     // ============== 試抽功能 (無需登入，不扣代幣) ==============
 
-    /**
-     * 試抽 - 模擬一番賞抽獎體驗
-     * 不需登入，不扣代幣，隨機返回獎品結果
-     * 
-     * @param id    箱體 ID
-     * @param count 模擬抽取數量 (1-10)
-     */
     @PostMapping("/{id}/trial")
     public ApiResponse<Map<String, Object>> trial(
             @PathVariable Long id,
@@ -215,12 +204,10 @@ public class IchibanApiController {
             count = Math.max(1, Math.min(10, body.get("count")));
         }
 
-        // 從獎品池中隨機抽取（模擬）
-        java.util.List<Map<String, Object>> results = new java.util.ArrayList<>();
-        java.util.Random random = new java.util.Random();
+        List<Map<String, Object>> results = new ArrayList<>();
+        Random random = new Random();
 
-        // 獲取所有可用獎品（有剩餘數量的）
-        java.util.List<IchibanPrize> availablePrizes = box.getPrizes().stream()
+        List<IchibanPrize> availablePrizes = box.getPrizes().stream()
                 .filter(p -> p.getRemainingQuantity() > 0)
                 .collect(Collectors.toList());
 
@@ -228,13 +215,11 @@ public class IchibanApiController {
             return ApiResponse.error("此箱體已售罄，無法試抽");
         }
 
-        // 計算總權重（依剩餘數量加權）
         int totalWeight = availablePrizes.stream()
                 .mapToInt(IchibanPrize::getRemainingQuantity)
                 .sum();
 
         for (int i = 0; i < count; i++) {
-            // 隨機抽取
             int roll = random.nextInt(totalWeight);
             int cumulative = 0;
             IchibanPrize selectedPrize = availablePrizes.get(0);
@@ -247,7 +232,6 @@ public class IchibanApiController {
                 }
             }
 
-            // 模擬格子編號
             int mockSlotNumber = random.nextInt(box.getTotalSlots()) + 1;
             int mockShards = random.nextInt(20) + 1;
 

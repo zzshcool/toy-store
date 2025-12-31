@@ -7,7 +7,7 @@ import com.toy.store.model.PromoCode;
 import com.toy.store.repository.MemberRepository;
 import com.toy.store.service.PromoCodeService;
 import com.toy.store.service.TokenService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -18,17 +18,12 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/promo")
+@RequiredArgsConstructor
 public class PromoCodeApiController {
 
-    @Autowired
-    private PromoCodeService promoCodeService;
+    private final PromoCodeService promoCodeService;
+    private final MemberRepository memberRepository;
 
-    @Autowired
-    private MemberRepository memberRepository;
-
-    /**
-     * 獲取或生成用戶推薦碼
-     */
     @GetMapping("/my-referral")
     public ApiResponse<Map<String, Object>> getMyReferralCode(
             @CurrentUser TokenService.TokenInfo tokenInfo) {
@@ -37,24 +32,18 @@ public class PromoCodeApiController {
             return ApiResponse.error("請先登入");
         }
 
-        Member member = memberRepository.findByUsername(tokenInfo.getUsername()).orElse(null);
-        if (member == null) {
-            return ApiResponse.error("會員不存在");
-        }
-
-        PromoCode code = promoCodeService.generateReferralCode(member.getId());
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("code", code.getCode());
-        result.put("rewardValue", code.getRewardValue());
-        result.put("usedCount", code.getUsedCount());
-
-        return ApiResponse.ok(result);
+        return memberRepository.findByUsername(tokenInfo.getUsername())
+                .map(member -> {
+                    PromoCode code = promoCodeService.generateReferralCode(member.getId());
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("code", code.getCode());
+                    result.put("rewardValue", code.getRewardValue());
+                    result.put("usedCount", code.getUsedCount());
+                    return ApiResponse.ok(result);
+                })
+                .orElseGet(() -> ApiResponse.error("會員不存在"));
     }
 
-    /**
-     * 兌換碼
-     */
     @PostMapping("/redeem")
     public ApiResponse<String> redeemCode(
             @CurrentUser TokenService.TokenInfo tokenInfo,
@@ -64,22 +53,21 @@ public class PromoCodeApiController {
             return ApiResponse.error("請先登入");
         }
 
-        Member member = memberRepository.findByUsername(tokenInfo.getUsername()).orElse(null);
-        if (member == null) {
-            return ApiResponse.error("會員不存在");
-        }
+        return memberRepository.findByUsername(tokenInfo.getUsername())
+                .map(member -> {
+                    String code = request.get("code");
+                    if (code == null || code.trim().isEmpty()) {
+                        return ApiResponse.<String>error("請輸入兌換碼");
+                    }
 
-        String code = request.get("code");
-        if (code == null || code.trim().isEmpty()) {
-            return ApiResponse.error("請輸入兌換碼");
-        }
+                    String result = promoCodeService.redeemCode(member.getId(), code.trim());
 
-        String result = promoCodeService.redeemCode(member.getId(), code.trim());
-
-        if (result.startsWith("兌換成功")) {
-            return ApiResponse.ok(result);
-        } else {
-            return ApiResponse.error(result);
-        }
+                    if (result.startsWith("兌換成功")) {
+                        return ApiResponse.ok(result);
+                    } else {
+                        return ApiResponse.<String>error(result);
+                    }
+                })
+                .orElseGet(() -> ApiResponse.error("會員不存在"));
     }
 }

@@ -16,6 +16,7 @@ public class MissionService {
 
     private final MemberMissionRepository missionRepository;
     private final MemberService memberService;
+    private final SystemSettingService settingService;
 
     /**
      * 更新任務進度
@@ -56,20 +57,26 @@ public class MissionService {
     }
 
     /**
-     * 初始化今日任務
+     * 初始化今日任務（從系統設定取得獎勵和目標值）
      */
     @Transactional
     public void initDailyMissions(Long memberId) {
         LocalDate today = LocalDate.now();
         List<MemberMission> existing = missionRepository.findByMemberIdAndMissionDate(memberId, today);
         if (existing.isEmpty()) {
-            // 從規格書 7.C 定義基礎任務
+            // 從系統設定取得任務配置
+            int loginReward = settingService.getMissionDailyLoginReward();
+            int spendTarget = settingService.getMissionSpendTarget();
+            int spendReward = settingService.getMissionSpendReward();
+            int drawTarget = settingService.getMissionDrawTarget();
+            int drawReward = settingService.getMissionDrawReward();
+
             // 1. 每日登入
-            createMission(memberId, today, MemberMission.MissionType.DAILY_LOGIN, 1, 10);
-            // 2. 消費任務 (例如：累計消費 500)
-            createMission(memberId, today, MemberMission.MissionType.SPEND_AMOUNT, 500, 20);
-            // 3. 抽獎次數 (例如：累計抽獎 10 次)
-            createMission(memberId, today, MemberMission.MissionType.DRAW_COUNT, 10, 30);
+            createMission(memberId, today, MemberMission.MissionType.DAILY_LOGIN, 1, loginReward);
+            // 2. 消費任務
+            createMission(memberId, today, MemberMission.MissionType.SPEND_AMOUNT, spendTarget, spendReward);
+            // 3. 抽獎次數
+            createMission(memberId, today, MemberMission.MissionType.DRAW_COUNT, drawTarget, drawReward);
         }
     }
 

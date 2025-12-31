@@ -3,7 +3,7 @@ package com.toy.store.controller.api;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.DrawVerification;
 import com.toy.store.service.TransparencyService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -13,14 +13,11 @@ import java.util.*;
  */
 @RestController
 @RequestMapping("/api/verification")
+@RequiredArgsConstructor
 public class VerificationApiController {
 
-    @Autowired
-    private TransparencyService transparencyService;
+    private final TransparencyService transparencyService;
 
-    /**
-     * 獲取最近完售的驗證記錄
-     */
     @GetMapping("/completed")
     public ApiResponse<List<Map<String, Object>>> getCompletedVerifications() {
         List<DrawVerification> verifications = transparencyService.getCompletedVerifications();
@@ -39,9 +36,6 @@ public class VerificationApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 獲取特定遊戲的驗證詳情
-     */
     @GetMapping("/{gameType}/{gameId}")
     public ApiResponse<Map<String, Object>> getVerificationDetail(
             @PathVariable String gameType,
@@ -72,9 +66,6 @@ public class VerificationApiController {
                 .orElse(ApiResponse.error("找不到驗證記錄"));
     }
 
-    /**
-     * 驗證哈希值
-     */
     @PostMapping("/verify")
     public ApiResponse<Map<String, Object>> verifyHash(@RequestBody Map<String, Object> request) {
         Long verificationId = Long.valueOf(request.get("verificationId").toString());
@@ -89,9 +80,6 @@ public class VerificationApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 自行計算 SHA256（供用戶驗證）
-     */
     @PostMapping("/compute-hash")
     public ApiResponse<Map<String, Object>> computeHash(@RequestBody Map<String, String> request) {
         String input = request.get("input");

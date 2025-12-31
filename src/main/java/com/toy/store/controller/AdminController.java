@@ -1,43 +1,36 @@
 package com.toy.store.controller;
 
 import com.toy.store.annotation.CurrentUser;
-import com.toy.store.model.Product;
+import com.toy.store.model.*;
+import com.toy.store.repository.AdminActionLogRepository;
+import com.toy.store.repository.AdminUserRepository;
+import com.toy.store.repository.CategoryRepository;
+import com.toy.store.service.AdminService;
 import com.toy.store.service.TokenService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
-import java.util.Map;
-import java.util.LinkedHashMap;
-import java.util.Collections;
-import java.util.Optional;
+
+import java.math.BigDecimal;
+import java.util.*;
 
 @Controller
 @RequestMapping("/admin")
+@RequiredArgsConstructor
 public class AdminController {
 
-    @Autowired
-    private com.toy.store.service.AdminService adminService;
-
-    @Autowired
-    private com.toy.store.repository.AdminUserRepository adminUserRepository;
-
-    @Autowired
-    private com.toy.store.repository.AdminActionLogRepository adminActionLogRepository;
-
-    @Autowired
-    private TokenService tokenService;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private com.toy.store.repository.CategoryRepository categoryRepository;
+    private final AdminService adminService;
+    private final AdminUserRepository adminUserRepository;
+    private final AdminActionLogRepository adminActionLogRepository;
+    private final TokenService tokenService;
+    private final PasswordEncoder passwordEncoder;
+    private final CategoryRepository categoryRepository;
 
     @GetMapping("/login")
     public String adminLogin() {
@@ -48,29 +41,22 @@ public class AdminController {
     public String loginSubmit(@RequestParam String username, @RequestParam String password,
             HttpServletResponse response, HttpServletRequest request) {
 
-        Optional<com.toy.store.model.AdminUser> adminOpt = adminUserRepository.findByUsername(username);
+        Optional<AdminUser> adminOpt = adminUserRepository.findByUsername(username);
 
         if (adminOpt.isPresent()) {
-            com.toy.store.model.AdminUser admin = adminOpt.get();
+            AdminUser admin = adminOpt.get();
             if (passwordEncoder.matches(password, admin.getPassword())) {
-                // Success
                 String token = tokenService.createToken(username, TokenService.ROLE_ADMIN, admin.getPermissions());
                 Cookie cookie = new Cookie("ADMIN_TOKEN", token);
                 cookie.setHttpOnly(true);
                 cookie.setPath("/");
                 cookie.setMaxAge(28800);
                 response.addCookie(cookie);
-
-                // Auto-logged by AOP
-
                 return "redirect:/admin";
             }
         }
 
-        // FAILED login is a POST, but AOP might not capture correctly if we return
-        // early.
-        // Let's keep manual failed log for security.
-        adminActionLogRepository.save(new com.toy.store.model.AdminActionLog(
+        adminActionLogRepository.save(new AdminActionLog(
                 username, "LOGIN_FAILED", "Invalid credentials", "IP: " + request.getRemoteAddr()));
 
         return "redirect:/admin/login?error";
@@ -112,11 +98,10 @@ public class AdminController {
                 memberPage, memberSize, txPage, txSize, logPage, logSize, gachaPage, gachaSize);
         model.addAllAttributes(data);
 
-        // Initialize new objects for forms
         model.addAttribute("newProduct", new Product());
-        model.addAttribute("newTheme", new com.toy.store.model.GachaTheme());
-        model.addAttribute("newActivity", new com.toy.store.model.Activity());
-        model.addAttribute("newCategory", new com.toy.store.model.Category());
+        model.addAttribute("newTheme", new GachaTheme());
+        model.addAttribute("newActivity", new Activity());
+        model.addAttribute("newCategory", new Category());
 
         return "admin";
     }
@@ -135,8 +120,7 @@ public class AdminController {
     }
 
     @PostMapping("/categories")
-    public String createCategory(@ModelAttribute com.toy.store.model.Category category,
-            @CurrentUser TokenService.TokenInfo info) {
+    public String createCategory(@ModelAttribute Category category, @CurrentUser TokenService.TokenInfo info) {
         adminService.createCategory(category, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=categories";
     }
@@ -150,8 +134,9 @@ public class AdminController {
 
     @GetMapping("/api/subcategories/{categoryId}")
     @ResponseBody
-    public List<com.toy.store.model.SubCategory> getSubCategories(@PathVariable Long categoryId) {
-        return categoryRepository.findById(categoryId).map(com.toy.store.model.Category::getSubCategories)
+    public List<SubCategory> getSubCategories(@PathVariable Long categoryId) {
+        return categoryRepository.findById(categoryId)
+                .map(Category::getSubCategories)
                 .orElse(Collections.emptyList());
     }
 
@@ -170,25 +155,21 @@ public class AdminController {
 
     // --- Gacha Management ---
     @PostMapping("/gacha/themes")
-    public String createTheme(@ModelAttribute com.toy.store.model.GachaTheme theme,
-            @CurrentUser TokenService.TokenInfo info) {
+    public String createTheme(@ModelAttribute GachaTheme theme, @CurrentUser TokenService.TokenInfo info) {
         adminService.createTheme(theme, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=mystery";
     }
 
     @PostMapping("/gacha/items")
-    public String createGachaItem(@RequestParam Long themeId,
-            @ModelAttribute com.toy.store.model.GachaItem item,
+    public String createGachaItem(@RequestParam Long themeId, @ModelAttribute GachaItem item,
             @CurrentUser TokenService.TokenInfo info) {
         adminService.createGachaItem(themeId, item, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=mystery";
     }
 
     @PostMapping("/gacha/items/update")
-    public String updateGachaItem(@RequestParam Long id,
-            @RequestParam String name,
-            @RequestParam java.math.BigDecimal estimatedValue,
-            @RequestParam Integer weight,
+    public String updateGachaItem(@RequestParam Long id, @RequestParam String name,
+            @RequestParam BigDecimal estimatedValue, @RequestParam Integer weight,
             @CurrentUser TokenService.TokenInfo info) {
         adminService.updateGachaItem(id, name, estimatedValue, weight, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=mystery";
@@ -202,22 +183,16 @@ public class AdminController {
     }
 
     @PostMapping("/gacha/themes/update")
-    public String updateTheme(@RequestParam Long id,
-            @RequestParam String name,
-            @RequestParam java.math.BigDecimal price,
+    public String updateTheme(@RequestParam Long id, @RequestParam String name, @RequestParam BigDecimal price,
             @CurrentUser TokenService.TokenInfo info) {
         adminService.updateTheme(id, name, price, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=mystery";
     }
 
     @PostMapping("/activities/update")
-    public String updateActivity(@RequestParam Long id,
-            @RequestParam String title,
-            @RequestParam String description,
-            @RequestParam String type,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String expiryDate,
-            @CurrentUser TokenService.TokenInfo info) {
+    public String updateActivity(@RequestParam Long id, @RequestParam String title, @RequestParam String description,
+            @RequestParam String type, @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String expiryDate, @CurrentUser TokenService.TokenInfo info) {
         adminService.updateActivity(id, title, description, type, startDate, expiryDate,
                 info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=activities";
@@ -230,12 +205,8 @@ public class AdminController {
     }
 
     @PostMapping("/members/update")
-    public String updateMember(@RequestParam Long id,
-            @RequestParam String email,
-            @RequestParam String nickname,
-            @RequestParam boolean enabled,
-            @RequestParam com.toy.store.model.MemberLevel level,
-            @CurrentUser TokenService.TokenInfo info) {
+    public String updateMember(@RequestParam Long id, @RequestParam String email, @RequestParam String nickname,
+            @RequestParam boolean enabled, @RequestParam MemberLevel level, @CurrentUser TokenService.TokenInfo info) {
         adminService.updateMember(id, email, nickname, enabled, level, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=members";
     }
@@ -267,15 +238,13 @@ public class AdminController {
     }
 
     @PostMapping("/member-levels")
-    public String createMemberLevel(@ModelAttribute com.toy.store.model.MemberLevel memberLevel,
-            @CurrentUser TokenService.TokenInfo info) {
+    public String createMemberLevel(@ModelAttribute MemberLevel memberLevel, @CurrentUser TokenService.TokenInfo info) {
         adminService.saveMemberLevel(memberLevel, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=levels";
     }
 
     @PostMapping("/member-levels/update")
-    public String updateMemberLevel(@ModelAttribute com.toy.store.model.MemberLevel memberLevel,
-            @CurrentUser TokenService.TokenInfo info) {
+    public String updateMemberLevel(@ModelAttribute MemberLevel memberLevel, @CurrentUser TokenService.TokenInfo info) {
         adminService.saveMemberLevel(memberLevel, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=levels";
     }
@@ -302,108 +271,101 @@ public class AdminController {
 
     @PostMapping("/platform/carousel/create")
     @ResponseBody
-    public org.springframework.http.ResponseEntity<Map<String, Object>> createCarouselSlide(
+    public ResponseEntity<Map<String, Object>> createCarouselSlide(
             @RequestParam String imageUrl, @RequestParam(required = false) String linkUrl,
             @CurrentUser TokenService.TokenInfo info) {
 
-        Map<String, Object> response = new java.util.LinkedHashMap<>();
+        Map<String, Object> response = new LinkedHashMap<>();
         try {
-            com.toy.store.model.CarouselSlide saved = adminService.createCarouselSlide(imageUrl, linkUrl,
+            CarouselSlide saved = adminService.createCarouselSlide(imageUrl, linkUrl,
                     info != null ? info.getUsername() : "System");
             response.put("success", true);
             response.put("slide", saved);
-            return org.springframework.http.ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", e.getMessage());
-            return org.springframework.http.ResponseEntity.status(500).body(response);
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     @PostMapping("/platform/carousel/delete/{id}")
     @ResponseBody
-    public org.springframework.http.ResponseEntity<Map<String, Object>> deleteCarouselSlide(
+    public ResponseEntity<Map<String, Object>> deleteCarouselSlide(
             @PathVariable Long id, @CurrentUser TokenService.TokenInfo info) {
-        Map<String, Object> response = new java.util.LinkedHashMap<>();
+        Map<String, Object> response = new LinkedHashMap<>();
         try {
             adminService.deleteCarouselSlide(id, info != null ? info.getUsername() : "System");
             response.put("success", true);
-            return org.springframework.http.ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", e.getMessage());
-            return org.springframework.http.ResponseEntity.status(500).body(response);
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     @PostMapping("/platform/featured/add")
     @ResponseBody
-    public org.springframework.http.ResponseEntity<Map<String, Object>> addFeaturedItem(
-            @RequestParam Long productId,
-            @RequestParam com.toy.store.model.FeaturedItem.Type type,
-            @RequestParam(defaultValue = "0") Integer sortOrder,
-            @CurrentUser TokenService.TokenInfo info) {
+    public ResponseEntity<Map<String, Object>> addFeaturedItem(
+            @RequestParam Long productId, @RequestParam FeaturedItem.Type type,
+            @RequestParam(defaultValue = "0") Integer sortOrder, @CurrentUser TokenService.TokenInfo info) {
 
         Map<String, Object> response = new LinkedHashMap<>();
         try {
-            com.toy.store.model.FeaturedItem saved = adminService.addFeaturedItem(productId, type, sortOrder,
+            FeaturedItem saved = adminService.addFeaturedItem(productId, type, sortOrder,
                     info != null ? info.getUsername() : "System");
             response.put("success", true);
             response.put("item", saved);
             response.put("productName", saved.getProduct().getName());
-            return org.springframework.http.ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", e.getMessage());
-            return org.springframework.http.ResponseEntity.status(500).body(response);
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     @PostMapping("/platform/featured/delete/{id}")
     @ResponseBody
-    public org.springframework.http.ResponseEntity<Map<String, Object>> deleteFeaturedItem(
+    public ResponseEntity<Map<String, Object>> deleteFeaturedItem(
             @PathVariable Long id, @CurrentUser TokenService.TokenInfo info) {
         Map<String, Object> response = new LinkedHashMap<>();
         try {
             adminService.deleteFeaturedItem(id, info != null ? info.getUsername() : "System");
             response.put("success", true);
-            return org.springframework.http.ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", e.getMessage());
-            return org.springframework.http.ResponseEntity.status(500).body(response);
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     @PostMapping("/platform/notification/send")
     @ResponseBody
-    public org.springframework.http.ResponseEntity<Map<String, Object>> sendNotification(
-            @ModelAttribute com.toy.store.model.Notification notification,
-            @CurrentUser TokenService.TokenInfo info) {
+    public ResponseEntity<Map<String, Object>> sendNotification(
+            @ModelAttribute Notification notification, @CurrentUser TokenService.TokenInfo info) {
 
         Map<String, Object> response = new LinkedHashMap<>();
         try {
-            com.toy.store.model.Notification saved = adminService.sendNotification(notification,
+            Notification saved = adminService.sendNotification(notification,
                     info != null ? info.getUsername() : "System");
             response.put("success", true);
             response.put("notification", saved);
-            return org.springframework.http.ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", e.getMessage());
-            return org.springframework.http.ResponseEntity.status(500).body(response);
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     @PostMapping("/coupons")
     public String createCoupon(
-            @RequestParam String name,
-            @RequestParam String code,
-            @RequestParam com.toy.store.model.Coupon.CouponType type,
-            @RequestParam java.math.BigDecimal value,
-            @RequestParam String description,
-            @RequestParam(required = false) String validFrom,
-            @RequestParam(required = false) String validUntil,
+            @RequestParam String name, @RequestParam String code, @RequestParam Coupon.CouponType type,
+            @RequestParam BigDecimal value, @RequestParam String description,
+            @RequestParam(required = false) String validFrom, @RequestParam(required = false) String validUntil,
             @CurrentUser TokenService.TokenInfo info) {
         adminService.createCoupon(name, code, type, value, description, validFrom, validUntil,
                 info != null ? info.getUsername() : "System");

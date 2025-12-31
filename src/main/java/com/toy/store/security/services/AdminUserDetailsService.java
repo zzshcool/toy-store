@@ -2,7 +2,7 @@ package com.toy.store.security.services;
 
 import com.toy.store.model.AdminUser;
 import com.toy.store.repository.AdminUserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -10,10 +10,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class AdminUserDetailsService implements UserDetailsService {
 
-    @Autowired
-    AdminUserRepository adminUserRepository;
+    private final AdminUserRepository adminUserRepository;
 
     @Override
     @Transactional

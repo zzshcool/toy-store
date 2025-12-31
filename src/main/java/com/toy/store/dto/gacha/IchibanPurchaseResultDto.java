@@ -25,7 +25,7 @@ public class IchibanPurchaseResultDto {
     public static IchibanPurchaseResultDto from(IchibanService.PurchaseResult result) {
         IchibanPurchaseResultDto dto = new IchibanPurchaseResultDto();
         dto.setTotalCost(result.getTotalCost());
-        dto.setTotalShards(result.totalShards());
+        dto.setTotalShards(result.getTotalShards());
         dto.setSlots(result.getSlots().stream().map(slot -> {
             SlotResultDto slotDto = new SlotResultDto();
             slotDto.setSlotNumber(slot.getSlotNumber());

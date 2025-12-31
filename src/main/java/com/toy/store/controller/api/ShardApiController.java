@@ -1,13 +1,13 @@
 package com.toy.store.controller.api;
 
-import com.toy.store.exception.AppException;
-
 import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
+import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
+import com.toy.store.repository.MemberRepository;
 import com.toy.store.service.ShardService;
 import com.toy.store.service.TokenService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -20,17 +20,12 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class ShardApiController {
 
-    @Autowired
-    private ShardService shardService;
+    private final ShardService shardService;
+    private final MemberRepository memberRepository;
 
-    @Autowired
-    private com.toy.store.repository.MemberRepository memberRepository;
-
-    /**
-     * 取得碎片餘額
-     */
     @GetMapping("/shards/balance")
     public ApiResponse<Map<String, Object>> getBalance(@CurrentUser TokenService.TokenInfo info) {
         Long memberId = getMemberId(info);
@@ -44,9 +39,6 @@ public class ShardApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 取得碎片交易紀錄
-     */
     @GetMapping("/shards/transactions")
     public ApiResponse<List<Map<String, Object>>> getTransactions(@CurrentUser TokenService.TokenInfo info) {
         Long memberId = getMemberId(info);
@@ -61,9 +53,6 @@ public class ShardApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 取得兌換商店商品
-     */
     @GetMapping("/redeem-shop")
     public ApiResponse<List<Map<String, Object>>> getShopItems() {
         List<RedeemShopItem> items = shardService.getAllItems();
@@ -73,9 +62,6 @@ public class ShardApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 兌換商品
-     */
     @PostMapping("/redeem-shop/{id}/redeem")
     public ApiResponse<Map<String, Object>> redeem(
             @PathVariable Long id,

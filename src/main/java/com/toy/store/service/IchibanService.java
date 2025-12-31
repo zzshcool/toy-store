@@ -178,14 +178,14 @@ public class IchibanService extends BaseGachaService {
         List<IchibanSlot> lockedSlots = new java.util.ArrayList<>();
         for (Integer slotNumber : slotNumbers) {
             IchibanSlot slot = slotRepository.findByBox_IdAndSlotNumber(boxId, slotNumber)
-                    .orElseThrow(() -> new RuntimeException("格子 " + slotNumber + " 不存在"));
+                    .orElseThrow(() -> new AppException("格子 " + slotNumber + " 不存在"));
 
             if (slot.getStatus() == IchibanSlot.Status.REVEALED) {
-                throw new RuntimeException("格子 " + slotNumber + " 已被揭曉");
+                throw new AppException("格子 " + slotNumber + " 已被揭曉");
             }
             if (slot.getStatus() == IchibanSlot.Status.LOCKED && !slot.isLockExpired()) {
                 if (!slot.getLockedByMemberId().equals(memberId)) {
-                    throw new RuntimeException("格子 " + slotNumber + " 被其他玩家鎖定");
+                    throw new AppException("格子 " + slotNumber + " 被其他玩家鎖定");
                 }
             }
             slot.lock(memberId);
@@ -267,7 +267,7 @@ public class IchibanService extends BaseGachaService {
             return totalCost;
         }
 
-        public int totalShards() {
+        public int getTotalShards() {
             return totalShards;
         }
     }

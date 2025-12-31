@@ -188,6 +188,153 @@
             border-radius: 20px;
             font-size: 0.8rem;
         }
+
+        .badge-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .badge-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .badge-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .badge-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 8% auto;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: var(--danger-color);
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+        }
+
+        .modal-footer {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 0.8rem;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
     </style>
 </head>
 
@@ -201,72 +348,112 @@
             </div>
 
             <nav class="sidebar-menu">
-                <div class="menu-category">核心管理</div>
-                <a th:href="@{/admin?tab=overview}" class="menu-item"
-                    th:classappend="${activeTab == 'overview' ? 'active' : ''}">
-                    數據概覽
+                <div class="menu-category">核心</div>
+                <a th:href="@{/admin?tab=dashboard-overview}" class="menu-item"
+                    th:classappend="${activeTab == 'dashboard-overview' ? 'active' : ''}">
+                    儀表板
                 </a>
                 <a th:href="@{/admin?tab=members}" class="menu-item"
                     th:classappend="${activeTab == 'members' ? 'active' : ''}">
-                    會員等級管理
+                    會員管理
+                </a>
+                <a th:href="@{/admin?tab=member-tags}" class="menu-item"
+                    th:classappend="${activeTab == 'member-tags' ? 'active' : ''}">
+                    會員標籤
+                </a>
+                <a th:href="@{/admin?tab=levels}" class="menu-item"
+                    th:classappend="${activeTab == 'levels' ? 'active' : ''}">
+                    等級管理
                 </a>
                 <a th:href="@{/admin?tab=products}" class="menu-item"
                     th:classappend="${activeTab == 'products' ? 'active' : ''}">
-                    商品與分類管理
+                    商品管理
                 </a>
+                <a th:href="@{/admin?tab=categories}" class="menu-item"
+                    th:classappend="${activeTab == 'categories' ? 'active' : ''}">
+                    分類管理
+                </a>
+
+                <div class="menu-category">抽獎</div>
+                <a th:href="@{/admin?tab=gacha-ips}" class="menu-item"
+                    th:classappend="${activeTab == 'gacha-ips' ? 'active' : ''}">
+                    IP 主題
+                </a>
+                <a th:href="@{/admin?tab=gacha-ichiban}" class="menu-item"
+                    th:classappend="${activeTab == 'gacha-ichiban' ? 'active' : ''}">
+                    一番賞
+                </a>
+                <a th:href="@{/admin?tab=gacha-roulette}" class="menu-item"
+                    th:classappend="${activeTab == 'gacha-roulette' ? 'active' : ''}">
+                    轉盤
+                </a>
+                <a th:href="@{/admin?tab=gacha-bingo}" class="menu-item"
+                    th:classappend="${activeTab == 'gacha-bingo' ? 'active' : ''}">
+                    九宮格
+                </a>
+                <a th:href="@{/admin?tab=mystery}" class="menu-item"
+                    th:classappend="${activeTab == 'mystery' ? 'active' : ''}">
+                    扭蛋主題
+                </a>
+                <a th:href="@{/admin?tab=gacha-redeem}" class="menu-item"
+                    th:classappend="${activeTab == 'gacha-redeem' ? 'active' : ''}">
+                    碎片商店
+                </a>
+
+                <div class="menu-category">營運</div>
                 <a th:href="@{/admin?tab=transactions}" class="menu-item"
                     th:classappend="${activeTab == 'transactions' ? 'active' : ''}">
-                    交易紀錄查詢
+                    交易紀錄
                 </a>
-
-                <div class="menu-category">抽獎系統</div>
-                <a th:href="@{/admin/gacha/ips}" class="menu-item"
-                    th:classappend="${activePage == 'ips' ? 'active' : ''}">
-                    IP 主題管理
+                <a th:href="@{/admin?tab=payment-orders}" class="menu-item"
+                    th:classappend="${activeTab == 'payment-orders' ? 'active' : ''}">
+                    金流訂單
                 </a>
-                <a th:href="@{/admin/gacha/ichiban}" class="menu-item"
-                    th:classappend="${activePage == 'ichiban' ? 'active' : ''}">
-                    一番賞管理
-                </a>
-                <a th:href="@{/admin/gacha/roulette}" class="menu-item"
-                    th:classappend="${activePage == 'roulette' ? 'active' : ''}">
-                    幸運轉盤
-                </a>
-                <a th:href="@{/admin/gacha/bingo}" class="menu-item"
-                    th:classappend="${activePage == 'bingo' ? 'active' : ''}">
-                    歡樂九宮格
-                </a>
-                <a th:href="@{/admin/gacha/redeem}" class="menu-item"
-                    th:classappend="${activePage == 'redeem' ? 'active' : ''}">
-                    碎片兌換商店
-                </a>
-
-                <div class="menu-category">行銷與平台</div>
-                <a th:href="@{/admin?tab=coupons}" class="menu-item"
-                    th:classappend="${activeTab == 'coupons' ? 'active' : ''}">
-                    優惠券管理
+                <a th:href="@{/admin?tab=logistics}" class="menu-item"
+                    th:classappend="${activeTab == 'logistics' ? 'active' : ''}">
+                    物流管理
                 </a>
                 <a th:href="@{/admin?tab=activities}" class="menu-item"
                     th:classappend="${activeTab == 'activities' ? 'active' : ''}">
-                    活動與廣告
+                    活動管理
+                </a>
+                <a th:href="@{/admin?tab=coupons}" class="menu-item"
+                    th:classappend="${activeTab == 'coupons' ? 'active' : ''}">
+                    優惠券
+                </a>
+                <a th:href="@{/admin?tab=announcements}" class="menu-item"
+                    th:classappend="${activeTab == 'announcements' ? 'active' : ''}">
+                    系統公告
+                </a>
+                <a th:href="@{/admin?tab=promo-codes}" class="menu-item"
+                    th:classappend="${activeTab == 'promo-codes' ? 'active' : ''}">
+                    禮包碼
                 </a>
                 <a th:href="@{/admin?tab=platform}" class="menu-item"
                     th:classappend="${activeTab == 'platform' ? 'active' : ''}">
-                    平台介面設定
+                    平台設定
+                </a>
+
+                <div class="menu-category">系統</div>
+                <a th:href="@{/admin?tab=rbac}" class="menu-item"
+                    th:classappend="${activeTab == 'rbac' ? 'active' : ''}">
+                    權限管理
                 </a>
                 <a th:href="@{/admin?tab=logs}" class="menu-item"
                     th:classappend="${activeTab == 'logs' ? 'active' : ''}">
-                    系統審計日誌
+                    操作日誌
                 </a>
-
-                <div class="menu-category">系統操作</div>
+                <a th:href="@{/admin?tab=transparency}" class="menu-item"
+                    th:classappend="${activeTab == 'transparency' ? 'active' : ''}">
+                    透明驗證
+                </a>
                 <a th:href="@{/}" target="_blank" class="menu-item">
-                    前往商場首頁
+                    前往前台
                 </a>
                 <form th:action="@{/admin/logout}" method="post" id="logoutForm">
                     <a href="javascript:void(0)" onclick="document.getElementById('logoutForm').submit()"
                         class="menu-item" style="color: var(--danger-color)">
-                        登出系統
+                        登出
                     </a>
                 </form>
             </nav>

@@ -52,4 +52,19 @@ public class SystemSetting {
     public static final String CAPTCHA_ENABLED = "captcha.enabled";
     public static final String CAPTCHA_TYPE = "captcha.type"; // GRAPHIC 或 OTP
     public static final String OTP_ENABLED = "otp.enabled";
+
+    // 導航管理設定
+    public static final String MODULE_BLINDBOX_ENABLED = "module.blindbox.enabled";
+    public static final String NAV_ITEM_ORDER = "nav.item.order"; // 如：ichiban,roulette,bingo,gacha,blindbox
+
+    // 簽到獎勵設定
+    public static final String SIGNIN_DAILY_REWARD = "signin.daily.reward"; // 每日簽到獎勵
+    public static final String SIGNIN_WEEKLY_BONUS = "signin.weekly.bonus"; // 連續7天獎勵
+
+    // 任務獎勵設定
+    public static final String MISSION_DAILY_LOGIN_REWARD = "mission.daily.login.reward";
+    public static final String MISSION_SPEND_REWARD = "mission.spend.reward";
+    public static final String MISSION_DRAW_REWARD = "mission.draw.reward";
+    public static final String MISSION_SPEND_TARGET = "mission.spend.target";
+    public static final String MISSION_DRAW_TARGET = "mission.draw.target";
 }

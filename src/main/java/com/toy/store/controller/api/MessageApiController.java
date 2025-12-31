@@ -2,12 +2,13 @@ package com.toy.store.controller.api;
 
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.MemberMessage;
+import com.toy.store.repository.MemberRepository;
 import com.toy.store.service.MessageService;
 import com.toy.store.service.TokenService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,17 +18,12 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/messages")
+@RequiredArgsConstructor
 public class MessageApiController {
 
-    @Autowired
-    private MessageService messageService;
+    private final MessageService messageService;
+    private final MemberRepository memberRepository;
 
-    @Autowired
-    private com.toy.store.repository.MemberRepository memberRepository;
-
-    /**
-     * 取得所有消息
-     */
     @GetMapping
     public ApiResponse<List<MemberMessage>> getMessages(HttpServletRequest request) {
         TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
@@ -40,9 +36,6 @@ public class MessageApiController {
                 .orElse(ApiResponse.error("會員不存在"));
     }
 
-    /**
-     * 取得未讀消息數量
-     */
     @GetMapping("/unread-count")
     public ApiResponse<Map<String, Object>> getUnreadCount(HttpServletRequest request) {
         TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
@@ -65,9 +58,6 @@ public class MessageApiController {
                 });
     }
 
-    /**
-     * 標記單條消息已讀
-     */
     @PostMapping("/{id}/read")
     public ApiResponse<Void> markAsRead(@PathVariable Long id, HttpServletRequest request) {
         TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");
@@ -79,9 +69,6 @@ public class MessageApiController {
         return ApiResponse.ok(null, "已標記為已讀");
     }
 
-    /**
-     * 標記全部已讀
-     */
     @PostMapping("/read-all")
     public ApiResponse<Void> markAllAsRead(HttpServletRequest request) {
         TokenService.TokenInfo user = (TokenService.TokenInfo) request.getAttribute("currentUser");

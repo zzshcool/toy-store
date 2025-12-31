@@ -204,10 +204,13 @@
                 updateCartBar();
 
                 const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                document.getElementById('trialModeBanner').style.display = 'block'; // 始終顯示或改為特定提示
-                document.getElementById('trialModeBanner').innerHTML = isLoggedIn
-                    ? '✨ 目前為試抽模式 (登入中)，結果不列入紀錄。'
-                    : '✨ 目前為試抽模式，結果不列入紀錄。立即登入贏取真品！';
+                // 只有未登入時顯示試抽模式提示
+                if (!isLoggedIn) {
+                    document.getElementById('trialModeBanner').style.display = 'block';
+                    document.getElementById('trialModeBanner').innerHTML = '✨ 目前為試抽模式，結果不列入紀錄。立即登入贏取真品！';
+                } else {
+                    document.getElementById('trialModeBanner').style.display = 'none';
+                }
 
                 document.getElementById('boxList').style.display = 'none';
                 document.getElementById('slotSection').style.display = 'block';

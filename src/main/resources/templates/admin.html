@@ -3,42 +3,33 @@
 
 <body>
     <div th:fragment="content">
-        <!-- Tabs -->
+        <!-- 錯誤訊息 -->
         <div th:if="${errorMessage}" class="alert alert-danger"
             style="color: red; padding: 10px; border: 1px solid red; margin-bottom: 10px;">
             <b th:text="${errorMessage}">Error</b>
         </div>
-        <div
-            style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; flex-wrap: wrap;">
-            <button onclick="openTab('members')" class="btn btn-outline btn-sm">會員管理</button>
-            <button onclick="openTab('levels')" class="btn btn-outline btn-sm">等級管理</button>
-            <button onclick="openTab('products')" class="btn btn-outline btn-sm">商品管理</button>
-            <button onclick="openTab('categories')" class="btn btn-outline btn-sm">分類管理</button>
-            <button onclick="openTab('mystery')" class="btn btn-outline btn-sm">扭蛋管理</button>
-            <button onclick="openTab('transactions')" class="btn btn-outline btn-sm">交易管理</button>
-            <button onclick="openTab('activities')" class="btn btn-outline btn-sm">活動管理</button>
-            <button onclick="openTab('coupons')" class="btn btn-outline btn-sm">優惠券管理</button>
-            <button onclick="openTab('platform')" class="btn btn-outline btn-sm">平台管理</button>
-            <button onclick="openTab('logs')" class="btn btn-outline btn-sm">操作日誌</button>
-            <!-- 抽獎系統管理 Tabs -->
-            <button onclick="openTab('gacha-ips')" class="btn btn-outline btn-sm"
-                style="background: #e8f4fd;">IP主題</button>
-            <button onclick="openTab('gacha-ichiban')" class="btn btn-outline btn-sm"
-                style="background: #e8f4fd;">一番賞</button>
-            <button onclick="openTab('gacha-roulette')" class="btn btn-outline btn-sm"
-                style="background: #e8f4fd;">轉盤</button>
-            <button onclick="openTab('gacha-bingo')" class="btn btn-outline btn-sm"
-                style="background: #e8f4fd;">九宮格</button>
-            <button onclick="openTab('gacha-redeem')" class="btn btn-outline btn-sm"
-                style="background: #e8f4fd;">碎片商店</button>
-            <button onclick="openTab('rbac')" class="btn btn-outline btn-sm" style="background: #ffe4e1;">🔐
-                角色權限</button>
+
+        <!-- History Modal -->
+        <div id="historyModal" class="modal"
+            style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);">
+            <div class="modal-content"
+                style="background: white; margin: 10% auto; padding: 30px; border-radius: 10px; max-width: 600px; position: relative;">
+                <span onclick="document.getElementById('historyModal').style.display='none'"
+                    style="position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 24px;">&times;</span>
+                <h3 style="margin-bottom: 20px;">📋 會員詳細資訊</h3>
+                <div id="historyModalContent">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+            </div>
         </div>
 
         <!-- Member Management -->
         <div id="members" class="tab-content">
-            <h3>會員列表</h3>
-            <table>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0;">會員列表</h3>
+                <button class="btn btn-success" onclick="exportMembersCSV()">📥 匯出 CSV</button>
+            </div>
+            <table id="members-table">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -620,6 +611,18 @@
                         </form>
                     </div>
 
+                    <div style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                        <h5>📌 按會員標籤派發</h5>
+                        <div style="display:flex; gap:10px;">
+                            <select id="distTagId" class="form-control" required>
+                                <option value="">選擇標籤</option>
+                                <!-- 從 API 動態載入 -->
+                            </select>
+                            <button type="button" class="btn btn-success" onclick="distributeByTag()">批量派發</button>
+                        </div>
+                        <p id="distTagResult" style="margin-top: 10px; color: #27ae60;"></p>
+                    </div>
+
                     <div>
                         <h5>按會員ID派發</h5>
                         <form th:action="@{/admin/coupons/distribute/member}" method="post"
@@ -638,9 +641,9 @@
             </div>
         </div>
 
-        <!-- Platform Management -->
-        <div id="platform" class="tab-content" style="display:none;">
-            <h3>平台管理</h3>
+        <!-- [已整合到新版 platform Tab，以下舊版可刪除] -->
+        <div id="platform-old" class="tab-content" style="display:none;">
+            <h3>平台管理 (舊版)</h3>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <!-- Carousel Management -->
@@ -809,6 +812,38 @@
         <!-- Logs -->
         <div id="logs" class="tab-content" style="display:none;">
             <h3>操作日誌</h3>
+
+            <!-- 搜尋過濾區 -->
+            <div class="card" style="padding: 15px; margin-bottom: 20px;">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: end;">
+                    <div>
+                        <label>操作者</label>
+                        <input type="text" id="log-search-user" placeholder="搜尋操作者" class="form-control"
+                            style="width: 150px;">
+                    </div>
+                    <div>
+                        <label>動作類型</label>
+                        <select id="log-filter-action" class="form-control" style="width: 150px;">
+                            <option value="">全部</option>
+                            <option value="LOGIN">登入</option>
+                            <option value="CREATE">建立</option>
+                            <option value="UPDATE">更新</option>
+                            <option value="DELETE">刪除</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>日期範圍</label>
+                        <input type="date" id="log-date-from" class="form-control" style="width: 140px;">
+                    </div>
+                    <div>
+                        <label style="visibility: hidden;">-</label>
+                        <input type="date" id="log-date-to" class="form-control" style="width: 140px;">
+                    </div>
+                    <button class="btn btn-primary" onclick="filterLogs()">搜尋</button>
+                    <button class="btn btn-outline" onclick="clearLogFilters()">清除</button>
+                </div>
+            </div>
+
             <table>
                 <thead>
                     <tr>
@@ -820,7 +855,7 @@
                         <th>時間</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="logs-table-body">
                     <tr th:each="log : ${logs}">
                         <td th:text="${log.id}">1</td>
                         <td th:text="${log.adminUsername}">User</td>
@@ -837,9 +872,9 @@
             </table>
         </div>
 
-        <!-- RBAC 角色權限管理 -->
-        <div id="rbac" class="tab-content" style="display:none;">
-            <h3>🔐 角色權限管理</h3>
+        <!-- [已整合到新版 rbac Tab，以下舊版可刪除] -->
+        <div id="rbac-old" class="tab-content" style="display:none;">
+            <h3>🔐 角色權限管理 (舊版)</h3>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <!-- 管理員帳號 -->
@@ -1204,6 +1239,339 @@
             </table>
         </div>
 
+        <!-- 平台設定 -->
+        <div id="platform" class="tab-content" style="display:none;">
+            <h3>平台設定</h3>
+
+            <!-- 輪播圖管理 -->
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>輪播圖管理</h4>
+                <form th:action="@{/admin/carousel/create}" method="post" style="margin-bottom: 15px;">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr auto; gap: 10px; align-items: end;">
+                        <div>
+                            <label>圖片網址</label>
+                            <input type="text" name="imageUrl" placeholder="https://..." class="form-control"
+                                required />
+                        </div>
+                        <div>
+                            <label>連結網址</label>
+                            <input type="text" name="linkUrl" placeholder="/products 或 https://..."
+                                class="form-control" />
+                        </div>
+                        <button type="submit" class="btn btn-primary">新增</button>
+                    </div>
+                </form>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>預覽</th>
+                            <th>連結</th>
+                            <th>排序</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="slide : ${carouselSlides}">
+                            <td th:text="${slide.id}">1</td>
+                            <td><img th:src="${slide.imageUrl}" style="height: 50px; border-radius: 4px;" /></td>
+                            <td th:text="${slide.linkUrl ?: '-'}">-</td>
+                            <td th:text="${slide.sortOrder}">0</td>
+                            <td>
+                                <form th:action="@{/admin/carousel/{id}/delete(id=${slide.id})}" method="post"
+                                    style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-danger"
+                                        onclick="return confirm('確定刪除？')">刪除</button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 精選商品管理 -->
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>精選商品（新品/熱賣）</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <h5>新品推薦</h5>
+                        <ul>
+                            <li th:each="item : ${newArrivals}" th:text="${item.product.name}">商品名</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h5>熱賣排行</h5>
+                        <ul>
+                            <li th:each="item : ${bestSellers}" th:text="${item.product.name}">商品名</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 系統設定 -->
+            <div class="card" style="padding: 20px;">
+                <h4>系統設定</h4>
+                <p style="color: #888; font-size: 0.9rem; margin-bottom: 15px;">功能開關與遊戲參數配置</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>設定項</th>
+                            <th>說明</th>
+                            <th>目前值</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="system-settings-table">
+                        <!-- 動態載入 -->
+                    </tbody>
+                </table>
+                <div style="margin-top: 15px; text-align: right;">
+                    <button class="btn btn-primary" onclick="saveAllSettings()">儲存所有設定</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 禮包碼管理 -->
+        <div id="promo-codes" class="tab-content" style="display:none;">
+            <h3>禮包碼管理</h3>
+
+            <!-- 建立禮包碼 -->
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>建立新禮包碼</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <input type="text" id="promo-name" placeholder="禮包名稱" class="form-control" />
+                    <select id="promo-reward-type" class="form-control">
+                        <option value="TOKENS">代幣</option>
+                        <option value="BONUS">紅利點數</option>
+                        <option value="SHARDS">碎片</option>
+                    </select>
+                    <input type="number" id="promo-reward-value" placeholder="獎勵數量" class="form-control" />
+                    <input type="number" id="promo-max-uses" placeholder="最大使用次數" class="form-control" value="100" />
+                    <input type="datetime-local" id="promo-valid-until" class="form-control" />
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="promo-description" placeholder="描述（可選）" class="form-control"
+                        style="flex: 1;" />
+                    <button class="btn btn-primary" onclick="createPromoCode()">建立禮包碼</button>
+                </div>
+            </div>
+
+            <!-- 禮包碼列表 -->
+            <div class="card" style="padding: 20px;">
+                <h4>禮包碼列表</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>代碼</th>
+                            <th>名稱</th>
+                            <th>類型</th>
+                            <th>獎勵</th>
+                            <th>使用/上限</th>
+                            <th>狀態</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="promo-codes-table">
+                        <!-- 動態載入 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- RBAC 權限管理 -->
+        <div id="rbac" class="tab-content" style="display:none;">
+            <h3>角色權限管理</h3>
+
+            <!-- 角色列表 -->
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>角色列表</h4>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="new-role-name" placeholder="新角色名稱" class="form-control"
+                        style="width: 200px;" />
+                    <select id="new-role-perms" class="form-control" style="width: 300px;" multiple>
+                        <!-- 動態載入權限選項 -->
+                    </select>
+                    <button class="btn btn-primary" onclick="createRole()">新增角色</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>角色名稱</th>
+                            <th>權限</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rbac-roles-table">
+                        <!-- 動態載入 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 權限列表 -->
+            <div class="card" style="padding: 20px;">
+                <h4>權限列表</h4>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="new-perm-code" placeholder="權限代碼 (如 MEMBER_VIEW)" class="form-control"
+                        style="width: 200px;" />
+                    <input type="text" id="new-perm-name" placeholder="權限名稱" class="form-control"
+                        style="width: 200px;" />
+                    <input type="text" id="new-perm-desc" placeholder="描述 (可選)" class="form-control"
+                        style="width: 200px;" />
+                    <button class="btn btn-primary" onclick="createPermission()">新增權限</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>權限代碼</th>
+                            <th>權限名稱</th>
+                            <th>描述</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rbac-perms-table">
+                        <!-- 動態載入 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 會員標籤管理 -->
+        <div id="member-tags" class="tab-content" style="display:none;">
+            <h3>會員標籤管理</h3>
+
+            <!-- 建立標籤 -->
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>建立新標籤</h4>
+                <div style="display: flex; gap: 10px; align-items: end;">
+                    <div>
+                        <label>標籤名稱</label>
+                        <input type="text" id="tag-name" placeholder="如：活躍用戶" class="form-control" />
+                    </div>
+                    <div>
+                        <label>顏色</label>
+                        <input type="color" id="tag-color" value="#667eea" class="form-control"
+                            style="width: 60px; height: 38px;" />
+                    </div>
+                    <div>
+                        <label>說明</label>
+                        <input type="text" id="tag-description" placeholder="選填" class="form-control" />
+                    </div>
+                    <button class="btn btn-primary" onclick="createMemberTag()">建立標籤</button>
+                </div>
+            </div>
+
+            <!-- 標籤列表 -->
+            <div class="card" style="padding: 20px;">
+                <h4>標籤列表</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>標籤</th>
+                            <th>說明</th>
+                            <th>類型</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="member-tags-table">
+                        <!-- 動態載入 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 系統公告 -->
+        <div id="announcements" class="tab-content" style="display:none;">
+            <h3>系統公告</h3>
+
+            <!-- 群發公告 -->
+            <div class="card" style="padding: 20px;">
+                <h4>發送公告</h4>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <label>公告標題</label>
+                        <input type="text" id="ann-title" placeholder="如：系統維護通知" class="form-control" />
+                    </div>
+                    <div>
+                        <label>公告內容</label>
+                        <textarea id="ann-content" class="form-control" rows="4" placeholder="請輸入公告內容..."></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label>發送對象：</label>
+                        <select id="ann-target" class="form-control" style="width: 200px;">
+                            <option value="all">所有會員</option>
+                        </select>
+                        <span id="ann-target-count" style="color: #888;"></span>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="sendAnnouncement()">發送公告</button>
+                        <button class="btn btn-secondary" onclick="loadAnnouncementTags()">刷新標籤列表</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 透明驗證查詢 -->
+        <div id="transparency" class="tab-content" style="display:none;">
+            <h3>開獎透明驗證</h3>
+
+            <div class="card" style="padding: 20px;">
+                <h4>已完售遊戲驗證記錄</h4>
+                <button class="btn btn-secondary" onclick="loadTransparencyData()"
+                    style="margin-bottom: 15px;">刷新</button>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>遊戲類型</th>
+                            <th>遊戲 ID</th>
+                            <th>遊戲名稱</th>
+                            <th>完成時間</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transparency-table">
+                        <!-- 動態載入 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 驗證 Modal -->
+            <div id="hashVerifyModal" class="modal" style="display: none;">
+                <div class="modal-content" style="max-width: 600px;">
+                    <span class="modal-close" onclick="closeHashModal()">&times;</span>
+                    <h3>哈希驗證</h3>
+                    <p id="hashDisplayValue"
+                        style="word-break: break-all; background: #f5f5f5; padding: 10px; border-radius: 4px;"></p>
+                    <div style="margin-top: 15px;">
+                        <input type="text" id="hashVerifyInput" placeholder="輸入哈希值進行驗證" class="form-control" />
+                        <button class="btn btn-primary" onclick="verifyHash()" style="margin-top: 10px;">驗證</button>
+                    </div>
+                    <p id="hashVerifyResult" style="margin-top: 15px;"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 角色權限編輯 Modal -->
+        <div id="rolePermissionModal" class="modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <span class="modal-close" onclick="closeRoleModal()">&times;</span>
+                <div class="modal-header">
+                    <h3>編輯角色權限: <span id="editingRoleName"></span></h3>
+                </div>
+                <div id="permissionCheckboxList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- 動態生成權限勾選框 -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeRoleModal()">取消</button>
+                    <button class="btn btn-primary" onclick="saveRolePermissions()">儲存權限</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Edit Member Level Modal -->
         <div id="editLevelModal" class="modal"
             style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
@@ -1267,6 +1635,225 @@
                 </form>
             </div>
         </div>
+
+        <!-- 物流管理 Tab -->
+        <div id="logistics" class="tab-content" style="display:none;">
+            <h3>📦 物流管理</h3>
+            <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                <h4>批次匯入物流單號</h4>
+                <p style="color: #888; margin-bottom: 15px;">CSV 格式: 出貨申請ID, 物流單號, 物流公司(可選)</p>
+                <textarea id="csv-import-content" class="form-control" rows="5"
+                    placeholder="1001,9876543210,黑貓&#10;1002,1234567890,新竹"></textarea>
+                <button class="btn btn-primary" style="margin-top: 10px;" onclick="importLogisticsCSV()">匯入</button>
+                <div id="import-result" style="margin-top: 10px; display: none;"></div>
+            </div>
+            <h4>待處理發貨申請</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>會員ID</th>
+                        <th>收件人</th>
+                        <th>電話</th>
+                        <th>地址</th>
+                        <th>件數</th>
+                        <th>狀態</th>
+                        <th>物流單號</th>
+                    </tr>
+                </thead>
+                <tbody id="pending-shipments-tbody">
+                    <tr th:each="ship : ${pendingShipments}" th:if="${pendingShipments != null}">
+                        <td th:text="${ship.id}">1</td>
+                        <td th:text="${ship.memberId}">1001</td>
+                        <td th:text="${ship.recipientName}">王小明</td>
+                        <td th:text="${ship.recipientPhone}">0912345678</td>
+                        <td th:text="${ship.recipientAddress}">台北市...</td>
+                        <td th:text="${ship.itemCount}">5</td>
+                        <td>
+                            <span
+                                th:class="${ship.status.name() == 'PENDING' ? 'badge badge-warning' : 'badge badge-success'}"
+                                th:text="${ship.status.getDisplayName()}">待處理</span>
+                        </td>
+                        <td th:text="${ship.trackingNumber != null ? ship.trackingNumber : '-'}">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 金流訂單管理 -->
+        <div id="payment-orders" class="tab-content" style="display:none;">
+            <h3>金流訂單管理</h3>
+
+            <!-- 統計摘要 -->
+            <div id="payment-summary"
+                style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px;">
+                <div class="card" style="padding: 15px; text-align: center;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;" id="po-total">-</div>
+                    <div style="color: #888;">總訂單數</div>
+                </div>
+                <div class="card" style="padding: 15px; text-align: center;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #f39c12;" id="po-pending">-</div>
+                    <div style="color: #888;">待處理</div>
+                </div>
+                <div class="card" style="padding: 15px; text-align: center;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #27ae60;" id="po-paid">-</div>
+                    <div style="color: #888;">已付款</div>
+                </div>
+                <div class="card" style="padding: 15px; text-align: center;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #e74c3c;" id="po-failed">-</div>
+                    <div style="color: #888;">失敗</div>
+                </div>
+            </div>
+
+            <!-- 訂單列表 -->
+            <div class="card" style="padding: 20px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button class="btn btn-secondary" onclick="loadPaymentOrders()">刷新</button>
+                    <select id="po-filter" class="form-control" style="width: 150px;" onchange="filterOrders()">
+                        <option value="all">全部狀態</option>
+                        <option value="PENDING">待處理</option>
+                        <option value="PAID">已付款</option>
+                        <option value="FAILED">失敗</option>
+                    </select>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>訂單號</th>
+                            <th>會員 ID</th>
+                            <th>金額</th>
+                            <th>付款方式</th>
+                            <th>狀態</th>
+                            <th>建立時間</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payment-orders-table">
+                        <!-- 動態載入 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 儀表板總覽 Tab -->
+        <div id="dashboard-overview" class="tab-content" style="display:none;">
+            <h3>📊 營運儀表板</h3>
+            <div id="dashboard-kpi"
+                style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px;">
+                <div class="card" style="padding: 20px; text-align: center;">
+                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="kpi-members">-</div>
+                    <div style="color: #888;">總會員數</div>
+                </div>
+                <div class="card" style="padding: 20px; text-align: center;">
+                    <div style="font-size: 2rem; color: #27ae60; font-weight: bold;" id="kpi-revenue">-</div>
+                    <div style="color: #888;">本月營收</div>
+                </div>
+                <div class="card" style="padding: 20px; text-align: center;">
+                    <div style="font-size: 2rem; color: #e74c3c; font-weight: bold;" id="kpi-draws">-</div>
+                    <div style="color: #888;">今日抽獎次數</div>
+                </div>
+                <div class="card" style="padding: 20px; text-align: center;">
+                    <div style="font-size: 2rem; color: #f39c12; font-weight: bold;" id="kpi-pending">-</div>
+                    <div style="color: #888;">待發貨</div>
+                </div>
+            </div>
+            <div class="card" style="padding: 20px;">
+                <h4>📈 最新交易記錄</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>會員</th>
+                            <th>類型</th>
+                            <th>金額</th>
+                            <th>時間</th>
+                        </tr>
+                    </thead>
+                    <tbody id="latest-transactions">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #999;">載入中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <script>
+            // 儀表板載入
+            async function loadDashboard() {
+                try {
+                    // KPI
+                    const kpiRes = await fetch('/api/admin/dashboard/kpi');
+                    const kpiJson = await kpiRes.json();
+                    if (kpiJson.code === 200) {
+                        document.getElementById('kpi-members').textContent = kpiJson.data.totalMembers;
+                        document.getElementById('kpi-revenue').textContent = '$' + (kpiJson.data.monthRevenue || 0);
+                        document.getElementById('kpi-draws').textContent = kpiJson.data.todayDraws;
+                        document.getElementById('kpi-pending').textContent = kpiJson.data.pendingShipments;
+                    }
+
+                    // Latest Transactions
+                    const txRes = await fetch('/api/admin/dashboard/transactions/latest');
+                    const txJson = await txRes.json();
+                    if (txJson.code === 200) {
+                        const tbody = document.getElementById('latest-transactions');
+                        if (txJson.data.length > 0) {
+                            tbody.innerHTML = txJson.data.map(tx => `
+                                <tr>
+                                    <td>${tx.id}</td>
+                                    <td>${tx.member}</td>
+                                    <td>${tx.type}</td>
+                                    <td>$${tx.amount}</td>
+                                    <td>${tx.time}</td>
+                                </tr>
+                            `).join('');
+                        } else {
+                            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">暫無交易記錄</td></tr>';
+                        }
+                    }
+                } catch (e) {
+                    console.error('載入儀表板失敗', e);
+                }
+            }
+
+            // 物流匯入
+            async function importLogisticsCSV() {
+                const content = document.getElementById('csv-import-content').value.trim();
+                if (!content) {
+                    alert('請輸入 CSV 內容');
+                    return;
+                }
+
+                try {
+                    const res = await fetch('/api/admin/logistics/import-csv', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: content
+                    });
+                    const json = await res.json();
+                    const resultEl = document.getElementById('import-result');
+                    resultEl.style.display = 'block';
+
+                    if (json.code === 200) {
+                        resultEl.innerHTML = `<span style="color: #27ae60;">✅ 匯入成功: ${json.data.successCount || 0} 筆</span>`;
+                    } else {
+                        resultEl.innerHTML = `<span style="color: #e74c3c;">❌ ${json.message}</span>`;
+                    }
+                } catch (e) {
+                    console.error('匯入失敗', e);
+                }
+            }
+
+            // 儀表板 Tab 開啟時載入數據
+            const origOpenTabDash = window.openTab;
+            window.openTab = function (tabName) {
+                if (typeof origOpenTabDash === 'function') {
+                    origOpenTabDash(tabName);
+                }
+                if (tabName === 'dashboard-overview') {
+                    loadDashboard();
+                }
+            };
+        </script>
 
         <script>
             function editLevel(id, name, sort, threshold, reward, enabled) {
@@ -1335,9 +1922,45 @@
                 window.history.replaceState({}, '', url);
             }
 
-            function showHistory(memberId) {
-                alert("History Modal feature coming soon for Member ID: " + memberId);
-                // Implementation for Modal fetch would go here
+            async function showHistory(memberId) {
+                try {
+                    const res = await fetch('/api/member/admin/' + memberId + '/history');
+                    const json = await res.json();
+
+                    if (json.code !== 200) {
+                        alert('載入失敗: ' + json.message);
+                        return;
+                    }
+
+                    const data = json.data;
+                    const content = `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div><strong>會員ID:</strong> ${data.id}</div>
+                            <div><strong>帳號:</strong> ${data.username}</div>
+                            <div><strong>暱稱:</strong> ${data.nickname || '-'}</div>
+                            <div><strong>Email:</strong> ${data.email}</div>
+                            <div><strong>等級:</strong> ${data.level}</div>
+                            <div><strong>帳戶餘額:</strong> $${data.balance}</div>
+                            <div><strong>積分:</strong> ${data.points}</div>
+                            <div><strong>紅利點數:</strong> ${data.bonusPoints}</div>
+                            <div><strong>成長值:</strong> ${data.growthValue}</div>
+                            <div><strong>本月儲值:</strong> $${data.monthlyRecharge}</div>
+                            <div><strong>註冊時間:</strong> ${data.createdAt || '-'}</div>
+                            <div><strong>最後登入:</strong> ${data.lastLoginTime || '未登入'}</div>
+                            <div style="grid-column: span 2;"><strong>狀態:</strong> 
+                                <span class="${data.enabled ? 'badge badge-success' : 'badge badge-danger'}">
+                                    ${data.enabled ? '正常' : '已封鎖'}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+
+                    document.getElementById('historyModalContent').innerHTML = content;
+                    document.getElementById('historyModal').style.display = 'block';
+                } catch (e) {
+                    console.error('載入會員歷史失敗', e);
+                    alert('載入錯誤');
+                }
             }
 
             // On Load: Check for 'tab' param
@@ -1614,6 +2237,78 @@
                 loadRbacData();
             }
 
+            // ==================== 權限勾選 Modal 功能 ====================
+            let currentEditingRoleId = null;
+            let allPermissions = [];
+
+            async function editRole(roleId, roleName) {
+                currentEditingRoleId = roleId;
+                document.getElementById('editingRoleName').textContent = roleName;
+
+                try {
+                    // 取得所有權限
+                    const permsRes = await fetch('/api/admin/rbac/permissions');
+                    const permsJson = await permsRes.json();
+                    allPermissions = permsJson.data || [];
+
+                    // 取得該角色資訊
+                    const rolesRes = await fetch('/api/admin/rbac/roles');
+                    const rolesJson = await rolesRes.json();
+                    const role = (rolesJson.data || []).find(r => r.id === roleId);
+                    const rolePermIds = role ? role.permissions.map(p => p.id) : [];
+
+                    // 渲染權限勾選框
+                    const container = document.getElementById('permissionCheckboxList');
+                    container.innerHTML = allPermissions.map(p => `
+                        <label style="display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #eee; cursor: pointer;">
+                            <input type="checkbox" value="${p.id}" ${rolePermIds.includes(p.id) ? 'checked' : ''} 
+                                   style="margin-right: 10px; width: 18px; height: 18px;" />
+                            <span style="flex: 1;">
+                                <strong>${p.name}</strong>
+                                <small style="color: #888; margin-left: 8px;">${p.code}</small>
+                            </span>
+                        </label>
+                    `).join('');
+
+                    // 顯示 Modal
+                    document.getElementById('rolePermissionModal').style.display = 'block';
+                } catch (e) {
+                    console.error('載入權限失敗', e);
+                    alert('載入權限失敗');
+                }
+            }
+
+            function closeRoleModal() {
+                document.getElementById('rolePermissionModal').style.display = 'none';
+                currentEditingRoleId = null;
+            }
+
+            async function saveRolePermissions() {
+                if (!currentEditingRoleId) return;
+
+                const checkboxes = document.querySelectorAll('#permissionCheckboxList input[type="checkbox"]:checked');
+                const permissionIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+                try {
+                    const res = await fetch('/api/admin/rbac/roles/' + currentEditingRoleId, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ permissionIds })
+                    });
+                    const json = await res.json();
+                    if (json.code === 200) {
+                        alert('權限更新成功');
+                        closeRoleModal();
+                        loadRbacData();
+                    } else {
+                        alert('更新失敗: ' + json.message);
+                    }
+                } catch (e) {
+                    console.error('儲存權限失敗', e);
+                    alert('儲存錯誤');
+                }
+            }
+
             async function createPermission() {
                 const code = document.getElementById('new-perm-code').value;
                 const name = document.getElementById('new-perm-name').value;
@@ -1639,14 +2334,578 @@
                 loadRbacData();
             }
 
-            // 當切換到 RBAC Tab 時載入資料
+            // ==================== 禮包碼管理 ====================
+            async function loadPromoCodes() {
+                try {
+                    const res = await fetch('/api/admin/promo-codes');
+                    const json = await res.json();
+                    if (json.success) {
+                        const tbody = document.getElementById('promo-codes-table');
+                        tbody.innerHTML = json.data.map(c => `
+                            <tr>
+                                <td>${c.id}</td>
+                                <td><code>${c.code}</code></td>
+                                <td>${c.name}</td>
+                                <td>${c.type === 'GIFT' ? '禮包' : '推薦'}</td>
+                                <td>${c.rewardValue} ${c.rewardType === 'TOKENS' ? '代幣' : c.rewardType === 'BONUS' ? '紅利' : '碎片'}</td>
+                                <td>${c.usedCount}/${c.maxUses || '∞'}</td>
+                                <td>
+                                    <span class="badge ${c.enabled ? 'badge-success' : 'badge-secondary'}">${c.enabled ? '啟用' : '停用'}</span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" onclick="togglePromoCode(${c.id})">${c.enabled ? '停用' : '啟用'}</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deletePromoCode(${c.id})">刪除</button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                } catch (e) {
+                    console.error('載入禮包碼失敗', e);
+                }
+            }
+
+            async function createPromoCode() {
+                const name = document.getElementById('promo-name').value;
+                const rewardType = document.getElementById('promo-reward-type').value;
+                const rewardValue = document.getElementById('promo-reward-value').value;
+                const maxUses = document.getElementById('promo-max-uses').value;
+                const validUntil = document.getElementById('promo-valid-until').value;
+                const description = document.getElementById('promo-description').value;
+
+                if (!name || !rewardValue) {
+                    alert('請填寫禮包名稱和獎勵數量');
+                    return;
+                }
+
+                try {
+                    const res = await fetch('/api/admin/promo-codes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, description, rewardType, rewardValue: parseFloat(rewardValue), maxUses: parseInt(maxUses) || 100, validUntil })
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        alert('禮包碼建立成功: ' + json.data.code);
+                        loadPromoCodes();
+                        // 清空表單
+                        document.getElementById('promo-name').value = '';
+                        document.getElementById('promo-reward-value').value = '';
+                        document.getElementById('promo-description').value = '';
+                    } else {
+                        alert('建立失敗: ' + json.message);
+                    }
+                } catch (e) {
+                    console.error('建立禮包碼失敗', e);
+                }
+            }
+
+            async function togglePromoCode(id) {
+                await fetch('/api/admin/promo-codes/' + id + '/toggle', { method: 'POST' });
+                loadPromoCodes();
+            }
+
+            async function deletePromoCode(id) {
+                if (!confirm('確定刪除此禮包碼？')) return;
+                await fetch('/api/admin/promo-codes/' + id, { method: 'DELETE' });
+                loadPromoCodes();
+            }
+
+            // ==================== 系統設定管理 ====================
+            let currentSettings = [];
+
+            async function loadSystemSettings() {
+                try {
+                    const res = await fetch('/api/admin/settings');
+                    const json = await res.json();
+                    if (json.success) {
+                        currentSettings = json.data;
+                        const tbody = document.getElementById('system-settings-table');
+                        tbody.innerHTML = json.data.map(s => `
+                            <tr>
+                                <td><code>${s.key}</code></td>
+                                <td>${s.description || '-'}</td>
+                                <td>
+                                    ${isBooleanSetting(s.key)
+                                ? `<select id="setting-${s.key}" class="form-control" style="width: 100px;">
+                                            <option value="true" ${s.value === 'true' ? 'selected' : ''}>啟用</option>
+                                            <option value="false" ${s.value === 'false' ? 'selected' : ''}>停用</option>
+                                           </select>`
+                                : `<input type="text" id="setting-${s.key}" class="form-control" style="width: 150px;" value="${s.value}" />`
+                            }
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" onclick="saveSingleSetting('${s.key}')">儲存</button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                } catch (e) {
+                    console.error('載入系統設定失敗', e);
+                }
+            }
+
+            function isBooleanSetting(key) {
+                return key.includes('.enabled') || key === 'captcha.enabled' || key === 'otp.enabled';
+            }
+
+            async function saveSingleSetting(key) {
+                const input = document.getElementById('setting-' + key);
+                if (!input) return;
+                const value = input.value;
+                try {
+                    const res = await fetch('/api/admin/settings/' + encodeURIComponent(key), {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ value })
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        alert('設定已儲存');
+                    } else {
+                        alert('儲存失敗: ' + json.message);
+                    }
+                } catch (e) {
+                    console.error('儲存設定失敗', e);
+                }
+            }
+
+            async function saveAllSettings() {
+                const settings = {};
+                currentSettings.forEach(s => {
+                    const input = document.getElementById('setting-' + s.key);
+                    if (input) {
+                        settings[s.key] = input.value;
+                    }
+                });
+                try {
+                    const res = await fetch('/api/admin/settings', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(settings)
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        alert('所有設定已儲存');
+                    } else {
+                        alert('儲存失敗: ' + json.message);
+                    }
+                } catch (e) {
+                    console.error('批量儲存設定失敗', e);
+                }
+            }
+
+            // ==================== 會員標籤管理 ====================
+            async function loadMemberTags() {
+                try {
+                    const res = await fetch('/api/admin/member-tags');
+                    const json = await res.json();
+                    if (json.success) {
+                        const tbody = document.getElementById('member-tags-table');
+                        tbody.innerHTML = json.data.map(t => `
+                            <tr>
+                                <td>${t.id}</td>
+                                <td><span style="background: ${t.color}; color: white; padding: 2px 10px; border-radius: 12px;">${t.name}</span></td>
+                                <td>${t.description || '-'}</td>
+                                <td>${t.type === 'SYSTEM' ? '系統' : t.type === 'AUTO' ? '自動' : '手動'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" onclick="viewTagMembers(${t.id}, '${t.name}')">查看會員</button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                } catch (e) {
+                    console.error('載入會員標籤失敗', e);
+                }
+            }
+
+            async function createMemberTag() {
+                const name = document.getElementById('tag-name').value;
+                const color = document.getElementById('tag-color').value;
+                const description = document.getElementById('tag-description').value;
+
+                if (!name) {
+                    alert('請填寫標籤名稱');
+                    return;
+                }
+
+                try {
+                    const res = await fetch('/api/admin/member-tags', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, color, description })
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        alert('標籤建立成功');
+                        loadMemberTags();
+                        document.getElementById('tag-name').value = '';
+                        document.getElementById('tag-description').value = '';
+                    } else {
+                        alert('建立失敗: ' + json.message);
+                    }
+                } catch (e) {
+                    console.error('建立標籤失敗', e);
+                }
+            }
+
+            async function viewTagMembers(tagId, tagName) {
+                try {
+                    const res = await fetch('/api/admin/member-tags/' + tagId + '/members');
+                    const json = await res.json();
+                    if (json.success) {
+                        const count = json.data.length;
+                        const sample = json.data.slice(0, 10).join(', ');
+                        alert(`標籤「${tagName}」有 ${count} 位會員\n\n前 10 名會員 ID: ${sample || '無'}`);
+                    }
+                } catch (e) {
+                    console.error('查詢標籤會員失敗', e);
+                }
+            }
+
+            // ==================== 系統公告 ====================
+            async function loadAnnouncementTags() {
+                try {
+                    const res = await fetch('/api/admin/member-tags');
+                    const json = await res.json();
+                    if (json.success) {
+                        const select = document.getElementById('ann-target');
+                        select.innerHTML = '<option value="all">所有會員</option>' +
+                            json.data.map(t => `<option value="tag-${t.id}">標籤：${t.name}</option>`).join('');
+                    }
+                } catch (e) {
+                    console.error('載入標籤列表失敗', e);
+                }
+            }
+
+            async function sendAnnouncement() {
+                const title = document.getElementById('ann-title').value;
+                const content = document.getElementById('ann-content').value;
+                const target = document.getElementById('ann-target').value;
+
+                if (!title || !content) {
+                    alert('請填寫標題和內容');
+                    return;
+                }
+
+                if (!confirm('確定發送公告？此操作無法撤銷。')) return;
+
+                try {
+                    let url = '/api/admin/announcements/broadcast';
+                    if (target.startsWith('tag-')) {
+                        const tagId = target.replace('tag-', '');
+                        url = '/api/admin/announcements/broadcast-by-tag/' + tagId;
+                    }
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title, content })
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        alert('公告發送成功！已發送給 ' + json.data.sentCount + ' 位會員');
+                        document.getElementById('ann-title').value = '';
+                        document.getElementById('ann-content').value = '';
+                    } else {
+                        alert('發送失敗: ' + json.message);
+                    }
+                } catch (e) {
+                    console.error('發送公告失敗', e);
+                }
+            }
+
+            // ==================== 透明驗證查詢 ====================
+            let currentVerifyId = null;
+
+            async function loadTransparencyData() {
+                try {
+                    const res = await fetch('/api/admin/transparency/completed');
+                    const json = await res.json();
+                    if (json.success) {
+                        const tbody = document.getElementById('transparency-table');
+                        tbody.innerHTML = json.data.map(v => `
+                            <tr>
+                                <td>${v.id}</td>
+                                <td>${v.gameType}</td>
+                                <td>${v.gameId}</td>
+                                <td>${v.gameName}</td>
+                                <td>${v.completedAt || '-'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" onclick="showHashVerify(${v.id}, '${v.hashValue}')">驗證哈希</button>
+                                </td>
+                            </tr>
+                        `).join('') || '<tr><td colspan="6" style="text-align: center;">暫無已完售遊戲</td></tr>';
+                    }
+                } catch (e) {
+                    console.error('載入透明驗證資料失敗', e);
+                }
+            }
+
+            function showHashVerify(id, hashValue) {
+                currentVerifyId = id;
+                document.getElementById('hashDisplayValue').textContent = hashValue;
+                document.getElementById('hashVerifyInput').value = '';
+                document.getElementById('hashVerifyResult').textContent = '';
+                document.getElementById('hashVerifyModal').style.display = 'block';
+            }
+
+            function closeHashModal() {
+                document.getElementById('hashVerifyModal').style.display = 'none';
+            }
+
+            async function verifyHash() {
+                const hash = document.getElementById('hashVerifyInput').value;
+                if (!hash) {
+                    alert('請輸入哈希值');
+                    return;
+                }
+                try {
+                    const res = await fetch('/api/admin/transparency/verify/' + currentVerifyId, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ hash })
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        const result = document.getElementById('hashVerifyResult');
+                        result.textContent = json.data.message;
+                        result.style.color = json.data.valid ? '#4CAF50' : '#f44336';
+                    }
+                } catch (e) {
+                    console.error('驗證失敗', e);
+                }
+            }
+
+            // 當切換到不同 Tab 時載入資料
             const origOpenTab = window.openTab;
             window.openTab = function (tabName) {
                 origOpenTab(tabName);
                 if (tabName === 'rbac') {
                     loadRbacData();
                 }
+                if (tabName === 'promo-codes') {
+                    loadPromoCodes();
+                }
+                if (tabName === 'platform') {
+                    loadSystemSettings();
+                }
+                if (tabName === 'member-tags') {
+                    loadMemberTags();
+                }
+                if (tabName === 'announcements') {
+                    loadAnnouncementTags();
+                }
+                if (tabName === 'transparency') {
+                    loadTransparencyData();
+                }
+                if (tabName === 'payment-orders') {
+                    loadPaymentOrders();
+                }
             };
+
+            // ==================== 金流訂單管理 ====================
+            async function loadPaymentOrders() {
+                try {
+                    // 載入統計
+                    const summaryRes = await fetch('/api/admin/payments/summary');
+                    const summaryJson = await summaryRes.json();
+                    if (summaryJson.success) {
+                        const d = summaryJson.data;
+                        document.getElementById('po-total').textContent = d.totalOrders;
+                        document.getElementById('po-pending').textContent = d.pendingOrders;
+                        document.getElementById('po-paid').textContent = d.paidOrders;
+                        document.getElementById('po-failed').textContent = d.failedOrders;
+                    }
+
+                    // 載入訂單
+                    const ordersRes = await fetch('/api/admin/payments/orders');
+                    const ordersJson = await ordersRes.json();
+                    if (ordersJson.success) {
+                        renderPaymentOrders(ordersJson.data);
+                    }
+                } catch (e) {
+                    console.error('載入金流訂單失敗', e);
+                }
+            }
+
+            function renderPaymentOrders(orders) {
+                const tbody = document.getElementById('payment-orders-table');
+                tbody.innerHTML = orders.map(o => `
+                    <tr>
+                        <td>${o.orderNo}</td>
+                        <td>${o.memberId}</td>
+                        <td>$${o.amount}</td>
+                        <td>${o.method || '-'}</td>
+                        <td><span class="status-badge status-${o.status.toLowerCase()}">${o.status}</span></td>
+                        <td>${o.createdAt ? o.createdAt.substring(0, 16).replace('T', ' ') : '-'}</td>
+                    </tr>
+                `).join('') || '<tr><td colspan="6" style="text-align: center;">暫無訂單</td></tr>';
+            }
+
+            async function filterOrders() {
+                const filter = document.getElementById('po-filter').value;
+                let url = '/api/admin/payments/orders';
+                if (filter !== 'all') {
+                    url = '/api/admin/payments/orders/status/' + filter;
+                }
+                try {
+                    const res = await fetch(url);
+                    const json = await res.json();
+                    if (json.success) {
+                        renderPaymentOrders(json.data);
+                    }
+                } catch (e) {
+                    console.error('篩選訂單失敗', e);
+                }
+            }
+
+            // ==================== 優惠券批量發放 ====================
+            let currentDistCouponId = null;
+
+            function openDistributeModal(couponId, couponName) {
+                currentDistCouponId = couponId;
+                document.getElementById('distributeTitle').textContent = '派發優惠券：' + couponName;
+                document.getElementById('distCouponIdLevel').value = couponId;
+                document.getElementById('distCouponIdMember').value = couponId;
+                document.getElementById('distTagResult').textContent = '';
+                // 載入標籤列表
+                loadTagsForDistribute();
+                document.getElementById('distributeCouponModal').style.display = 'block';
+            }
+
+            async function loadTagsForDistribute() {
+                try {
+                    const res = await fetch('/api/admin/member-tags');
+                    const json = await res.json();
+                    if (json.success) {
+                        const select = document.getElementById('distTagId');
+                        select.innerHTML = '<option value="">選擇標籤</option>' +
+                            json.data.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+                    }
+                } catch (e) {
+                    console.error('載入標籤失敗', e);
+                }
+            }
+
+            async function distributeByTag() {
+                const tagId = document.getElementById('distTagId').value;
+                if (!tagId) {
+                    alert('請選擇標籤');
+                    return;
+                }
+                if (!currentDistCouponId) {
+                    alert('請重新開啟派發視窗');
+                    return;
+                }
+                try {
+                    const res = await fetch('/api/admin/coupons/' + currentDistCouponId + '/distribute-by-tag/' + tagId, {
+                        method: 'POST'
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        document.getElementById('distTagResult').textContent =
+                            '成功派發給 ' + json.data.successCount + ' / ' + json.data.totalMembers + ' 位會員';
+                    } else {
+                        document.getElementById('distTagResult').textContent = '派發失敗: ' + json.message;
+                        document.getElementById('distTagResult').style.color = '#e74c3c';
+                    }
+                } catch (e) {
+                    console.error('批量派發失敗', e);
+                }
+            }
+
+            // ==================== 日誌過濾 ====================
+            let allLogsData = []; // 儲存原始日誌資料
+
+            function filterLogs() {
+                const userSearch = document.getElementById('log-search-user').value.toLowerCase();
+                const actionFilter = document.getElementById('log-filter-action').value;
+                const dateFrom = document.getElementById('log-date-from').value;
+                const dateTo = document.getElementById('log-date-to').value;
+
+                const tbody = document.getElementById('logs-table-body');
+                const rows = tbody.querySelectorAll('tr');
+
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length === 0) return;
+
+                    const username = cells[1]?.textContent?.toLowerCase() || '';
+                    const action = cells[2]?.textContent || '';
+                    const timestamp = cells[5]?.textContent || '';
+
+                    let show = true;
+
+                    // 用戶名搜尋
+                    if (userSearch && !username.includes(userSearch)) {
+                        show = false;
+                    }
+
+                    // 動作類型過濾
+                    if (actionFilter && !action.includes(actionFilter)) {
+                        show = false;
+                    }
+
+                    // 日期範圍過濾
+                    if (dateFrom && timestamp) {
+                        const logDate = timestamp.split(' ')[0];
+                        if (logDate < dateFrom) show = false;
+                    }
+                    if (dateTo && timestamp) {
+                        const logDate = timestamp.split(' ')[0];
+                        if (logDate > dateTo) show = false;
+                    }
+
+                    row.style.display = show ? '' : 'none';
+                });
+            }
+
+            function clearLogFilters() {
+                document.getElementById('log-search-user').value = '';
+                document.getElementById('log-filter-action').value = '';
+                document.getElementById('log-date-from').value = '';
+                document.getElementById('log-date-to').value = '';
+
+                const tbody = document.getElementById('logs-table-body');
+                const rows = tbody.querySelectorAll('tr');
+                rows.forEach(row => row.style.display = '');
+            }
+
+            // ==================== 會員匯出 ====================
+            function exportMembersCSV() {
+                const table = document.getElementById('members-table');
+                if (!table) {
+                    alert('無法取得會員表格');
+                    return;
+                }
+
+                let csv = [];
+                const rows = table.querySelectorAll('tr');
+
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('th, td');
+                    const rowData = [];
+                    cells.forEach((cell, index) => {
+                        // 排除操作欄
+                        if (index < cells.length - 1) {
+                            let text = cell.textContent.trim().replace(/"/g, '""');
+                            rowData.push('"' + text + '"');
+                        }
+                    });
+                    csv.push(rowData.join(','));
+                });
+
+                const csvContent = '\uFEFF' + csv.join('\n'); // BOM for Excel
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'members_' + new Date().toISOString().split('T')[0] + '.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
         </script>
     </div>
 </body>

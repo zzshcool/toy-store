@@ -34,6 +34,13 @@ public class BlindBoxService {
     }
 
     /**
+     * 取得所有盲盒（包含售完）
+     */
+    public List<BlindBox> getAllBoxes() {
+        return boxRepository.findAll();
+    }
+
+    /**
      * 取得盲盒詳情
      */
     public BlindBox getBoxWithItems(Long boxId) {

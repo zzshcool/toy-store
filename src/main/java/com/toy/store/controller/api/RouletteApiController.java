@@ -1,18 +1,16 @@
 package com.toy.store.controller.api;
 
-import com.toy.store.exception.AppException;
-
 import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
+import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
+import com.toy.store.repository.MemberRepository;
 import com.toy.store.service.RouletteService;
 import com.toy.store.service.TokenService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -20,17 +18,12 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/roulette")
+@RequiredArgsConstructor
 public class RouletteApiController {
 
-    @Autowired
-    private RouletteService rouletteService;
+    private final RouletteService rouletteService;
+    private final MemberRepository memberRepository;
 
-    @Autowired
-    private com.toy.store.repository.MemberRepository memberRepository;
-
-    /**
-     * 取得所有進行中的轉盤
-     */
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> getActiveGames() {
         List<RouletteGame> games = rouletteService.getActiveGames();
@@ -38,9 +31,6 @@ public class RouletteApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 取得單一轉盤詳情（含獎格）
-     */
     @GetMapping("/{id}")
     public ApiResponse<Map<String, Object>> getGame(@PathVariable Long id) {
         RouletteGame game = rouletteService.getGameWithSlots(id);
@@ -53,9 +43,6 @@ public class RouletteApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 旋轉轉盤
-     */
     @PostMapping("/{id}/spin")
     public ApiResponse<Map<String, Object>> spin(
             @PathVariable Long id,
@@ -80,9 +67,6 @@ public class RouletteApiController {
         return ApiResponse.ok(response, message);
     }
 
-    /**
-     * 取得會員幸運值
-     */
     @GetMapping("/lucky-value")
     public ApiResponse<Map<String, Object>> getLuckyValue(@CurrentUser TokenService.TokenInfo info) {
         Long memberId = getMemberId(info);
@@ -131,12 +115,8 @@ public class RouletteApiController {
         return map;
     }
 
-    // ============== 試抽功能 (無需登入，不扣代幣) ==============
+    // ============== 試抽功能 ==============
 
-    /**
-     * 試轉 - 模擬轉盤體驗
-     * 不需登入，不扣代幣，隨機返回結果
-     */
     @PostMapping("/{id}/trial")
     public ApiResponse<Map<String, Object>> trial(@PathVariable Long id) {
         RouletteGame game = rouletteService.getGameWithSlots(id);
@@ -149,8 +129,7 @@ public class RouletteApiController {
             return ApiResponse.error("轉盤尚未設定獎格");
         }
 
-        // 隨機選擇一個獎格（依權重）
-        java.util.Random random = new java.util.Random();
+        Random random = new Random();
         int totalWeight = slots.stream().mapToInt(RouletteSlot::getWeight).sum();
         int roll = random.nextInt(totalWeight);
         int cumulative = 0;

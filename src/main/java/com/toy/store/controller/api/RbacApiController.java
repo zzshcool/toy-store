@@ -3,7 +3,7 @@ package com.toy.store.controller.api;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.*;
 import com.toy.store.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,25 +15,16 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/admin/rbac")
+@RequiredArgsConstructor
 public class RbacApiController {
 
-    @Autowired
-    private AdminUserRepository adminUserRepository;
-
-    @Autowired
-    private AdminRoleRepository roleRepository;
-
-    @Autowired
-    private AdminPermissionRepository permissionRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final AdminUserRepository adminUserRepository;
+    private final AdminRoleRepository roleRepository;
+    private final AdminPermissionRepository permissionRepository;
+    private final PasswordEncoder passwordEncoder;
 
     // ==================== 管理員帳號管理 ====================
 
-    /**
-     * 獲取所有管理員
-     */
     @GetMapping("/admins")
     public ApiResponse<List<Map<String, Object>>> getAllAdmins() {
         List<AdminUser> admins = adminUserRepository.findAll();
@@ -41,9 +32,6 @@ public class RbacApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 新增管理員
-     */
     @PostMapping("/admins")
     public ApiResponse<Map<String, Object>> createAdmin(@RequestBody Map<String, Object> request) {
         String username = (String) request.get("username");
@@ -74,43 +62,36 @@ public class RbacApiController {
         return ApiResponse.ok(mapAdmin(admin), "管理員建立成功");
     }
 
-    /**
-     * 更新管理員
-     */
     @PutMapping("/admins/{id}")
     public ApiResponse<Map<String, Object>> updateAdmin(
             @PathVariable Long id,
             @RequestBody Map<String, Object> request) {
 
-        AdminUser admin = adminUserRepository.findById(id).orElse(null);
-        if (admin == null) {
-            return ApiResponse.error("管理員不存在");
-        }
+        return adminUserRepository.findById(id)
+                .map(admin -> {
+                    String email = (String) request.get("email");
+                    String password = (String) request.get("password");
+                    @SuppressWarnings("unchecked")
+                    List<Number> roleIds = (List<Number>) request.get("roleIds");
 
-        String email = (String) request.get("email");
-        String password = (String) request.get("password");
-        @SuppressWarnings("unchecked")
-        List<Number> roleIds = (List<Number>) request.get("roleIds");
+                    if (email != null) {
+                        admin.setEmail(email);
+                    }
+                    if (password != null && !password.isEmpty()) {
+                        admin.setPassword(passwordEncoder.encode(password));
+                    }
+                    if (roleIds != null) {
+                        List<Long> ids = roleIds.stream().map(Number::longValue).collect(Collectors.toList());
+                        Set<AdminRole> roles = new HashSet<>(roleRepository.findAllById(ids));
+                        admin.setRoles(roles);
+                    }
 
-        if (email != null) {
-            admin.setEmail(email);
-        }
-        if (password != null && !password.isEmpty()) {
-            admin.setPassword(passwordEncoder.encode(password));
-        }
-        if (roleIds != null) {
-            List<Long> ids = roleIds.stream().map(Number::longValue).collect(Collectors.toList());
-            Set<AdminRole> roles = new HashSet<>(roleRepository.findAllById(ids));
-            admin.setRoles(roles);
-        }
-
-        adminUserRepository.save(admin);
-        return ApiResponse.ok(mapAdmin(admin), "更新成功");
+                    adminUserRepository.save(admin);
+                    return ApiResponse.ok(mapAdmin(admin), "更新成功");
+                })
+                .orElseGet(() -> ApiResponse.error("管理員不存在"));
     }
 
-    /**
-     * 刪除管理員
-     */
     @DeleteMapping("/admins/{id}")
     public ApiResponse<Void> deleteAdmin(@PathVariable Long id) {
         if (!adminUserRepository.existsById(id)) {
@@ -122,9 +103,6 @@ public class RbacApiController {
 
     // ==================== 角色管理 ====================
 
-    /**
-     * 獲取所有角色
-     */
     @GetMapping("/roles")
     public ApiResponse<List<Map<String, Object>>> getAllRoles() {
         List<AdminRole> roles = roleRepository.findAll();
@@ -132,9 +110,6 @@ public class RbacApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 新增角色
-     */
     @PostMapping("/roles")
     public ApiResponse<Map<String, Object>> createRole(@RequestBody Map<String, Object> request) {
         String name = (String) request.get("name");
@@ -160,39 +135,32 @@ public class RbacApiController {
         return ApiResponse.ok(mapRole(role), "角色建立成功");
     }
 
-    /**
-     * 更新角色
-     */
     @PutMapping("/roles/{id}")
     public ApiResponse<Map<String, Object>> updateRole(
             @PathVariable Long id,
             @RequestBody Map<String, Object> request) {
 
-        AdminRole role = roleRepository.findById(id).orElse(null);
-        if (role == null) {
-            return ApiResponse.error("角色不存在");
-        }
+        return roleRepository.findById(id)
+                .map(role -> {
+                    String name = (String) request.get("name");
+                    @SuppressWarnings("unchecked")
+                    List<Number> permissionIds = (List<Number>) request.get("permissionIds");
 
-        String name = (String) request.get("name");
-        @SuppressWarnings("unchecked")
-        List<Number> permissionIds = (List<Number>) request.get("permissionIds");
+                    if (name != null && !name.isEmpty()) {
+                        role.setName(name);
+                    }
+                    if (permissionIds != null) {
+                        List<Long> ids = permissionIds.stream().map(Number::longValue).collect(Collectors.toList());
+                        Set<AdminPermission> perms = new HashSet<>(permissionRepository.findAllById(ids));
+                        role.setPermissions(perms);
+                    }
 
-        if (name != null && !name.isEmpty()) {
-            role.setName(name);
-        }
-        if (permissionIds != null) {
-            List<Long> ids = permissionIds.stream().map(Number::longValue).collect(Collectors.toList());
-            Set<AdminPermission> perms = new HashSet<>(permissionRepository.findAllById(ids));
-            role.setPermissions(perms);
-        }
-
-        roleRepository.save(role);
-        return ApiResponse.ok(mapRole(role), "更新成功");
+                    roleRepository.save(role);
+                    return ApiResponse.ok(mapRole(role), "更新成功");
+                })
+                .orElseGet(() -> ApiResponse.error("角色不存在"));
     }
 
-    /**
-     * 刪除角色
-     */
     @DeleteMapping("/roles/{id}")
     public ApiResponse<Void> deleteRole(@PathVariable Long id) {
         if (!roleRepository.existsById(id)) {
@@ -204,9 +172,6 @@ public class RbacApiController {
 
     // ==================== 權限管理 ====================
 
-    /**
-     * 獲取所有權限
-     */
     @GetMapping("/permissions")
     public ApiResponse<List<Map<String, Object>>> getAllPermissions() {
         List<AdminPermission> perms = permissionRepository.findAll();
@@ -214,9 +179,6 @@ public class RbacApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 新增權限
-     */
     @PostMapping("/permissions")
     public ApiResponse<Map<String, Object>> createPermission(@RequestBody Map<String, String> request) {
         String code = request.get("code");
@@ -240,9 +202,6 @@ public class RbacApiController {
         return ApiResponse.ok(mapPermission(perm), "權限建立成功");
     }
 
-    /**
-     * 刪除權限
-     */
     @DeleteMapping("/permissions/{id}")
     public ApiResponse<Void> deletePermission(@PathVariable Long id) {
         if (!permissionRepository.existsById(id)) {

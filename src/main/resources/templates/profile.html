@@ -111,10 +111,10 @@
                                 th:text="'$' + ${#numbers.formatDecimal(nextLevel.threshold - currentSpent, 1, 2)}">
                                 $0.00</p>
 
-                            <div
-                                style="background: #eee; border-radius: 10px; height: 15px; overflow: hidden; margin-bottom: 10px;">
-                                <div style="transition: width 0.5s;"
-                                    th:style="'height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: ' + ${nextLevel.threshold.doubleValue() > 0 ? (currentSpent.doubleValue() / nextLevel.threshold.doubleValue() * 100) : 0} + '%'">
+                            <div id="progressBar"
+                                style="background: #eee; border-radius: 10px; height: 15px; overflow: hidden; margin-bottom: 10px; position: relative;">
+                                <div id="progressFill" class="progress-animated"
+                                    style="height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; transition: width 1.5s ease-out;">
                                 </div>
                             </div>
                             <div
@@ -172,11 +172,221 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- 每日簽到 -->
+                    <div class="card" style="padding: 25px;">
+                        <h3 style="margin-bottom: 20px;">📅 每日簽到</h3>
+                        <div id="sign-in-container" style="text-align: center; padding: 20px;">
+                            <div id="sign-in-status" style="margin-bottom: 15px;">
+                                <span style="font-size: 1.2rem; color: #666;">載入中...</span>
+                            </div>
+                            <button id="btn-sign-in" class="btn btn-primary"
+                                style="padding: 15px 40px; font-size: 1.1rem;" disabled>
+                                簽到
+                            </button>
+                            <div id="sign-in-result" style="margin-top: 15px; display: none;"></div>
+                        </div>
+                        <div style="margin-top: 15px; font-size: 0.85rem; color: #888;">
+                            <p>📌 連續簽到獎勵：1~6日每日 10 點，第7日 50 點！</p>
+                        </div>
+                    </div>
+
+                    <!-- 每日任務 -->
+                    <div class="card" style="padding: 25px;">
+                        <h3 style="margin-bottom: 20px;">🎯 每日任務</h3>
+                        <div id="missions-container">
+                            <div style="text-align: center; color: #999; padding: 20px;">載入中...</div>
+                        </div>
+                    </div>
+
+                    <!-- 推薦碼/兌換碼 -->
+                    <div class="card" style="padding: 25px;">
+                        <h3 style="margin-bottom: 20px;">🎁 推薦與兌換</h3>
+
+                        <!-- 我的推薦碼 -->
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="font-size: 1rem; margin-bottom: 10px;">我的推薦碼</h4>
+                            <div id="referral-code-container" style="display: flex; gap: 10px; align-items: center;">
+                                <input type="text" id="my-referral-code" class="form-control" readonly
+                                    style="flex: 1; font-weight: bold; text-align: center;" placeholder="載入中...">
+                                <button class="btn btn-secondary btn-sm" onclick="copyReferralCode()">複製</button>
+                            </div>
+                            <small style="color: #888; display: block; margin-top: 5px;">分享給好友，雙方都能獲得 50 代幣獎勵！</small>
+                        </div>
+
+                        <hr style="margin: 15px 0; border-color: #eee;">
+
+                        <!-- 兌換禮包碼 -->
+                        <div>
+                            <h4 style="font-size: 1rem; margin-bottom: 10px;">兌換禮包碼</h4>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="redeem-code-input" class="form-control" placeholder="輸入兌換碼"
+                                    style="flex: 1;">
+                                <button class="btn btn-primary" onclick="redeemCode()">兌換</button>
+                            </div>
+                            <div id="redeem-result" style="margin-top: 10px; display: none;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    </div>
+
+    <script>
+        // 簽到功能
+        async function loadSignInStatus() {
+            try {
+                const res = await fetch('/api/member/sign-in/status');
+                const json = await res.json();
+                if (json.code === 200) {
+                    const data = json.data;
+                    const statusEl = document.getElementById('sign-in-status');
+                    const btnEl = document.getElementById('btn-sign-in');
+
+                    if (data.signedToday) {
+                        statusEl.innerHTML = `<span style="color: #27ae60; font-size: 1.2rem;">✅ 今日已簽到</span><br>
+                            <span style="color: #666;">連續簽到 ${data.consecutiveDays} 天</span>`;
+                        btnEl.textContent = '已簽到';
+                        btnEl.disabled = true;
+                        btnEl.classList.remove('btn-primary');
+                        btnEl.classList.add('btn-secondary');
+                    } else {
+                        statusEl.innerHTML = `<span style="color: #e74c3c;">❗ 今日尚未簽到</span><br>
+                            <span style="color: #666;">簽到可獲得 ${data.nextReward} 紅利點數</span>`;
+                        btnEl.textContent = '立即簽到';
+                        btnEl.disabled = false;
+                    }
+                }
+            } catch (e) {
+                console.error('載入簽到狀態失敗', e);
+            }
+        }
+
+        document.getElementById('btn-sign-in').addEventListener('click', async function () {
+            const btn = this;
+            btn.disabled = true;
+            btn.textContent = '簽到中...';
+
+            try {
+                const res = await fetch('/api/member/sign-in', { method: 'POST' });
+                const json = await res.json();
+                const resultEl = document.getElementById('sign-in-result');
+                resultEl.style.display = 'block';
+
+                if (json.code === 200) {
+                    resultEl.innerHTML = `<span style="color: #27ae60;">🎉 ${json.data.message}</span>`;
+                    loadSignInStatus();
+                } else {
+                    resultEl.innerHTML = `<span style="color: #e74c3c;">❌ ${json.message}</span>`;
+                    btn.disabled = false;
+                    btn.textContent = '立即簽到';
+                }
+            } catch (e) {
+                console.error('簽到失敗', e);
+            }
+        });
+
+        // 任務功能
+        async function loadMissions() {
+            try {
+                const res = await fetch('/api/member/missions');
+                const json = await res.json();
+                const container = document.getElementById('missions-container');
+
+                if (json.code === 200 && json.data.length > 0) {
+                    container.innerHTML = json.data.map(m => `
+                        <div style="border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <strong>${m.typeName}</strong>
+                                <span class="${m.completed ? 'badge badge-success' : 'badge badge-secondary'}">
+                                    ${m.completed ? '已完成' : '進行中'}
+                                </span>
+                            </div>
+                            <div style="background: #eee; border-radius: 5px; height: 8px; margin-bottom: 5px;">
+                                <div style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; border-radius: 5px; width: ${m.progress}%;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #888;">
+                                <span>${m.currentValue} / ${m.targetValue}</span>
+                                <span>🎁 ${m.rewardBonusPoints} 紅利</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div style="text-align: center; color: #999;">暫無任務</div>';
+                }
+            } catch (e) {
+                console.error('載入任務失敗', e);
+            }
+        }
+
+        // 推薦碼功能
+        async function loadReferralCode() {
+            try {
+                const res = await fetch('/api/promo/my-referral');
+                const json = await res.json();
+                if (json.code === 200) {
+                    document.getElementById('my-referral-code').value = json.data.code;
+                }
+            } catch (e) {
+                console.error('載入推薦碼失敗', e);
+            }
+        }
+
+        function copyReferralCode() {
+            const input = document.getElementById('my-referral-code');
+            input.select();
+            document.execCommand('copy');
+            alert('推薦碼已複製！');
+        }
+
+        async function redeemCode() {
+            const code = document.getElementById('redeem-code-input').value.trim();
+            if (!code) {
+                alert('請輸入兌換碼');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/promo/redeem', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+                const json = await res.json();
+                const resultEl = document.getElementById('redeem-result');
+                resultEl.style.display = 'block';
+
+                if (json.code === 200) {
+                    resultEl.innerHTML = `<span style="color: #27ae60;">🎉 ${json.data}</span>`;
+                    document.getElementById('redeem-code-input').value = '';
+                } else {
+                    resultEl.innerHTML = `<span style="color: #e74c3c;">❌ ${json.message}</span>`;
+                }
+            } catch (e) {
+                console.error('兌換失敗', e);
+            }
+        }
+
+        // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', function () {
+            loadSignInStatus();
+            loadMissions();
+            loadReferralCode();
+            initProgressAnimation();
+        });
+
+        function initProgressAnimation() {
+            const progressFill = document.getElementById('progressFill');
+            if (progressFill) {
+                // 從 Thymeleaf 計算的真實進度
+                const targetWidth = /*[[${nextLevel != null && nextLevel.threshold.doubleValue() > 0 ? (currentSpent.doubleValue() / nextLevel.threshold.doubleValue() * 100) : 0}]]*/ 0;
+                // 延遲後啟動動畫
+                setTimeout(() => {
+                    progressFill.style.width = Math.min(targetWidth, 100) + '%';
+                }, 300);
+            }
+        }
+    </script>
 
     <style>
         .level-current {

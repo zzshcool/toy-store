@@ -1,18 +1,16 @@
 package com.toy.store.controller.api;
 
-import com.toy.store.exception.AppException;
-
 import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
+import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
+import com.toy.store.repository.MemberRepository;
 import com.toy.store.service.BingoService;
 import com.toy.store.service.TokenService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -20,17 +18,12 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/bingo")
+@RequiredArgsConstructor
 public class BingoApiController {
 
-    @Autowired
-    private BingoService bingoService;
+    private final BingoService bingoService;
+    private final MemberRepository memberRepository;
 
-    @Autowired
-    private com.toy.store.repository.MemberRepository memberRepository;
-
-    /**
-     * 取得所有進行中的九宮格遊戲
-     */
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> getActiveGames() {
         List<BingoGame> games = bingoService.getActiveGames();
@@ -38,9 +31,6 @@ public class BingoApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 取得單一遊戲詳情（含格子）
-     */
     @GetMapping("/{id}")
     public ApiResponse<Map<String, Object>> getGame(@PathVariable Long id) {
         BingoGame game = bingoService.getGameWithCells(id);
@@ -51,7 +41,6 @@ public class BingoApiController {
         result.put("cells", bingoService.getCells(id).stream()
                 .map(this::cellToMap).collect(Collectors.toList()));
 
-        // 加入獎項預覽 (從單元格中提取不重複的獎項資訊)
         List<Map<String, String>> prizePreview = bingoService.getCells(id).stream()
                 .filter(c -> c.getPrizeName() != null)
                 .map(c -> {
@@ -68,9 +57,6 @@ public class BingoApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 挖掘格子
-     */
     @PostMapping("/{id}/dig/{pos}")
     public ApiResponse<Map<String, Object>> dig(
             @PathVariable Long id,
@@ -101,9 +87,6 @@ public class BingoApiController {
         return ApiResponse.ok(response, message);
     }
 
-    /**
-     * 批次挖掘格子
-     */
     @PostMapping("/{id}/dig-batch")
     public ApiResponse<Map<String, Object>> digBatch(
             @PathVariable Long id,
@@ -182,15 +165,8 @@ public class BingoApiController {
         return map;
     }
 
-    // ============== 試抽功能 (無需登入，不扣代幣) ==============
+    // ============== 試抽功能 ==============
 
-    /**
-     * 試挖 - 模擬九宮格挖掘體驗
-     * 不需登入，不扣代幣，隨機返回結果
-     * 
-     * @param id    遊戲 ID
-     * @param count 模擬挖掘數量 (1-9)
-     */
     @PostMapping("/{id}/trial")
     public ApiResponse<Map<String, Object>> trial(
             @PathVariable Long id,
@@ -215,9 +191,9 @@ public class BingoApiController {
             count = Math.max(1, Math.min(availableCells.size(), body.get("count")));
         }
 
-        java.util.Random random = new java.util.Random();
-        java.util.List<Map<String, Object>> results = new java.util.ArrayList<>();
-        java.util.Set<Integer> usedIndexes = new java.util.HashSet<>();
+        Random random = new Random();
+        List<Map<String, Object>> results = new ArrayList<>();
+        Set<Integer> usedIndexes = new HashSet<>();
 
         for (int i = 0; i < count; i++) {
             int index;
@@ -239,7 +215,6 @@ public class BingoApiController {
             results.add(result);
         }
 
-        // 模擬連線檢查
         boolean mockBingo = count >= 3 && random.nextInt(5) == 0;
 
         Map<String, Object> response = new HashMap<>();

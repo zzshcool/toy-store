@@ -20,6 +20,8 @@ public class SignInService {
     private final MemberService memberService;
     @Lazy
     private final MissionService missionService;
+    @Lazy
+    private final SystemSettingService settingService;
 
     @Transactional
     public void processDailySignIn(Long memberId) {
@@ -41,9 +43,12 @@ public class SignInService {
         MemberSignIn signIn = new MemberSignIn(memberId, today, consecutiveDays);
         signInRepository.save(signIn);
 
-        // Award bonus points based on spec 7.C
-        // 1~6 日: 10 點, 7 日: 50 點
-        int reward = (consecutiveDays == 7) ? 50 : 10;
+        // 從系統設定取得簽到獎勵值
+        int dailyReward = settingService.getSignInDailyReward();
+        int weeklyBonus = settingService.getSignInWeeklyBonus();
+
+        // 1~6 日: 每日獎勵, 7 日: 每日獎勵 + 週獎勵
+        int reward = (consecutiveDays == 7) ? (dailyReward + weeklyBonus) : dailyReward;
         memberService.addBonusPoints(memberId, reward);
 
         // Also trigger daily login mission

@@ -1,9 +1,10 @@
 package com.toy.store.controller.api;
 
+import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.GachaRecord;
 import com.toy.store.repository.GachaRecordRepository;
-import com.toy.store.dto.ApiResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.toy.store.repository.MemberRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -16,19 +17,12 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/gacha")
+@RequiredArgsConstructor
 public class GachaRecordApiController {
 
-    @Autowired
-    private GachaRecordRepository gachaRecordRepository;
+    private final GachaRecordRepository gachaRecordRepository;
+    private final MemberRepository memberRepository;
 
-    @Autowired
-    private com.toy.store.repository.MemberRepository memberRepository;
-
-    /**
-     * 取得最新抽獎紀錄（公開，用於跑馬燈）
-     * 
-     * @param limit 筆數限制，預設 10
-     */
     @GetMapping("/recent")
     public ApiResponse<List<Map<String, Object>>> getRecentRecords(
             @RequestParam(defaultValue = "10") int limit) {
@@ -46,7 +40,6 @@ public class GachaRecordApiController {
     private Map<String, Object> recordToPublicMap(GachaRecord record) {
         Map<String, Object> map = new HashMap<>();
 
-        // 顯示暱稱（隱藏部分）
         String nickname = memberRepository.findById(record.getMemberId())
                 .map(m -> m.getNickname() != null ? m.getNickname() : m.getUsername())
                 .orElse("玩家");

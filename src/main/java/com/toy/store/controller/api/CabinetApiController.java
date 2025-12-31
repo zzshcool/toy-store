@@ -4,9 +4,11 @@ import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
+import com.toy.store.repository.MemberRepository;
 import com.toy.store.service.CabinetService;
 import com.toy.store.service.TokenService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -16,21 +18,15 @@ import java.util.stream.Collectors;
 
 /**
  * 盒櫃 API
- * 對應規格書 §4.D, §8.A
  */
 @RestController
 @RequestMapping("/api/cabinet")
+@RequiredArgsConstructor
 public class CabinetApiController {
 
-    @Autowired
-    private CabinetService cabinetService;
+    private final CabinetService cabinetService;
+    private final MemberRepository memberRepository;
 
-    @Autowired
-    private com.toy.store.repository.MemberRepository memberRepository;
-
-    /**
-     * 取得盒櫃內的獎品
-     */
     @GetMapping
     public ApiResponse<Map<String, Object>> getCabinet(@CurrentUser TokenService.TokenInfo info) {
         Long memberId = getMemberId(info);
@@ -51,9 +47,6 @@ public class CabinetApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 取得所有獎品紀錄（含已發貨）
-     */
     @GetMapping("/all")
     public ApiResponse<List<Map<String, Object>>> getAllItems(@CurrentUser TokenService.TokenInfo info) {
         Long memberId = getMemberId(info);
@@ -65,9 +58,6 @@ public class CabinetApiController {
         return ApiResponse.ok(items.stream().map(this::itemToMap).collect(Collectors.toList()));
     }
 
-    /**
-     * 計算運費預覽
-     */
     @PostMapping("/shipping-preview")
     public ApiResponse<Map<String, Object>> shippingPreview(
             @RequestBody Map<String, List<Long>> body,
@@ -94,9 +84,6 @@ public class CabinetApiController {
         return ApiResponse.ok(result);
     }
 
-    /**
-     * 提交發貨申請
-     */
     @PostMapping("/ship")
     public ApiResponse<Map<String, Object>> requestShipment(
             @RequestBody ShipmentRequestDTO body,
@@ -123,9 +110,6 @@ public class CabinetApiController {
         return ApiResponse.ok(result, message);
     }
 
-    /**
-     * 取得發貨申請列表
-     */
     @GetMapping("/shipments")
     public ApiResponse<List<Map<String, Object>>> getShipments(@CurrentUser TokenService.TokenInfo info) {
         Long memberId = getMemberId(info);
@@ -137,9 +121,6 @@ public class CabinetApiController {
         return ApiResponse.ok(shipments.stream().map(this::shipmentToMap).collect(Collectors.toList()));
     }
 
-    /**
-     * 取消發貨申請
-     */
     @PostMapping("/shipments/{id}/cancel")
     public ApiResponse<Void> cancelShipment(
             @PathVariable Long id,
@@ -154,9 +135,6 @@ public class CabinetApiController {
         return ApiResponse.ok(null, "發貨申請已取消");
     }
 
-    /**
-     * 兌換獎品為積分
-     */
     @PostMapping("/items/{id}/exchange")
     public ApiResponse<Map<String, Object>> exchangeForPoints(
             @PathVariable Long id,
@@ -214,7 +192,7 @@ public class CabinetApiController {
         return map;
     }
 
-    @lombok.Data
+    @Data
     public static class ShipmentRequestDTO {
         private List<Long> itemIds;
         private String recipientName;

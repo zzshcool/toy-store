@@ -75,9 +75,9 @@ public class AdminService {
                 // Gacha Data (Paginated)
                 Pageable gachaPageable = PageRequest.of(gachaPage, gachaSize,
                                 Sort.by(Sort.Direction.DESC, "createdAt"));
-                data.put("ichibanPage", ichibanBoxRepository.findAll(gachaPageable));
-                data.put("roulettePage", rouletteGameRepository.findAll(gachaPageable));
-                data.put("bingoPage", bingoGameRepository.findAll(gachaPageable));
+                data.put("ichibanBoxes", ichibanBoxRepository.findAll(gachaPageable).getContent());
+                data.put("rouletteGames", rouletteGameRepository.findAll(gachaPageable).getContent());
+                data.put("bingoGames", bingoGameRepository.findAll(gachaPageable).getContent());
 
                 // Static / Unpaginated Data
                 data.put("products", productService.findAll(Pageable.unpaged()).getContent());

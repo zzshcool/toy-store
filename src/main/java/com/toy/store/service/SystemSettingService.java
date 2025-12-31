@@ -44,6 +44,21 @@ public class SystemSettingService {
         createIfNotExists(SystemSetting.CAPTCHA_ENABLED, "false", "圖形驗證碼開關");
         createIfNotExists(SystemSetting.CAPTCHA_TYPE, "GRAPHIC", "驗證碼類型（GRAPHIC/OTP）");
         createIfNotExists(SystemSetting.OTP_ENABLED, "false", "OTP 簡訊驗證開關");
+
+        // 導航管理設定
+        createIfNotExists(SystemSetting.MODULE_BLINDBOX_ENABLED, "true", "動漫周邊功能開關");
+        createIfNotExists(SystemSetting.NAV_ITEM_ORDER, "ichiban,roulette,bingo,blindbox,gacha", "導航列項目順序");
+
+        // 簽到獎勵設定
+        createIfNotExists(SystemSetting.SIGNIN_DAILY_REWARD, "10", "每日簽到獎勵紅利點數");
+        createIfNotExists(SystemSetting.SIGNIN_WEEKLY_BONUS, "50", "連續7天簽到額外獎勵");
+
+        // 任務獎勵設定
+        createIfNotExists(SystemSetting.MISSION_DAILY_LOGIN_REWARD, "10", "每日登入任務獎勵");
+        createIfNotExists(SystemSetting.MISSION_SPEND_REWARD, "20", "消費任務獎勵");
+        createIfNotExists(SystemSetting.MISSION_DRAW_REWARD, "30", "抽獎任務獎勵");
+        createIfNotExists(SystemSetting.MISSION_SPEND_TARGET, "500", "消費任務目標金額");
+        createIfNotExists(SystemSetting.MISSION_DRAW_TARGET, "10", "抽獎任務目標次數");
     }
 
     private void createIfNotExists(String key, String value, String description) {
@@ -134,5 +149,80 @@ public class SystemSettingService {
 
     public double getRevenueThreshold() {
         return getIntSetting(SystemSetting.GACHA_REVENUE_THRESHOLD, 70) / 100.0;
+    }
+
+    public boolean isBlindboxEnabled() {
+        return getBooleanSetting(SystemSetting.MODULE_BLINDBOX_ENABLED);
+    }
+
+    /**
+     * 取得導航項目順序
+     * 
+     * @return 逗號分隔的導航項目 key 列表
+     */
+    public String getNavItemOrder() {
+        String order = getSetting(SystemSetting.NAV_ITEM_ORDER);
+        return order != null ? order : "ichiban,roulette,bingo,blindbox,gacha";
+    }
+
+    /**
+     * 取得排序後且啟用的導航項目
+     * 
+     * @return 導航項目 DTO 列表
+     */
+    public java.util.List<java.util.Map<String, Object>> getSortedNavItems() {
+        java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+        String order = getNavItemOrder();
+        String[] keys = order.split(",");
+
+        java.util.Map<String, Object> navMeta = new java.util.LinkedHashMap<>();
+        navMeta.put("ichiban", new Object[] { "🎯 一番賞", "/ichiban", isIchibanEnabled() });
+        navMeta.put("roulette", new Object[] { "🎡 轉盤", "/roulette", isRouletteEnabled() });
+        navMeta.put("bingo", new Object[] { "🎲 九宮格", "/bingo", isBingoEnabled() });
+        navMeta.put("blindbox", new Object[] { "📦 動漫周邊", "/blindbox", isBlindboxEnabled() });
+        navMeta.put("gacha", new Object[] { "🎁 扭蛋", "/gacha", isGachaEnabled() });
+
+        for (String key : keys) {
+            key = key.trim();
+            Object[] meta = (Object[]) navMeta.get(key);
+            if (meta != null && (Boolean) meta[2]) {
+                java.util.Map<String, Object> item = new java.util.LinkedHashMap<>();
+                item.put("key", key);
+                item.put("label", meta[0]);
+                item.put("url", meta[1]);
+                items.add(item);
+            }
+        }
+        return items;
+    }
+
+    // ==================== 簽到獎勵設定 ====================
+    public int getSignInDailyReward() {
+        return getIntSetting(SystemSetting.SIGNIN_DAILY_REWARD, 10);
+    }
+
+    public int getSignInWeeklyBonus() {
+        return getIntSetting(SystemSetting.SIGNIN_WEEKLY_BONUS, 50);
+    }
+
+    // ==================== 任務獎勵設定 ====================
+    public int getMissionDailyLoginReward() {
+        return getIntSetting(SystemSetting.MISSION_DAILY_LOGIN_REWARD, 10);
+    }
+
+    public int getMissionSpendReward() {
+        return getIntSetting(SystemSetting.MISSION_SPEND_REWARD, 20);
+    }
+
+    public int getMissionDrawReward() {
+        return getIntSetting(SystemSetting.MISSION_DRAW_REWARD, 30);
+    }
+
+    public int getMissionSpendTarget() {
+        return getIntSetting(SystemSetting.MISSION_SPEND_TARGET, 500);
+    }
+
+    public int getMissionDrawTarget() {
+        return getIntSetting(SystemSetting.MISSION_DRAW_TARGET, 10);
     }
 }

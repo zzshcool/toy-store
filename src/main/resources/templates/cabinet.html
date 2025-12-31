@@ -32,6 +32,16 @@
                     </div>
                 </div>
 
+                <!-- 全選按鈕區 -->
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button class="btn btn-outline" onclick="selectAll()" style="padding: 8px 16px;">
+                        ☑️ 全選
+                    </button>
+                    <button class="btn btn-outline" onclick="deselectAll()" style="padding: 8px 16px;">
+                        ☐ 取消全選
+                    </button>
+                </div>
+
                 <!-- 選中發貨按鈕 -->
                 <div id="shipBar"
                     style="display: none; position: sticky; bottom: 0; background: linear-gradient(to right, #667eea, #764ba2); 
@@ -170,6 +180,18 @@
                 } else {
                     selectedItems.push(itemId);
                 }
+                renderCabinetItems(cabinetData);
+                updateShipBar();
+            }
+
+            function selectAll() {
+                selectedItems = cabinetData.map(item => item.id);
+                renderCabinetItems(cabinetData);
+                updateShipBar();
+            }
+
+            function deselectAll() {
+                selectedItems = [];
                 renderCabinetItems(cabinetData);
                 updateShipBar();
             }
