@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+    遊戲結果彈窗共用 Fragment
+    用法: <div th:replace="~{fragments/game-result-modal :: result-modal(modalId='resultModal', closeFunction='closeResultModal')}"></div>
+-->
+
+<!-- 基礎結果彈窗 -->
+<div th:fragment="result-modal(modalId, closeFunction)" th:id="${modalId}" class="game-modal-overlay"
+    style="display: none;">
+    <div class="game-modal-wrapper">
+        <div class="game-modal-content">
+            <h2 class="game-modal-title">🎉 恭喜獲得！</h2>
+            <div th:id="${modalId + 'Results'}" class="prize-results-grid">
+                <!-- 獎品結果將由 JS 動態生成 -->
+            </div>
+            <div class="game-modal-summary">
+                <p>共獲得 <strong th:id="${modalId + 'Shards'}" class="highlight-text">0</strong> 碎片</p>
+                <p class="secondary-text">消費金額：$<span th:id="${modalId + 'Cost'}">0</span></p>
+            </div>
+            <button class="btn-gacha" th:onclick="${closeFunction} + '()'">太棒了！</button>
+        </div>
+    </div>
+</div>
+
+<!-- 簡易結果彈窗 (適用於轉盤、九宮格) -->
+<div th:fragment="simple-result-modal(modalId, closeFunction)" th:id="${modalId}" class="prize-reveal-overlay"
+    style="display: none;">
+    <div class="prize-card">
+        <div th:id="${modalId + 'Type'}" class="result-icon">🎊</div>
+        <h3 th:id="${modalId + 'Title'}" class="result-title">獎品名稱</h3>
+        <div th:id="${modalId + 'Image'}" class="result-image-container">
+            <!-- 獎品圖片 -->
+        </div>
+        <p th:id="${modalId + 'Value'}" class="result-value"></p>
+        <button class="btn-gacha" th:onclick="${closeFunction} + '()'" style="margin-top: 20px;">確定</button>
+    </div>
+</div>
+
+<!-- 確認扣款彈窗 -->
+<div th:fragment="confirm-modal(modalId, confirmFunction, cancelFunction)" th:id="${modalId}"
+    class="prize-reveal-overlay" style="display: none;">
+    <div class="prize-card" style="max-width: 400px;">
+        <div class="confirm-icon">🎯</div>
+        <h3>確認扣款</h3>
+        <p th:id="${modalId + 'Message'}" class="confirm-message">確定要花費 $0 進行遊戲嗎？</p>
+        <div class="modal-button-group">
+            <button class="btn btn-outline" th:onclick="${cancelFunction} + '()'">取消</button>
+            <button th:id="${modalId + 'ConfirmBtn'}" class="btn-gacha"
+                th:onclick="${confirmFunction} + '()'">確認扣款</button>
+        </div>
+    </div>
+</div>
+
+</html>

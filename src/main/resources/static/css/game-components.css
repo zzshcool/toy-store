@@ -1,0 +1,292 @@
+/**
+ * 遊戲元件共用樣式
+ * 用於所有遊戲頁面的彈窗、卡片等共用元件
+ */
+
+/* ==================== 共用 Modal 基礎樣式 ==================== */
+
+.game-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10001;
+    overflow-y: auto;
+}
+
+.game-modal-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+}
+
+.game-modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 600px;
+    width: 100%;
+    text-align: center;
+}
+
+.game-modal-title {
+    margin-bottom: 30px;
+    color: #333;
+    font-size: 1.8rem;
+}
+
+/* ==================== 獎品結果網格 ==================== */
+
+.prize-results-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.prize-result-card {
+    background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+    border-radius: 15px;
+    padding: 20px;
+    min-width: 140px;
+    text-align: center;
+}
+
+.prize-result-card.rare {
+    background: linear-gradient(145deg, #ffd93d, #ffb347);
+    box-shadow: 0 5px 20px rgba(255, 217, 61, 0.4);
+}
+
+.prize-result-image {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    margin-bottom: 10px;
+}
+
+.prize-result-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+/* ==================== Modal 摘要區塊 ==================== */
+
+.game-modal-summary {
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+    margin-top: 20px;
+}
+
+.highlight-text {
+    color: #6c5ce7;
+    font-size: 1.2rem;
+}
+
+.secondary-text {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+/* ==================== 規則彈窗樣式 ==================== */
+
+.rules-modal-wrapper {
+    max-width: 500px;
+    margin: 50px auto;
+    position: relative;
+}
+
+.rules-modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    position: relative;
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.2s;
+}
+
+.modal-close-btn:hover {
+    color: #333;
+}
+
+.rules-title {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #333;
+}
+
+/* ==================== 價格資訊卡 ==================== */
+
+.price-info-card {
+    background: linear-gradient(145deg, #667eea, #764ba2);
+    border-radius: 15px;
+    padding: 20px;
+    color: white;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.price-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.price-value {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+/* ==================== 規則區塊 ==================== */
+
+.rules-section {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.rules-section h4 {
+    margin-bottom: 10px;
+    color: #667eea;
+}
+
+.rules-section ul,
+.rules-section ol {
+    margin: 0;
+    padding-left: 20px;
+    line-height: 1.8;
+    color: #555;
+}
+
+.rules-section li {
+    margin-bottom: 5px;
+}
+
+/* ==================== 確認彈窗樣式 ==================== */
+
+.confirm-icon {
+    font-size: 2rem;
+    margin-bottom: 15px;
+}
+
+.confirm-message {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.modal-button-group {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.modal-button-group .btn {
+    min-width: 120px;
+}
+
+/* ==================== 獎品揭曉動畫 ==================== */
+
+.prize-reveal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.prize-card {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    animation: prizeReveal 0.5s ease-out;
+}
+
+@keyframes prizeReveal {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.result-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.result-title {
+    font-size: 1.5rem;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.result-image-container {
+    margin-bottom: 15px;
+}
+
+.result-image-container img {
+    max-width: 150px;
+    max-height: 150px;
+    border-radius: 10px;
+}
+
+.result-value {
+    color: #6c5ce7;
+    font-weight: 600;
+}
+
+/* ==================== 響應式調整 ==================== */
+
+@media (max-width: 768px) {
+    .game-modal-content {
+        padding: 25px;
+    }
+
+    .prize-result-card {
+        min-width: 120px;
+        padding: 15px;
+    }
+
+    .rules-modal-wrapper {
+        margin: 20px;
+    }
+
+    .rules-modal-content {
+        padding: 20px;
+    }
+}

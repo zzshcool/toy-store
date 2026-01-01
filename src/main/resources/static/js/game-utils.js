@@ -102,7 +102,193 @@ const GameUtils = {
             const mask = document.getElementById('ui-mask');
             if (mask) mask.style.display = 'none';
         }
+    },
+
+    // ==================== API 客戶端 ====================
+
+    /**
+     * 統一 API 請求封裝
+     * @param {string} url - API 端點
+     * @param {Object} options - fetch 選項
+     * @returns {Promise<Object>} API 回應
+     */
+    async fetchApi(url, options = {}) {
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                },
+                ...options
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'API 請求失敗');
+            }
+
+            return data;
+        } catch (error) {
+            console.error('API Error:', error);
+            if (window.Toast) Toast.error(error.message || '網路錯誤');
+            throw error;
+        }
+    },
+
+    /**
+     * GET 請求簡化
+     */
+    async get(url) {
+        return this.fetchApi(url);
+    },
+
+    /**
+     * POST 請求簡化
+     */
+    async post(url, body) {
+        return this.fetchApi(url, {
+            method: 'POST',
+            body: JSON.stringify(body)
+        });
+    },
+
+    // ==================== 價格格式化 ====================
+
+    /**
+     * 格式化價格
+     * @param {number} price - 價格
+     * @param {string} currency - 貨幣符號
+     * @returns {string} 格式化的價格字串
+     */
+    formatPrice(price, currency = '$') {
+        if (typeof price !== 'number' || isNaN(price)) return currency + '0';
+        return currency + price.toLocaleString('zh-TW');
+    },
+
+    /**
+     * 格式化折扣後價格
+     */
+    formatDiscountPrice(originalPrice, discountRate) {
+        const discounted = Math.floor(originalPrice * (1 - discountRate));
+        return {
+            original: this.formatPrice(originalPrice),
+            discounted: this.formatPrice(discounted),
+            savedAmount: this.formatPrice(originalPrice - discounted)
+        };
+    },
+
+    // ==================== 共用 Modal 操作 ====================
+
+    /**
+     * 顯示結果 Modal
+     */
+    showResultModal(config) {
+        const {
+            containerId = 'resultModal',
+            prizes = [],
+            isRare = false,
+            isTrial = false
+        } = config;
+
+        const modal = document.getElementById(containerId);
+        if (!modal) return;
+
+        modal.style.display = 'flex';
+
+        if (!isTrial && isRare) {
+            this.spawnConfetti();
+            this.playWinSound();
+        } else if (!isTrial) {
+            this.playRevealSound();
+        }
+    },
+
+    /**
+     * 關閉 Modal
+     */
+    closeModal(containerId) {
+        const modal = document.getElementById(containerId);
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    },
+
+    // ==================== 遊戲狀態管理 ====================
+
+    /**
+     * 檢查登入狀態
+     */
+    isLoggedIn() {
+        return document.querySelector('.nav-user') !== null ||
+            document.cookie.includes('authToken') ||
+            document.body.dataset.loggedIn === 'true';
+    },
+
+    /**
+     * 提示登入
+     */
+    promptLogin(callback) {
+        if (window.LoginModal) {
+            LoginModal.show(callback);
+        } else if (window.requireLogin) {
+            requireLogin(callback);
+        } else {
+            window.location.href = '/login';
+        }
+    },
+
+    /**
+     * 刷新使用者餘額
+     */
+    refreshBalance() {
+        if (typeof window.refreshUserBalance === 'function') {
+            window.refreshUserBalance();
+        }
+    },
+
+    // ==================== 遊戲清單渲染 ====================
+
+    /**
+     * 建立遊戲卡片 HTML
+     */
+    createGameCard(game, options = {}) {
+        const {
+            onClick = 'selectGame',
+            badge = '🎮',
+            showPrice = true
+        } = options;
+
+        return `
+            <div class="product-card" onclick="${onClick}(${game.id})" style="cursor: pointer;">
+                <div class="product-image">
+                    <img src="${game.imageUrl || '/images/placeholder.jpg'}" alt="${game.name}" 
+                         onerror="this.src='/images/placeholder.jpg'">
+                    <span class="product-badge">${badge}</span>
+                </div>
+                <div class="product-details">
+                    <h3 class="product-title">${game.name}</h3>
+                    ${showPrice ? `<p class="product-price">${this.formatPrice(game.pricePerPlay || game.pricePerDraw)}/次</p>` : ''}
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * 渲染遊戲清單
+     */
+    renderGameList(containerId, games, options = {}) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        if (!games || games.length === 0) {
+            container.innerHTML = '<p class="text-center" style="color: var(--text-secondary);">目前沒有可用的遊戲</p>';
+            return;
+        }
+
+        container.innerHTML = games.map(game => this.createGameCard(game, options)).join('');
     }
 };
 
 window.GameUtils = GameUtils;
+
