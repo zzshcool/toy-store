@@ -1,6 +1,5 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -8,30 +7,22 @@ import java.time.LocalDateTime;
 import java.math.BigDecimal;
 
 /**
- * 抽獎紀錄實體
+ * 抽獎紀錄實體 - 純 POJO (MyBatis)
  * 記錄所有抽獎行為（一番賞、轉盤、九宮格）
  */
-@Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "gacha_records")
 public class GachaRecord {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private Long memberId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private GachaType gachaType;
 
     private Long gameId; // 對應的遊戲ID
 
-    @Column(nullable = false)
     private String prizeName; // 獲得的獎品名稱
 
     private String prizeRank; // 獎品等級（一番賞用）

@@ -2,44 +2,57 @@ package com.toy.store.service;
 
 import com.toy.store.exception.ResourceNotFoundException;
 import com.toy.store.model.Product;
-import com.toy.store.repository.ProductRepository;
+import com.toy.store.mapper.ProductMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class ProductService {
 
-    private final ProductRepository productRepository;
+    private final ProductMapper productMapper;
 
-    public Page<Product> findAll(Pageable pageable) {
-        return productRepository.findAll(pageable);
+    public List<Product> findAll() {
+        return productMapper.findAll();
     }
 
-    public Page<Product> findByStatus(Product.Status status, Pageable pageable) {
-        return productRepository.findByStatus(status, pageable);
+    public List<Product> findAllPaged(int offset, int limit) {
+        return productMapper.findAllPaged(offset, limit);
     }
 
-    public Page<Product> findByCategory(String category, Pageable pageable) {
-        return productRepository.findByCategory(category, pageable);
+    public List<Product> findByStatus(Product.Status status) {
+        return productMapper.findByStatus(status.name());
     }
 
-    public Page<Product> searchProducts(String keyword, Pageable pageable) {
-        return productRepository.searchByNameOrDescription(keyword, pageable);
+    public List<Product> findByCategory(String category) {
+        return productMapper.findByCategory(category);
+    }
+
+    public List<Product> searchProducts(String keyword) {
+        return productMapper.searchByNameOrDescription("%" + keyword.toLowerCase() + "%");
     }
 
     public Product findById(Long id) {
-        return productRepository.findById(id)
+        return productMapper.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("產品", id));
     }
 
     public Product saveProduct(Product product) {
-        return productRepository.save(product);
+        if (product.getId() == null) {
+            productMapper.insert(product);
+        } else {
+            productMapper.update(product);
+        }
+        return product;
     }
 
     public void deleteProduct(Long id) {
-        productRepository.deleteById(id);
+        productMapper.deleteById(id);
+    }
+
+    public long count() {
+        return productMapper.count();
     }
 }

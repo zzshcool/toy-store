@@ -1,70 +1,26 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import java.time.LocalDateTime;
 
 /**
- * 系統設定實體 - 鍵值對存儲功能開關與配置
+ * 系統設定實體 - 純 POJO (MyBatis)
  */
-@Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "system_settings")
 public class SystemSetting {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
     private String settingKey;
 
-    @Column(nullable = false)
     private String settingValue;
 
-    @Column(length = 500)
+    private String settingType;
+
     private String description;
 
-    public SystemSetting(String settingKey, String settingValue, String description) {
-        this.settingKey = settingKey;
-        this.settingValue = settingValue;
-        this.description = description;
-    }
-
-    // 常用設定鍵常量
-    public static final String MODULE_SHOPPING_ENABLED = "module.shopping.enabled";
-    public static final String MODULE_ICHIBAN_ENABLED = "module.ichiban.enabled";
-    public static final String MODULE_ROULETTE_ENABLED = "module.roulette.enabled";
-    public static final String MODULE_BINGO_ENABLED = "module.bingo.enabled";
-    public static final String MODULE_REDEEM_ENABLED = "module.redeem.enabled";
-    public static final String MODULE_GACHA_ENABLED = "module.gacha.enabled";
-    public static final String GACHA_LUCKY_THRESHOLD = "gacha.lucky.threshold";
-    public static final String GACHA_SHARD_MIN = "gacha.shard.min";
-    public static final String GACHA_SHARD_MAX = "gacha.shard.max";
-    public static final String GACHA_DUPLICATE_SHARD = "gacha.duplicate.shard";
-    public static final String GACHA_REDEEM_COST = "gacha.redeem.cost";
-    public static final String GACHA_REVENUE_THRESHOLD = "gacha.revenue.threshold";
-
-    // 驗證碼設定
-    public static final String CAPTCHA_ENABLED = "captcha.enabled";
-    public static final String CAPTCHA_TYPE = "captcha.type"; // GRAPHIC 或 OTP
-    public static final String OTP_ENABLED = "otp.enabled";
-
-    // 導航管理設定
-    public static final String MODULE_BLINDBOX_ENABLED = "module.blindbox.enabled";
-    public static final String NAV_ITEM_ORDER = "nav.item.order"; // 如：ichiban,roulette,bingo,gacha,blindbox
-
-    // 簽到獎勵設定
-    public static final String SIGNIN_DAILY_REWARD = "signin.daily.reward"; // 每日簽到獎勵
-    public static final String SIGNIN_WEEKLY_BONUS = "signin.weekly.bonus"; // 連續7天獎勵
-
-    // 任務獎勵設定
-    public static final String MISSION_DAILY_LOGIN_REWARD = "mission.daily.login.reward";
-    public static final String MISSION_SPEND_REWARD = "mission.spend.reward";
-    public static final String MISSION_DRAW_REWARD = "mission.draw.reward";
-    public static final String MISSION_SPEND_TARGET = "mission.spend.target";
-    public static final String MISSION_DRAW_TARGET = "mission.draw.target";
+    private LocalDateTime updatedAt = LocalDateTime.now();
 }

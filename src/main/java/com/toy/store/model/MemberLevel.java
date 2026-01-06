@@ -1,50 +1,28 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
-@Entity
+/**
+ * 會員等級實體 - 純 POJO (MyBatis)
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "member_levels")
 public class MemberLevel {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private Integer sortOrder;
+    private Long minGrowthValue = 0L;
 
-    @Column(nullable = false)
-    private BigDecimal threshold;
+    private BigDecimal discountRate = new BigDecimal("100.00");
 
-    private boolean enabled = true;
+    private BigDecimal pointsMultiplier = BigDecimal.ONE;
 
-    private String monthlyReward;
+    private String description;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
+    private String iconUrl;
 }

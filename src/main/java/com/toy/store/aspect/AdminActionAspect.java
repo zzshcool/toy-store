@@ -1,7 +1,7 @@
 package com.toy.store.aspect;
 
 import com.toy.store.model.AdminActionLog;
-import com.toy.store.repository.AdminActionLogRepository;
+import com.toy.store.mapper.AdminActionLogMapper;
 import com.toy.store.service.TokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -22,7 +23,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminActionAspect {
 
-        private final AdminActionLogRepository adminActionLogRepository;
+        private final AdminActionLogMapper adminActionLogMapper;
 
         @Pointcut("within(com.toy.store.controller.AdminController) || within(com.toy.store.controller.admin..*)")
         public void adminController() {
@@ -54,7 +55,11 @@ public class AdminActionAspect {
 
                 String details = "Auto-logged: " + action;
 
-                AdminActionLog log = new AdminActionLog(adminName, action, details, params);
-                adminActionLogRepository.save(log);
+                AdminActionLog log = new AdminActionLog();
+                log.setAction(action);
+                log.setDetails(details);
+                log.setIpAddress(request.getRemoteAddr());
+                log.setCreatedAt(LocalDateTime.now());
+                adminActionLogMapper.insert(log);
         }
 }

@@ -1,43 +1,23 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import java.time.LocalDateTime;
 
-import java.math.BigDecimal;
-import java.util.List;
-
-@Entity
+/**
+ * 扭蛋主題實體 - 純 POJO (MyBatis)
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "gacha_themes")
 public class GachaTheme {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false)
+    private Long ipId;
     private String name;
-
-    @Column(length = 1000)
     private String description;
-
-    @Column(nullable = false)
-    private BigDecimal price; // Cost to draw once
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ip_id")
-    private GachaIp ip;
-
     private String imageUrl;
-
-    @OneToMany(mappedBy = "theme", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<GachaItem> items;
-
-    // 取得 IP 名稱
-    public String getIpName() {
-        return ip != null ? ip.getName() : "";
-    }
+    private java.math.BigDecimal pricePerGacha;
+    private String status = "ACTIVE";
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

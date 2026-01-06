@@ -1,29 +1,29 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
-@Entity
+import java.math.BigDecimal;
+
+/**
+ * 購物車項目實體 - 純 POJO (MyBatis)
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "cart_items")
 public class CartItem {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cart_id")
-    @JsonIgnore
-    private Cart cart;
+    private Long cartId;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "product_id")
-    private Product product;
+    private transient Cart cart;
+
+    private Long productId;
+
+    private transient Product product;
 
     private Integer quantity;
+
+    private BigDecimal price;
 }

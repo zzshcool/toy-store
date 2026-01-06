@@ -3,9 +3,10 @@ package com.toy.store.service;
 import com.toy.store.dto.SignupRequest;
 import com.toy.store.exception.AppException;
 import com.toy.store.model.Member;
+import com.toy.store.model.MemberLevel;
 import com.toy.store.model.Transaction;
-import com.toy.store.repository.MemberLevelRepository;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
+import com.toy.store.mapper.MemberLevelMapper;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -18,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 會員業務服務
@@ -27,8 +29,8 @@ import java.util.List;
 @Slf4j
 public class MemberService {
 
-    private final MemberRepository memberRepository;
-    private final MemberLevelRepository memberLevelRepository;
+    private final MemberMapper memberMapper;
+    private final MemberLevelMapper memberLevelMapper;
     private final PasswordEncoder encoder;
     private final TokenService tokenService;
     private final TransactionService transactionService;
@@ -36,15 +38,15 @@ public class MemberService {
     private final SignInService signInService;
 
     public MemberService(
-            MemberRepository memberRepository,
-            MemberLevelRepository memberLevelRepository,
+            MemberMapper memberMapper,
+            MemberLevelMapper memberLevelMapper,
             PasswordEncoder encoder,
             TokenService tokenService,
             @Lazy TransactionService transactionService,
             EmailVerificationService emailVerificationService,
             @Lazy SignInService signInService) {
-        this.memberRepository = memberRepository;
-        this.memberLevelRepository = memberLevelRepository;
+        this.memberMapper = memberMapper;
+        this.memberLevelMapper = memberLevelMapper;
         this.encoder = encoder;
         this.tokenService = tokenService;
         this.transactionService = transactionService;
@@ -65,7 +67,7 @@ public class MemberService {
             throw new AppException("驗證碼不正確");
         }
 
-        Member member = memberRepository.findByUsername(username)
+        Member member = memberMapper.findByUsername(username)
                 .orElseThrow(() -> new AppException("帳號或密碼錯誤"));
 
         if (!encoder.matches(password, member.getPassword())) {
@@ -84,7 +86,7 @@ public class MemberService {
 
         // 更新最後登入時間
         member.setLastLoginTime(LocalDateTime.now());
-        memberRepository.save(member);
+        memberMapper.update(member);
 
         // 觸發每日簽到與任務
         try {
@@ -100,13 +102,13 @@ public class MemberService {
      * 驗證登入（不需驗證碼，供 API 登入使用）
      */
     public Member validateLogin(String username, String password) {
-        Member member = memberRepository.findByUsername(username).orElse(null);
+        Member member = memberMapper.findByUsername(username).orElse(null);
         if (member == null || !encoder.matches(password, member.getPassword())) {
             return null;
         }
         // 更新最後登入時間
         member.setLastLoginTime(LocalDateTime.now());
-        memberRepository.save(member);
+        memberMapper.update(member);
         return member;
     }
 
@@ -115,11 +117,11 @@ public class MemberService {
      */
     @Transactional
     public void register(SignupRequest signUpRequest, HttpSession session) {
-        if (memberRepository.existsByUsername(signUpRequest.getUsername())) {
+        if (Boolean.TRUE.equals(memberMapper.existsByUsername(signUpRequest.getUsername()))) {
             throw new AppException("此帳號已被註冊");
         }
 
-        if (memberRepository.existsByEmail(signUpRequest.getEmail())) {
+        if (Boolean.TRUE.equals(memberMapper.existsByEmail(signUpRequest.getEmail()))) {
             throw new AppException("此 Email 已被使用");
         }
 
@@ -151,6 +153,7 @@ public class MemberService {
         member.setPassword(encoder.encode(signUpRequest.getPassword()));
         member.setRole(Member.Role.USER);
         member.setPlatformWalletBalance(BigDecimal.ZERO);
+        member.setCreatedAt(LocalDateTime.now());
 
         // 設定暱稱
         String nickname = signUpRequest.getNickname();
@@ -158,12 +161,12 @@ public class MemberService {
                 nickname != null && !nickname.trim().isEmpty() ? nickname.trim() : signUpRequest.getUsername());
 
         // 初始化會員等級 (自動指派最低等級)
-        List<com.toy.store.model.MemberLevel> levels = memberLevelRepository.findByEnabledTrueOrderBySortOrderAsc();
+        List<MemberLevel> levels = memberLevelMapper.findAll();
         if (!levels.isEmpty()) {
-            member.setLevel(levels.get(0));
+            member.setMemberLevelId(levels.get(0).getId());
         }
 
-        memberRepository.save(member);
+        memberMapper.insert(member);
     }
 
     /**
@@ -172,7 +175,7 @@ public class MemberService {
     @Transactional
     public void updateProfile(String username, String nickname, String email, String phone,
             String realName, String address, String gender, java.time.LocalDate birthday) {
-        Member member = memberRepository.findByUsername(username)
+        Member member = memberMapper.findByUsername(username)
                 .orElseThrow(() -> new AppException("會員不存在"));
 
         member.setNickname(nickname);
@@ -183,7 +186,7 @@ public class MemberService {
         member.setGender(gender);
         member.setBirthday(birthday);
 
-        memberRepository.save(member);
+        memberMapper.update(member);
     }
 
     /**
@@ -191,27 +194,27 @@ public class MemberService {
      */
     @Transactional
     public Member topup(String username, BigDecimal amount, String paymentMethod) {
-        Member member = memberRepository.findByUsername(username)
+        Member member = memberMapper.findByUsername(username)
                 .orElseThrow(() -> new AppException("會員不存在"));
 
         transactionService.updateWalletBalance(
                 member.getId(),
                 amount,
-                Transaction.TransactionType.DEPOSIT,
+                Transaction.Type.RECHARGE,
                 "TOPUP-" + paymentMethod);
 
         Long id = member.getId();
         if (id == null) {
             throw new AppException("會員儲存失敗");
         }
-        return memberRepository.findById(id).orElseThrow();
+        return memberMapper.findById(id).orElseThrow();
     }
 
     /**
      * 發送驗證碼
      */
     public void sendVerifyCode(String email, HttpSession session) {
-        if (memberRepository.existsByEmail(email)) {
+        if (Boolean.TRUE.equals(memberMapper.existsByEmail(email))) {
             throw new AppException("此 Email 已被註冊");
         }
         emailVerificationService.generateAndSaveCode(email, session);
@@ -231,9 +234,9 @@ public class MemberService {
     public void addPoints(Long memberId, int amount) {
         if (memberId == null)
             return;
-        memberRepository.findById(memberId).ifPresent(member -> {
+        memberMapper.findById(memberId).ifPresent(member -> {
             member.setPoints(member.getPoints() + amount);
-            memberRepository.save(member);
+            memberMapper.update(member);
             log.info("Member {} earned {} points", member.getUsername(), amount);
         });
     }
@@ -245,10 +248,44 @@ public class MemberService {
     public void addBonusPoints(Long memberId, int amount) {
         if (memberId == null)
             return;
-        memberRepository.findById(memberId).ifPresent(member -> {
+        memberMapper.findById(memberId).ifPresent(member -> {
             member.setBonusPoints(member.getBonusPoints() + amount);
-            memberRepository.save(member);
+            memberMapper.update(member);
             log.info("Member {} earned {} bonus points", member.getUsername(), amount);
         });
+    }
+
+    /**
+     * 根據 ID 查詢會員
+     */
+    public Optional<Member> findById(Long id) {
+        return memberMapper.findById(id);
+    }
+
+    /**
+     * 根據使用者名稱查詢會員
+     */
+    public Optional<Member> findByUsername(String username) {
+        return memberMapper.findByUsername(username);
+    }
+
+    /**
+     * 儲存會員
+     */
+    @Transactional
+    public Member save(Member member) {
+        if (member.getId() == null) {
+            memberMapper.insert(member);
+        } else {
+            memberMapper.update(member);
+        }
+        return member;
+    }
+
+    /**
+     * 查詢所有會員
+     */
+    public List<Member> findAll() {
+        return memberMapper.findAll();
     }
 }

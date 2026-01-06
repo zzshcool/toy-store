@@ -1,6 +1,5 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -10,34 +9,32 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
+/**
+ * 訂單實體 - 純 POJO (MyBatis)
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "orders")
 public class Order {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id")
-    private Member member;
+    // 會員 ID（手動關聯）
+    private Long memberId;
 
-    @Column(nullable = false)
+    // 會員物件（非持久化，由 Service 層填充）
+    private transient Member member;
+
     private BigDecimal totalPrice;
 
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
     private String couponName;
 
-    @Enumerated(EnumType.STRING)
     private OrderStatus status = OrderStatus.PENDING;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
-    private List<OrderItem> items = new ArrayList<>();
+    // 訂單項目（非持久化，由 Service 層填充）
+    private transient List<OrderItem> items = new ArrayList<>();
 
-    @Column(nullable = false)
     private LocalDateTime createTime = LocalDateTime.now();
 
     public enum OrderStatus {

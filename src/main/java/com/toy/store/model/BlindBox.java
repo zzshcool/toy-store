@@ -1,6 +1,5 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -10,65 +9,40 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 盲盒（中盒）實體
- * 對應規格書 §4.D 動漫周邊系統
+ * 盲盒（中盒）實體 - 純 POJO (MyBatis)
  */
-@Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "blind_boxes")
 public class BlindBox {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String name; // 盲盒名稱
 
-    @Column(length = 500)
     private String description;
 
     private String imageUrl;
 
-    @Column(nullable = false)
     private String ipName; // IP 名稱（如：海賊王、火影忍者）
 
-    @Column(nullable = false)
     private BigDecimal pricePerBox; // 單抽價格
 
-    @Column(nullable = false)
     private BigDecimal fullBoxPrice; // 全包價格（整中盒）
 
-    @Column(nullable = false)
     private Integer totalBoxes = 12; // 中盒內總格數（通常 6-12 個）
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Status status = Status.ACTIVE;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "blindBox", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<BlindBoxItem> items;
+    private transient List<BlindBoxItem> items;
 
     public enum Status {
         ACTIVE, // 進行中
         SOLD_OUT, // 售罄
         INACTIVE // 下架
-    }
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
     }
 
     /**

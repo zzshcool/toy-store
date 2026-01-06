@@ -1,101 +1,52 @@
 package com.toy.store.model;
 
-import com.toy.store.service.GachaProbabilityEngine;
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import com.toy.store.service.GachaProbabilityEngine;
 
 /**
- * 轉盤獎格實體
- * 定義每個格子的類型、權重與獎品
+ * 轉盤格子實體 - 純 POJO (MyBatis)
  */
-@Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "roulette_slots")
 public class RouletteSlot implements GachaProbabilityEngine.ProbableItem {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "game_id", nullable = false)
-    @JsonIgnore
-    private RouletteGame game;
+    private Long gameId;
+    private transient RouletteGame game;
 
-    @Column(nullable = false)
-    private Integer slotOrder; // 格子順序 1-25
+    private Integer position;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private SlotType slotType; // 格子類型
-
-    @Column(nullable = false)
-    private String prizeName; // 獎品名稱
+    private String prizeName;
 
     private String prizeDescription;
+
     private String prizeImageUrl;
-    private BigDecimal prizeValue; // 獎品價值
 
-    @Column(nullable = false)
-    private Integer weight = 100; // 權重（用於隨機計算）
+    private BigDecimal prizeValue;
 
-    // 碎片數（如果是碎片類型）
-    private Integer shardAmount;
+    private Integer weight = 1;
 
-    // 顏色（用於前端顯示）
-    private String color = "#FFD700";
+    private GachaProbabilityEngine.PrizeTier tier = GachaProbabilityEngine.PrizeTier.NORMAL;
+
+    private Integer shardsReward = 0;
+
+    private Integer luckyValueReward = 0;
 
     @Override
     public Integer getWeight() {
-        return weight;
+        return this.weight != null ? this.weight : 1;
     }
 
     @Override
     public GachaProbabilityEngine.PrizeTier getTier() {
-        if (slotType == SlotType.JACKPOT)
-            return GachaProbabilityEngine.PrizeTier.JACKPOT;
-        if (slotType == SlotType.RARE)
-            return GachaProbabilityEngine.PrizeTier.RARE;
-        return GachaProbabilityEngine.PrizeTier.NORMAL;
-    }
-
-    public enum SlotType {
-        JACKPOT("大獎", "#FF0000"), // 大獎
-        RARE("稀有獎", "#FF6600"), // 稀有獎
-        NORMAL("普通獎", "#FFD700"), // 普通獎
-        FREE_SPIN("再來一次", "#00FF00"), // 再來一次
-        SHARD("碎片", "#AAAAAA"); // 碎片獎勵
-
-        private final String displayName;
-        private final String defaultColor;
-
-        SlotType(String displayName, String defaultColor) {
-            this.displayName = displayName;
-            this.defaultColor = defaultColor;
-        }
-
-        public String getDisplayName() {
-            return displayName;
-        }
-
-        public String getDefaultColor() {
-            return defaultColor;
-        }
-    }
-
-    // 是否為大獎（用於保底判斷）
-    public boolean isJackpot() {
-        return slotType == SlotType.JACKPOT || slotType == SlotType.RARE;
-    }
-
-    // 取得遊戲名稱
-    public String getGameName() {
-        return game != null ? game.getName() : "";
+        return this.tier != null ? this.tier : GachaProbabilityEngine.PrizeTier.NORMAL;
     }
 }

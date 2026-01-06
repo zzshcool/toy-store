@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.toy.store.mapper.MemberMapper">
+
+    <resultMap id="MemberResultMap" type="com.toy.store.model.Member">
+        <id property="id" column="id"/>
+        <result property="username" column="username"/>
+        <result property="password" column="password"/>
+        <result property="email" column="email"/>
+        <result property="role" column="role"/>
+        <result property="avatarUrl" column="avatar_url"/>
+        <result property="nickname" column="nickname"/>
+        <result property="phone" column="phone"/>
+        <result property="platformWalletBalance" column="platform_wallet_balance"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="enabled" column="enabled"/>
+        <result property="lastLoginTime" column="last_login_time"/>
+        <result property="monthlyRecharge" column="monthly_recharge"/>
+        <result property="realName" column="real_name"/>
+        <result property="address" column="address"/>
+        <result property="gender" column="gender"/>
+        <result property="birthday" column="birthday"/>
+        <result property="growthValue" column="growth_value"/>
+        <result property="points" column="points"/>
+        <result property="bonusPoints" column="bonus_points"/>
+        <result property="luckyValue" column="lucky_value"/>
+        <result property="lastLevelReviewDate" column="last_level_review_date"/>
+        <association property="level" column="member_level_id"
+                     javaType="com.toy.store.model.MemberLevel"
+                     select="com.toy.store.mapper.MemberLevelMapper.findById"/>
+    </resultMap>
+
+    <select id="searchByKeyword" resultMap="MemberResultMap">
+        SELECT * FROM members
+        WHERE LOWER(username) LIKE #{keyword}
+           OR LOWER(email) LIKE #{keyword}
+           OR LOWER(nickname) LIKE #{keyword}
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <update id="update">
+        UPDATE members SET
+            username = #{username},
+            password = #{password},
+            email = #{email},
+            role = #{role},
+            avatar_url = #{avatarUrl},
+            nickname = #{nickname},
+            phone = #{phone},
+            platform_wallet_balance = #{platformWalletBalance},
+            enabled = #{enabled},
+            last_login_time = #{lastLoginTime},
+            member_level_id = #{level.id},
+            monthly_recharge = #{monthlyRecharge},
+            real_name = #{realName},
+            address = #{address},
+            gender = #{gender},
+            birthday = #{birthday},
+            growth_value = #{growthValue},
+            points = #{points},
+            bonus_points = #{bonusPoints},
+            lucky_value = #{luckyValue},
+            last_level_review_date = #{lastLevelReviewDate}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

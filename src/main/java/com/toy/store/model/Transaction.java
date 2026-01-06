@@ -1,6 +1,5 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -8,33 +7,32 @@ import lombok.AllArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Entity
+/**
+ * 交易紀錄實體 - 純 POJO (MyBatis)
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "transactions")
 public class Transaction {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id", nullable = false)
-    private Member member;
+    private Long memberId;
 
-    @Column(nullable = false)
-    private BigDecimal amount; // Can be positive or negative
+    private String type;
 
-    @Enumerated(EnumType.STRING)
-    private TransactionType type;
+    private BigDecimal amount;
 
-    @Column(nullable = false)
-    private LocalDateTime timestamp = LocalDateTime.now();
+    private BigDecimal balanceAfter;
 
-    private String referenceId; // e.g., Order ID or Mystery Box ID
+    private String description;
 
-    public enum TransactionType {
-        DEPOSIT, WITHDRAW, PURCHASE, PRIZE_INCOME, GACHA_COST,
-        ICHIBAN_COST, ROULETTE_COST, BINGO_COST, REFUND, GACHA_SPEND, BLINDBOX_COST
+    private Long referenceId;
+
+    private String referenceType;
+
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    public enum Type {
+        RECHARGE, PURCHASE, REFUND, BONUS, WITHDRAW
     }
 }

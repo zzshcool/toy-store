@@ -1,24 +1,20 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
-@Entity
+/**
+ * 輪播圖實體 - 純 POJO (MyBatis)
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "carousel_slides")
 public class CarouselSlide {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    private String title;
     private String imageUrl;
     private String linkUrl;
-
-    private Integer sortOrder;
-
-    private boolean isActive = true;
+    private Integer sortOrder = 0;
+    private Boolean active = true;
 }

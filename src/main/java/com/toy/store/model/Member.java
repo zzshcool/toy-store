@@ -1,6 +1,5 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -9,26 +8,21 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 
-@Entity
+/**
+ * 會員實體 - 純 POJO (MyBatis)
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "members")
 public class Member {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
     private String username;
 
-    @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false)
     private String email;
 
-    @Enumerated(EnumType.STRING)
     private Role role = Role.USER;
 
     private String avatarUrl;
@@ -37,22 +31,21 @@ public class Member {
 
     private String phone;
 
-    // Platform Wallet Balance used for transactions
-    @Column(nullable = false)
+    // 平台錢包餘額
     private BigDecimal platformWalletBalance = BigDecimal.ZERO;
 
-    @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
     private boolean enabled = true;
 
     private LocalDateTime lastLoginTime;
 
-    @ManyToOne
-    @JoinColumn(name = "member_level_id")
-    private MemberLevel level;
+    // 會員等級 ID（手動關聯）
+    private Long memberLevelId;
 
-    @Column(nullable = false)
+    // 會員等級物件（非持久化，由 Service 層填充）
+    private transient MemberLevel level;
+
     private BigDecimal monthlyRecharge = BigDecimal.ZERO;
 
     private String realName;
@@ -63,16 +56,12 @@ public class Member {
 
     private java.time.LocalDate birthday;
 
-    @Column(nullable = false)
     private Long growthValue = 0L;
 
-    @Column(nullable = false)
     private Integer points = 0; // 積分 (原 Shards)
 
-    @Column(nullable = false)
     private Integer bonusPoints = 0; // 紅利點數
 
-    @Column(nullable = false)
     private Integer luckyValue = 0; // 幸運值
 
     private LocalDate lastLevelReviewDate;

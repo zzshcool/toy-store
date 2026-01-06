@@ -1,55 +1,41 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.toy.store.service.GachaProbabilityEngine;
 
 /**
- * 九宮格格子實體
+ * 九宮格格子實體 - 純 POJO (MyBatis)
  * 每個格子代表網格中的一個位置
  */
-@Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "bingo_cells")
 public class BingoCell implements GachaProbabilityEngine.ProbableItem {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "game_id", nullable = false)
-    @JsonIgnore
-    private BingoGame game;
+    private Long gameId;
+    private transient BingoGame game;
 
-    @Column(nullable = false)
     private Integer position; // 位置編號（從1開始，左上到右下）
 
-    @Column(name = "row_num", nullable = false)
     private Integer row; // 行（0-5）
 
-    @Column(name = "col_num", nullable = false)
     private Integer col; // 列（0-5）
 
-    @Column(nullable = false)
     private String prizeName;
 
     private String prizeDescription;
     private String prizeImageUrl;
     private BigDecimal prizeValue;
 
-    @Column(nullable = false)
     private Boolean isRevealed = false;
 
-    @Enumerated(EnumType.STRING)
     private GachaProbabilityEngine.PrizeTier tier = GachaProbabilityEngine.PrizeTier.NORMAL;
 
     // 揭曉資訊
@@ -83,7 +69,7 @@ public class BingoCell implements GachaProbabilityEngine.ProbableItem {
     }
 
     public Long getGameId() {
-        return game != null ? game.getId() : null;
+        return gameId != null ? gameId : (game != null ? game.getId() : null);
     }
 
     // 根據位置計算行列（用於建立格子時）

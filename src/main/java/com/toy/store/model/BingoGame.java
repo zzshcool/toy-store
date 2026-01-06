@@ -1,50 +1,36 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 九宮格遊戲實體
+ * 九宮格遊戲實體 - 純 POJO (MyBatis)
  * 支援 3×3 到 6×6 的網格大小
  */
-@Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "bingo_games")
 public class BingoGame {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ip_id", nullable = false)
-    @JsonIgnore
-    private GachaIp ip;
+    private Long ipId;
+    private transient GachaIp ip;
 
-    @Column(nullable = false)
     private String name;
 
-    @Column(length = 1000)
     private String description;
 
     private String imageUrl;
 
-    @Column(nullable = false)
     private BigDecimal pricePerDig; // 單次挖掘價格
 
-    @Column(nullable = false)
     private Integer gridSize = 3; // 網格大小：3-6（表示 3×3 到 6×6）
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Status status = Status.ACTIVE;
 
     // 連線獎勵設定
@@ -54,10 +40,8 @@ public class BingoGame {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // 格子
-    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @OrderBy("position ASC")
-    private List<BingoCell> cells;
+    // 格子（非持久化，由 Service 層填充）
+    private transient List<BingoCell> cells;
 
     public enum Status {
         DRAFT,
@@ -76,8 +60,6 @@ public class BingoGame {
     }
 
     // 驗證 gridSize 範圍
-    @PrePersist
-    @PreUpdate
     public void validateGridSize() {
         if (gridSize < 3)
             gridSize = 3;

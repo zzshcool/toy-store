@@ -1,39 +1,28 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 
 import com.toy.store.service.GachaProbabilityEngine;
 
 /**
- * 一番賞格子實體
+ * 一番賞格子實體 - 純 POJO (MyBatis)
  * 每個格子對應一個編號和一個獎品
  */
-@Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "ichiban_slots")
 public class IchibanSlot implements GachaProbabilityEngine.ProbableItem {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "box_id", nullable = false)
-    @JsonIgnore
-    private IchibanBox box;
+    private Long boxId; // 箱體 ID（手動關聯）
+    private transient IchibanBox box;
 
-    @Column(nullable = false)
     private Integer slotNumber; // 格子編號 1-80
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private Status status = Status.AVAILABLE;
 
     // 鎖定資訊（防止併發衝突）
@@ -45,9 +34,8 @@ public class IchibanSlot implements GachaProbabilityEngine.ProbableItem {
     private LocalDateTime revealedAt;
 
     // 該格子對應的獎品
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "prize_id")
-    private IchibanPrize prize;
+    private Long prizeId;
+    private transient IchibanPrize prize;
 
     private LocalDateTime lockTime;
 

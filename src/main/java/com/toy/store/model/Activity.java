@@ -1,27 +1,21 @@
 package com.toy.store.model;
 
-import jakarta.persistence.*;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import java.time.LocalDateTime;
 
+/**
+ * 活動實體 - 純 POJO (MyBatis)
+ */
 @Data
-@Entity
-@Table(name = "activities")
+@NoArgsConstructor
+@AllArgsConstructor
 public class Activity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    private String title;
-
-    @Column(length = 1000)
+    private String name;
     private String description;
-
-    private String imageUrl;
-
-    private String type; // e.g. SALE, PREORDER
-
-    private java.time.LocalDateTime startDate;
-    private java.time.LocalDateTime expiryDate; // Using as End Date
-
-    private boolean active = true;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
+    private String status = "ACTIVE";
 }

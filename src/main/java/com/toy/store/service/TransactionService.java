@@ -5,9 +5,9 @@ import com.toy.store.model.Member;
 import com.toy.store.model.MemberLevel;
 import com.toy.store.model.MemberMission;
 import com.toy.store.model.Transaction;
-import com.toy.store.repository.MemberLevelRepository;
-import com.toy.store.repository.MemberRepository;
-import com.toy.store.repository.TransactionRepository;
+import com.toy.store.mapper.MemberMapper;
+import com.toy.store.mapper.MemberLevelMapper;
+import com.toy.store.mapper.TransactionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -19,14 +19,23 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class TransactionService {
 
-    private final MemberRepository memberRepository;
-    private final TransactionRepository transactionRepository;
-    private final MemberLevelRepository memberLevelRepository;
-    @Lazy
+    private final MemberMapper memberMapper;
+    private final TransactionMapper transactionMapper;
+    private final MemberLevelMapper memberLevelMapper;
     private final MissionService missionService;
+
+    public TransactionService(
+            MemberMapper memberMapper,
+            TransactionMapper transactionMapper,
+            MemberLevelMapper memberLevelMapper,
+            @Lazy MissionService missionService) {
+        this.memberMapper = memberMapper;
+        this.transactionMapper = transactionMapper;
+        this.memberLevelMapper = memberLevelMapper;
+        this.missionService = missionService;
+    }
 
     /**
      * Updates member wallet balance atomically.
@@ -37,8 +46,8 @@ public class TransactionService {
      * @throws RuntimeException if member not found or insufficient funds
      */
     @Transactional
-    public void updateWalletBalance(Long memberId, BigDecimal amount, Transaction.TransactionType type, String refId) {
-        Member member = memberRepository.findById(memberId)
+    public void updateWalletBalance(Long memberId, BigDecimal amount, Transaction.Type type, String refId) {
+        Member member = memberMapper.findById(memberId)
                 .orElseThrow(() -> new AppException("會員不存在"));
 
         BigDecimal newBalance = member.getPlatformWalletBalance().add(amount);
@@ -63,22 +72,22 @@ public class TransactionService {
             }
         }
 
-        if (type == Transaction.TransactionType.DEPOSIT) {
+        if (type == Transaction.Type.RECHARGE) {
             member.setMonthlyRecharge(member.getMonthlyRecharge().add(amount));
             checkAndUpgradeLevel(member);
         }
 
         member.setPlatformWalletBalance(newBalance);
-        memberRepository.save(member);
+        memberMapper.update(member);
 
         Transaction transaction = new Transaction();
-        transaction.setMember(member);
+        transaction.setMemberId(memberId);
         transaction.setAmount(amount);
-        transaction.setType(type);
-        transaction.setTimestamp(LocalDateTime.now());
-        transaction.setReferenceId(refId);
+        transaction.setType(type.name());
+        transaction.setCreatedAt(LocalDateTime.now());
+        transaction.setDescription(refId);
 
-        transactionRepository.save(transaction);
+        transactionMapper.insert(transaction);
     }
 
     /**
@@ -86,7 +95,7 @@ public class TransactionService {
      */
     @Transactional
     public void deductBalance(Long memberId, BigDecimal amount, String description) {
-        updateWalletBalance(memberId, amount.negate(), Transaction.TransactionType.GACHA_SPEND, description);
+        updateWalletBalance(memberId, amount.negate(), Transaction.Type.PURCHASE, description);
     }
 
     /**
@@ -94,38 +103,57 @@ public class TransactionService {
      */
     @Transactional
     public void addBalance(Long memberId, BigDecimal amount, String description) {
-        updateWalletBalance(memberId, amount, Transaction.TransactionType.REFUND, description);
+        updateWalletBalance(memberId, amount, Transaction.Type.REFUND, description);
     }
 
     private void checkAndUpgradeLevel(Member member) {
-        MemberLevel current = member.getLevel();
+        Long memberLevelId = member.getMemberLevelId();
 
-        // Fetch all enabled levels sorted by sort order
-        List<MemberLevel> allLevels = memberLevelRepository.findByEnabledTrueOrderBySortOrderAsc();
+        // Fetch all levels sorted by min growth value
+        List<MemberLevel> allLevels = memberLevelMapper.findAll();
 
         if (allLevels.isEmpty())
             return;
 
         // 新會員無等級時，或重新指派
+        MemberLevel current = null;
+        if (memberLevelId != null) {
+            current = memberLevelMapper.findById(memberLevelId).orElse(null);
+        }
+
         if (current == null) {
-            member.setLevel(allLevels.get(0));
+            member.setMemberLevelId(allLevels.get(0).getId());
             current = allLevels.get(0);
         }
 
         MemberLevel targetLevel = current;
 
         // Find the highest eligible level using growthValue
-        BigDecimal growthValueBD = BigDecimal.valueOf(member.getGrowthValue());
+        Long growthValue = member.getGrowthValue();
         for (MemberLevel level : allLevels) {
-            if (level.getSortOrder() > current.getSortOrder() &&
-                    growthValueBD.compareTo(level.getThreshold()) >= 0) {
+            if (level.getMinGrowthValue() != null &&
+                    growthValue >= level.getMinGrowthValue()) {
                 targetLevel = level;
             }
         }
 
-        if (!targetLevel.equals(current)) {
-            member.setLevel(targetLevel);
+        if (!targetLevel.getId().equals(current.getId())) {
+            member.setMemberLevelId(targetLevel.getId());
             member.setLastLevelReviewDate(LocalDate.now());
         }
+    }
+
+    /**
+     * 查詢會員交易記錄
+     */
+    public List<Transaction> findByMemberId(Long memberId) {
+        return transactionMapper.findByMemberId(memberId);
+    }
+
+    /**
+     * 查詢所有交易記錄
+     */
+    public List<Transaction> findAll() {
+        return transactionMapper.findAll();
     }
 }
