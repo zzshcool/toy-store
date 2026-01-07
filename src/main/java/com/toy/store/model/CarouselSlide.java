@@ -17,4 +17,5 @@ public class CarouselSlide {
     private String linkUrl;
     private Integer sortOrder = 0;
     private Boolean active = true;
+    private java.time.LocalDateTime createdAt = java.time.LocalDateTime.now();
 }

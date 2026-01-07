@@ -32,7 +32,8 @@ public class Transaction {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    public enum Type {
-        RECHARGE, PURCHASE, REFUND, BONUS, WITHDRAW
+    public enum TransactionType {
+        RECHARGE, PURCHASE, REFUND, BONUS, WITHDRAW,
+        GACHA_COST, ICHIBAN_COST, ROULETTE_COST, BINGO_COST
     }
 }

@@ -12,27 +12,34 @@ import java.util.Optional;
 @Mapper
 public interface SystemSettingMapper {
 
-    @Select("SELECT * FROM system_settings WHERE id = #{id}")
-    Optional<SystemSetting> findById(Long id);
+        @Select("SELECT * FROM system_settings WHERE id = #{id}")
+        Optional<SystemSetting> findById(Long id);
 
-    @Select("SELECT * FROM system_settings WHERE setting_key = #{key}")
-    Optional<SystemSetting> findByKey(String key);
+        @Select("SELECT * FROM system_settings WHERE setting_key = #{key}")
+        Optional<SystemSetting> findByKey(String key);
 
-    @Select("SELECT * FROM system_settings")
-    List<SystemSetting> findAll();
+        @Select("SELECT * FROM system_settings")
+        List<SystemSetting> findAll();
 
-    @Insert("INSERT INTO system_settings (setting_key, setting_value, setting_type, description, updated_at) " +
-            "VALUES (#{settingKey}, #{settingValue}, #{settingType}, #{description}, #{updatedAt})")
-    @Options(useGeneratedKeys = true, keyProperty = "id")
-    int insert(SystemSetting setting);
+        @Insert("INSERT INTO system_settings (setting_key, setting_value, setting_type, description, updated_at) " +
+                        "VALUES (#{settingKey}, #{settingValue}, #{settingType}, #{description}, #{updatedAt})")
+        @Options(useGeneratedKeys = true, keyProperty = "id")
+        int insert(SystemSetting setting);
 
-    @Update("UPDATE system_settings SET setting_value = #{settingValue}, setting_type = #{settingType}, " +
-            "description = #{description}, updated_at = #{updatedAt} WHERE id = #{id}")
-    int update(SystemSetting setting);
+        @Update("UPDATE system_settings SET setting_value = #{settingValue}, setting_type = #{settingType}, " +
+                        "description = #{description}, updated_at = #{updatedAt} WHERE id = #{id}")
+        int update(SystemSetting setting);
 
-    @Update("UPDATE system_settings SET setting_value = #{value}, updated_at = NOW() WHERE setting_key = #{key}")
-    int updateValueByKey(@Param("key") String key, @Param("value") String value);
+        @Update("UPDATE system_settings SET setting_value = #{value}, updated_at = NOW() WHERE setting_key = #{key}")
+        int updateValueByKey(@Param("key") String key, @Param("value") String value);
 
-    @Delete("DELETE FROM system_settings WHERE id = #{id}")
-    int deleteById(Long id);
+        @Delete("DELETE FROM system_settings WHERE id = #{id}")
+        int deleteById(Long id);
+
+        // 別名方法
+        @Select("SELECT * FROM system_settings WHERE setting_key = #{key}")
+        Optional<SystemSetting> findBySettingKey(String key);
+
+        @Select("SELECT COUNT(*) > 0 FROM system_settings WHERE setting_key = #{key}")
+        boolean existsBySettingKey(String key);
 }

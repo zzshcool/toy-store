@@ -2,7 +2,7 @@ package com.toy.store.controller.api;
 
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.Member;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.MemberService;
 import com.toy.store.service.TokenService;
 import jakarta.servlet.http.Cookie;
@@ -22,7 +22,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MemberApiController {
 
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
     private final MemberService memberService;
     private final TokenService tokenService;
 
@@ -36,7 +36,7 @@ public class MemberApiController {
             return ApiResponse.error("請先登入");
         }
 
-        return memberRepository.findByUsername(user.getUsername())
+        return memberMapper.findByUsername(user.getUsername())
                 .map(member -> {
                     Map<String, Object> result = new HashMap<>();
                     result.put("balance", member.getPlatformWalletBalance());
@@ -57,7 +57,7 @@ public class MemberApiController {
             return ApiResponse.error("請先登入");
         }
 
-        return memberRepository.findByUsername(user.getUsername())
+        return memberMapper.findByUsername(user.getUsername())
                 .map(member -> {
                     Map<String, Object> result = new HashMap<>();
                     result.put("realName", member.getRealName());
@@ -109,7 +109,7 @@ public class MemberApiController {
      */
     @GetMapping("/admin/{memberId}/history")
     public ApiResponse<Map<String, Object>> getMemberHistory(@PathVariable Long memberId) {
-        return memberRepository.findById(memberId)
+        return memberMapper.findById(memberId)
                 .map(member -> {
                     Map<String, Object> history = new HashMap<>();
                     history.put("id", member.getId());

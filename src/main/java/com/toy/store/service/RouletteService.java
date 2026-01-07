@@ -2,7 +2,7 @@ package com.toy.store.service;
 
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
-import com.toy.store.repository.*;
+import com.toy.store.mapper.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,27 +15,27 @@ import java.util.List;
 @Service
 public class RouletteService extends BaseGachaService {
 
-    private final RouletteGameRepository gameRepository;
-    private final RouletteSlotRepository slotRepository;
+    private final RouletteGameMapper gameMapper;
+    private final RouletteSlotMapper slotMapper;
     private final GachaProbabilityEngine probabilityEngine;
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
     private final SystemSettingService systemSettingService;
 
     public RouletteService(
-            GachaRecordRepository recordRepository,
+            GachaRecordMapper recordMapper,
             TransactionService transactionService,
             ShardService shardService,
             MissionService missionService,
-            RouletteGameRepository gameRepository,
-            RouletteSlotRepository slotRepository,
+            RouletteGameMapper gameMapper,
+            RouletteSlotMapper slotMapper,
             GachaProbabilityEngine probabilityEngine,
-            MemberRepository memberRepository,
+            MemberMapper memberMapper,
             SystemSettingService systemSettingService) {
-        super(recordRepository, transactionService, shardService, missionService);
-        this.gameRepository = gameRepository;
-        this.slotRepository = slotRepository;
+        super(recordMapper, transactionService, shardService, missionService);
+        this.gameMapper = gameMapper;
+        this.slotMapper = slotMapper;
         this.probabilityEngine = probabilityEngine;
-        this.memberRepository = memberRepository;
+        this.memberMapper = memberMapper;
         this.systemSettingService = systemSettingService;
     }
 
@@ -43,7 +43,7 @@ public class RouletteService extends BaseGachaService {
      * 取得所有進行中的轉盤遊戲
      */
     public List<RouletteGame> getActiveGames() {
-        return gameRepository.findByStatus(RouletteGame.Status.ACTIVE);
+        return gameMapper.findByStatus(RouletteGame.Status.ACTIVE.name());
     }
 
     /**
@@ -52,14 +52,14 @@ public class RouletteService extends BaseGachaService {
     public RouletteGame getGameWithSlots(Long gameId) {
         if (gameId == null)
             return null;
-        return gameRepository.findById(gameId).orElse(null);
+        return gameMapper.findById(gameId).orElse(null);
     }
 
     /**
      * 取得轉盤的獎格列表
      */
     public List<RouletteSlot> getSlots(Long gameId) {
-        return slotRepository.findByGame_IdOrderBySlotOrderAsc(gameId);
+        return slotMapper.findByGameIdOrderBySlotOrderAsc(gameId);
     }
 
     /**
@@ -71,7 +71,7 @@ public class RouletteService extends BaseGachaService {
     public SpinResult spin(Long gameId, Long memberId) {
         if (memberId == null || gameId == null)
             throw new AppException("ID不能為空");
-        RouletteGame game = gameRepository.findById(gameId)
+        RouletteGame game = gameMapper.findById(gameId)
                 .orElseThrow(() -> new AppException("轉盤遊戲不存在"));
 
         // 扣款
@@ -79,14 +79,14 @@ public class RouletteService extends BaseGachaService {
                 "轉盤消費: " + game.getName());
 
         // 取得會員模型 (中央幸運值管理)
-        Member member = memberRepository.findById(memberId)
+        Member member = memberMapper.findById(memberId)
                 .orElseThrow(() -> new AppException("會員不存在"));
 
         int threshold = 100; // 規格書定義
         boolean isGuarantee = member.getLuckyValue() >= threshold;
 
         // 取得獎格列表
-        List<RouletteSlot> slots = slotRepository.findByGame_IdOrderBySlotOrderAsc(gameId);
+        List<RouletteSlot> slots = slotMapper.findByGameIdOrderBySlotOrderAsc(gameId);
         if (slots.isEmpty()) {
             throw new AppException("轉盤沒有獎格");
         }
@@ -104,8 +104,8 @@ public class RouletteService extends BaseGachaService {
 
             winningSlot = probabilityEngine.draw(slots, progress, revenueThreshold);
 
-            if (winningSlot.getSlotType() != RouletteSlot.SlotType.JACKPOT &&
-                    winningSlot.getSlotType() != RouletteSlot.SlotType.RARE) {
+            if (winningSlot.getSlotTypeEnum() != RouletteSlot.SlotType.JACKPOT &&
+                    winningSlot.getSlotTypeEnum() != RouletteSlot.SlotType.RARE) {
                 // 未中大獎，累積幸運值
                 member.setLuckyValue(member.getLuckyValue() + 10);
             } else {
@@ -116,8 +116,8 @@ public class RouletteService extends BaseGachaService {
 
         // 更新數據
         game.setTotalDraws(game.getTotalDraws() + 1);
-        gameRepository.save(game);
-        memberRepository.save(member);
+        gameMapper.update(game);
+        memberMapper.update(member);
 
         // 處理獎勵
         int shardsEarned = 0;
@@ -126,7 +126,7 @@ public class RouletteService extends BaseGachaService {
         // 所有獎項現在均產出隨機積分 1~20
         shardsEarned = processGachaShards(memberId, "ROULETTE", gameId, "轉盤抽獎獲得");
 
-        if (winningSlot.getSlotType() == RouletteSlot.SlotType.FREE_SPIN) {
+        if (winningSlot.getSlotTypeEnum() == RouletteSlot.SlotType.FREE_SPIN) {
             isFreeSpin = true;
         }
 
@@ -145,7 +145,7 @@ public class RouletteService extends BaseGachaService {
     public int getMemberLuckyValue(Long memberId) {
         if (memberId == null)
             return 0;
-        return memberRepository.findById(memberId)
+        return memberMapper.findById(memberId)
                 .map(Member::getLuckyValue)
                 .orElse(0);
     }
@@ -156,10 +156,10 @@ public class RouletteService extends BaseGachaService {
     private RouletteSlot selectJackpotSlot(List<RouletteSlot> slots) {
         // 優先選擇 JACKPOT，其次 RARE
         return slots.stream()
-                .filter(s -> s.getSlotType() == RouletteSlot.SlotType.JACKPOT)
+                .filter(s -> s.getSlotTypeEnum() == RouletteSlot.SlotType.JACKPOT)
                 .findFirst()
                 .orElse(slots.stream()
-                        .filter(s -> s.getSlotType() == RouletteSlot.SlotType.RARE)
+                        .filter(s -> s.getSlotTypeEnum() == RouletteSlot.SlotType.RARE)
                         .findFirst()
                         .orElse(slots.get(0)));
     }

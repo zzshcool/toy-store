@@ -2,7 +2,7 @@ package com.toy.store.service;
 
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
-import com.toy.store.repository.*;
+import com.toy.store.mapper.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,24 +16,24 @@ import java.util.List;
 @Service
 public class BingoService extends BaseGachaService {
 
-    private final BingoGameRepository gameRepository;
-    private final BingoCellRepository cellRepository;
-    private final MemberRepository memberRepository;
+    private final BingoGameMapper gameMapper;
+    private final BingoCellMapper cellMapper;
+    private final MemberMapper memberMapper;
     private final SystemSettingService systemSettingService;
 
     public BingoService(
-            GachaRecordRepository recordRepository,
+            GachaRecordMapper recordMapper,
             TransactionService transactionService,
             ShardService shardService,
             MissionService missionService,
-            BingoGameRepository gameRepository,
-            BingoCellRepository cellRepository,
-            MemberRepository memberRepository,
+            BingoGameMapper gameMapper,
+            BingoCellMapper cellMapper,
+            MemberMapper memberMapper,
             SystemSettingService systemSettingService) {
-        super(recordRepository, transactionService, shardService, missionService);
-        this.gameRepository = gameRepository;
-        this.cellRepository = cellRepository;
-        this.memberRepository = memberRepository;
+        super(recordMapper, transactionService, shardService, missionService);
+        this.gameMapper = gameMapper;
+        this.cellMapper = cellMapper;
+        this.memberMapper = memberMapper;
         this.systemSettingService = systemSettingService;
     }
 
@@ -41,7 +41,7 @@ public class BingoService extends BaseGachaService {
      * 取得所有進行中的九宮格遊戲
      */
     public List<BingoGame> getActiveGames() {
-        return gameRepository.findByStatus(BingoGame.Status.ACTIVE);
+        return gameMapper.findByStatus(BingoGame.Status.ACTIVE.name());
     }
 
     /**
@@ -50,7 +50,7 @@ public class BingoService extends BaseGachaService {
     public BingoGame getGameWithCells(Long gameId) {
         if (gameId == null)
             return null;
-        return gameRepository.findById(gameId).orElse(null);
+        return gameMapper.findById(gameId).orElse(null);
     }
 
     /**
@@ -59,7 +59,7 @@ public class BingoService extends BaseGachaService {
     public List<BingoCell> getCells(Long gameId) {
         if (gameId == null)
             return new ArrayList<>();
-        return cellRepository.findByGame_IdOrderByPositionAsc(gameId);
+        return cellMapper.findByGameIdOrderByPositionAsc(gameId);
     }
 
     /**
@@ -82,7 +82,7 @@ public class BingoService extends BaseGachaService {
     public DigBatchResult digMultiple(Long gameId, List<Integer> positions, Long memberId) {
         if (gameId == null)
             throw new AppException("遊戲ID不能為空");
-        BingoGame game = gameRepository.findById(gameId)
+        BingoGame game = gameMapper.findById(gameId)
                 .orElseThrow(() -> new AppException("遊戲不存在"));
 
         if (positions == null || positions.isEmpty()) {
@@ -92,7 +92,7 @@ public class BingoService extends BaseGachaService {
         // 1. 驗證所有格子可用
         List<BingoCell> targetCells = new ArrayList<>();
         for (Integer pos : positions) {
-            BingoCell cell = cellRepository.findByGame_IdAndPosition(gameId, pos)
+            BingoCell cell = cellMapper.findByGameIdAndPosition(gameId, pos)
                     .orElseThrow(() -> new AppException("格子 " + pos + " 不存在"));
             if (cell.getIsRevealed()) {
                 throw new AppException("格子 " + pos + " 已被挖掘");
@@ -107,7 +107,8 @@ public class BingoService extends BaseGachaService {
 
         // 3. 處理收益保護與挖掘
         int totalCellsCount = game.getTotalCells();
-        int revealedCount = cellRepository.countRevealedCells(gameId);
+        int revealedCount = cellMapper.countUnrevealedByGameId(gameId);
+        revealedCount = totalCellsCount - revealedCount; // 已翻開數量 = 總數 - 未翻開數量
         int totalShards = 0;
         List<BingoCell> revealedCells = new ArrayList<>();
 
@@ -119,7 +120,7 @@ public class BingoService extends BaseGachaService {
 
             // 挖掘
             cell.dig(memberId);
-            cellRepository.save(cell);
+            cellMapper.update(cell);
             revealedCells.add(cell);
             revealedCount++;
 
@@ -152,7 +153,7 @@ public class BingoService extends BaseGachaService {
      * 檢查所有連線（橫、豎、對角）
      */
     public List<BingoLine> checkBingoLines(Long gameId, int gridSize) {
-        List<BingoCell> cells = cellRepository.findByGame_IdOrderByPositionAsc(gameId);
+        List<BingoCell> cells = cellMapper.findByGameIdOrderByPositionAsc(gameId);
         List<BingoLine> bingoLines = new ArrayList<>();
 
         // 建立 2D 陣列方便檢查
@@ -341,13 +342,13 @@ public class BingoService extends BaseGachaService {
     private void updateMemberLuckyValue(Long memberId, GachaProbabilityEngine.PrizeTier tier) {
         if (memberId == null)
             return;
-        memberRepository.findById(memberId).ifPresent(member -> {
+        memberMapper.findById(memberId).ifPresent(member -> {
             if (tier == GachaProbabilityEngine.PrizeTier.JACKPOT) {
                 member.setLuckyValue(0);
             } else {
                 member.setLuckyValue(member.getLuckyValue() + 10);
             }
-            memberRepository.save(member);
+            memberMapper.update(member);
         });
     }
 
@@ -358,7 +359,7 @@ public class BingoService extends BaseGachaService {
             List<Integer> batchPositions) {
         if (memberId == null)
             return;
-        Member member = memberRepository.findById(memberId).orElse(null);
+        Member member = memberMapper.findById(memberId).orElse(null);
         if (member == null)
             return;
 
@@ -368,7 +369,7 @@ public class BingoService extends BaseGachaService {
 
         // 1. 保底邏輯
         if (hasGuarantee && !isBigPrize) {
-            List<BingoCell> availableBigCells = cellRepository.findByGame_IdAndIsRevealed(cell.getGameId(), false)
+            List<BingoCell> availableBigCells = cellMapper.findByGameIdAndNotRevealed(cell.getGameId())
                     .stream()
                     .filter(c -> c.getTier() == GachaProbabilityEngine.PrizeTier.JACKPOT
                             && !batchPositions.contains(c.getPosition()))
@@ -383,7 +384,7 @@ public class BingoService extends BaseGachaService {
 
         // 2. 收益保護
         if (progress < threshold && isBigPrize && !hasGuarantee) {
-            List<BingoCell> availableNormalCells = cellRepository.findByGame_IdAndIsRevealed(cell.getGameId(), false)
+            List<BingoCell> availableNormalCells = cellMapper.findByGameIdAndNotRevealed(cell.getGameId())
                     .stream()
                     .filter(c -> c.getTier() != GachaProbabilityEngine.PrizeTier.JACKPOT
                             && !batchPositions.contains(c.getPosition()))
@@ -409,6 +410,6 @@ public class BingoService extends BaseGachaService {
         c2.setPrizeName(tempName);
         c2.setPrizeValue(tempValue);
         c2.setTier(tempTier);
-        cellRepository.save(c2);
+        cellMapper.update(c2);
     }
 }

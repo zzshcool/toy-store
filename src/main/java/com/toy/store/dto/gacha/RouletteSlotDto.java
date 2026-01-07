@@ -21,7 +21,7 @@ public class RouletteSlotDto {
         dto.setId(slot.getId());
         dto.setSlotOrder(slot.getSlotOrder());
         dto.setPrizeName(slot.getPrizeName());
-        dto.setSlotType(slot.getSlotType() != null ? slot.getSlotType().name() : null);
+        dto.setSlotType(slot.getSlotType());
         dto.setPrizeValue(slot.getPrizeValue());
         dto.setColor(slot.getColor());
         return dto;

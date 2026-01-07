@@ -42,4 +42,20 @@ public interface CabinetItemMapper {
 
     @Select("SELECT * FROM cabinet_items")
     List<CabinetItem> findAll();
+
+    @Select("SELECT COUNT(*) FROM cabinet_items")
+    long count();
+
+    @Select("SELECT * FROM cabinet_items WHERE member_id = #{memberId} AND status = #{status} ORDER BY obtained_at DESC")
+    List<CabinetItem> findByMemberIdAndStatusOrderByObtainedAtDesc(@Param("memberId") Long memberId,
+            @Param("status") String status);
+
+    @Select("SELECT * FROM cabinet_items WHERE member_id = #{memberId} ORDER BY obtained_at DESC")
+    List<CabinetItem> findByMemberIdOrderByObtainedAtDesc(Long memberId);
+
+    @Select("SELECT COUNT(*) FROM cabinet_items WHERE member_id = #{memberId} AND status = 'IN_CABINET'")
+    int countItemsInCabinet(Long memberId);
+
+    @Select("SELECT * FROM cabinet_items WHERE shipment_request_id = #{shipmentRequestId}")
+    List<CabinetItem> findByShipmentRequestId(Long shipmentRequestId);
 }

@@ -41,6 +41,12 @@ public class Order {
         PENDING, PAID, SHIPPED, COMPLETED, CANCELLED, REFUNDED
     }
 
+    public void setStatus(String status) {
+        if (status != null) {
+            this.status = OrderStatus.valueOf(status.toUpperCase());
+        }
+    }
+
     public void addItem(OrderItem item) {
         items.add(item);
         item.setOrder(this);

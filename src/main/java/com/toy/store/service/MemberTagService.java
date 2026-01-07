@@ -1,12 +1,13 @@
 package com.toy.store.service;
 
 import com.toy.store.model.*;
-import com.toy.store.repository.*;
+import com.toy.store.mapper.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -18,8 +19,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MemberTagService {
 
-    private final MemberTagRepository tagRepository;
-    private final MemberTagRelationRepository relationRepository;
+    private final MemberTagMapper tagMapper;
+    private final MemberTagRelationMapper relationMapper;
 
     /**
      * 創建標籤
@@ -31,7 +32,9 @@ public class MemberTagService {
         tag.setDescription(description);
         tag.setColor(color);
         tag.setType(type);
-        return tagRepository.save(tag);
+        tag.setCreatedAt(LocalDateTime.now());
+        tagMapper.insert(tag);
+        return tag;
     }
 
     /**
@@ -39,16 +42,16 @@ public class MemberTagService {
      */
     @Transactional
     public void addTagToMember(Long memberId, Long tagId, String source) {
-        if (relationRepository.existsByMemberIdAndTagId(memberId, tagId)) {
+        if (relationMapper.existsByMemberIdAndTagId(memberId, tagId)) {
             return; // 已有此標籤
         }
 
-        tagRepository.findById(tagId).ifPresent(tag -> {
+        tagMapper.findById(tagId).ifPresent(tag -> {
             MemberTagRelation relation = new MemberTagRelation();
             relation.setMemberId(memberId);
-            relation.setTag(tag);
-            relation.setSource(source);
-            relationRepository.save(relation);
+            relation.setTagId(tagId);
+            relation.setCreatedAt(LocalDateTime.now());
+            relationMapper.insert(relation);
             log.info("會員 {} 添加標籤 {}", memberId, tag.getName());
         });
     }
@@ -58,16 +61,17 @@ public class MemberTagService {
      */
     @Transactional
     public void removeTagFromMember(Long memberId, Long tagId) {
-        relationRepository.deleteByMemberIdAndTagId(memberId, tagId);
+        relationMapper.deleteByMemberIdAndTagId(memberId, tagId);
     }
 
     /**
      * 獲取會員的所有標籤
      */
     public List<MemberTag> getMemberTags(Long memberId) {
-        return relationRepository.findByMemberId(memberId)
-                .stream()
-                .map(MemberTagRelation::getTag)
+        List<MemberTagRelation> relations = relationMapper.findByMemberId(memberId);
+        return relations.stream()
+                .map(rel -> tagMapper.findById(rel.getTagId()).orElse(null))
+                .filter(tag -> tag != null)
                 .collect(Collectors.toList());
     }
 
@@ -75,7 +79,7 @@ public class MemberTagService {
      * 獲取擁有特定標籤的所有會員ID
      */
     public List<Long> getMembersByTag(Long tagId) {
-        return relationRepository.findByTagId(tagId)
+        return relationMapper.findByTagId(tagId)
                 .stream()
                 .map(MemberTagRelation::getMemberId)
                 .collect(Collectors.toList());
@@ -94,7 +98,7 @@ public class MemberTagService {
     }
 
     private void createTagIfNotExists(String name, String desc, String color, MemberTag.TagType type) {
-        if (tagRepository.findByName(name).isEmpty()) {
+        if (tagMapper.findByName(name).isEmpty()) {
             createTag(name, desc, color, type);
         }
     }
@@ -103,6 +107,6 @@ public class MemberTagService {
      * 獲取所有標籤
      */
     public List<MemberTag> getAllTags() {
-        return tagRepository.findAll();
+        return tagMapper.findAll();
     }
 }

@@ -3,8 +3,8 @@ package com.toy.store.controller;
 import com.toy.store.annotation.CurrentUser;
 import com.toy.store.model.GachaItem;
 import com.toy.store.model.MemberActionLog;
-import com.toy.store.repository.MemberActionLogRepository;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberActionLogMapper;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.GachaService;
 import com.toy.store.service.TokenService;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -22,8 +23,8 @@ import java.util.Map;
 public class GachaController {
 
     private final GachaService gachaService;
-    private final MemberActionLogRepository memberActionLogRepository;
-    private final MemberRepository memberRepository;
+    private final MemberActionLogMapper memberActionLogMapper;
+    private final MemberMapper memberMapper;
 
     @GetMapping
     public String getAllThemes(Model model) {
@@ -55,16 +56,21 @@ public class GachaController {
                 return ResponseEntity.status(401).body(response);
             }
 
-            return memberRepository.findByUsername(info.getUsername())
+            return memberMapper.findByUsername(info.getUsername())
                     .map(member -> {
                         GachaItem item = gachaService.drawBox(member.getId(), themeId, couponId);
                         response.put("success", true);
                         response.put("wonItem", item);
 
                         // Log Action
-                        memberActionLogRepository.save(new MemberActionLog(
-                                member.getId(), member.getUsername(), "DRAW_GACHA",
-                                "Won item: " + item.getName() + " (Theme ID: " + themeId + ")", true));
+                        MemberActionLog log = new MemberActionLog();
+                        log.setMemberId(member.getId());
+                        log.setMemberUsername(member.getUsername());
+                        log.setAction("DRAW_GACHA");
+                        log.setDetails("Won item: " + item.getName() + " (Theme ID: " + themeId + ")");
+                        log.setSuccess(true);
+                        log.setTimestamp(LocalDateTime.now());
+                        memberActionLogMapper.insert(log);
 
                         return ResponseEntity.ok(response);
                     })

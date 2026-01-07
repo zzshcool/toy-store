@@ -12,30 +12,33 @@ import java.util.Optional;
 @Mapper
 public interface IchibanPrizeMapper {
 
-    @Select("SELECT * FROM ichiban_prizes WHERE id = #{id}")
-    Optional<IchibanPrize> findById(Long id);
+        @Select("SELECT * FROM ichiban_prizes WHERE id = #{id}")
+        Optional<IchibanPrize> findById(Long id);
 
-    @Select("SELECT * FROM ichiban_prizes WHERE box_id = #{boxId}")
-    List<IchibanPrize> findByBoxId(Long boxId);
+        @Select("SELECT * FROM ichiban_prizes WHERE box_id = #{boxId}")
+        List<IchibanPrize> findByBoxId(Long boxId);
 
-    @Select("SELECT * FROM ichiban_prizes WHERE box_id = #{boxId} AND `rank` = #{rank}")
-    List<IchibanPrize> findByBoxIdAndRank(@Param("boxId") Long boxId, @Param("rank") String rank);
+        @Select("SELECT * FROM ichiban_prizes WHERE box_id = #{boxId} AND `rank` = #{rank}")
+        List<IchibanPrize> findByBoxIdAndRank(@Param("boxId") Long boxId, @Param("rank") String rank);
 
-    @Insert("INSERT INTO ichiban_prizes (box_id, `rank`, name, description, image_url, " +
-            "quantity, remaining_quantity, estimated_value, shards_value) " +
-            "VALUES (#{box.id}, #{rank}, #{name}, #{description}, #{imageUrl}, " +
-            "#{quantity}, #{remainingQuantity}, #{estimatedValue}, #{shardsValue})")
-    @Options(useGeneratedKeys = true, keyProperty = "id")
-    int insert(IchibanPrize prize);
+        @Select("SELECT * FROM ichiban_prizes WHERE box_id = #{boxId} ORDER BY sort_order ASC")
+        List<IchibanPrize> findByBoxIdOrderBySortOrderAsc(Long boxId);
 
-    @Update("UPDATE ichiban_prizes SET `rank` = #{rank}, name = #{name}, description = #{description}, " +
-            "image_url = #{imageUrl}, quantity = #{quantity}, remaining_quantity = #{remainingQuantity}, " +
-            "estimated_value = #{estimatedValue}, shards_value = #{shardsValue} WHERE id = #{id}")
-    int update(IchibanPrize prize);
+        @Insert("INSERT INTO ichiban_prizes (box_id, `rank`, name, description, image_url, " +
+                        "quantity, remaining_quantity, estimated_value, shards_value) " +
+                        "VALUES (#{boxId}, #{rank}, #{name}, #{description}, #{imageUrl}, " +
+                        "#{quantity}, #{remainingQuantity}, #{estimatedValue}, #{shardsValue})")
+        @Options(useGeneratedKeys = true, keyProperty = "id")
+        int insert(IchibanPrize prize);
 
-    @Delete("DELETE FROM ichiban_prizes WHERE id = #{id}")
-    int deleteById(Long id);
+        @Update("UPDATE ichiban_prizes SET `rank` = #{rank}, name = #{name}, description = #{description}, " +
+                        "image_url = #{imageUrl}, quantity = #{quantity}, remaining_quantity = #{remainingQuantity}, " +
+                        "estimated_value = #{estimatedValue}, shards_value = #{shardsValue} WHERE id = #{id}")
+        int update(IchibanPrize prize);
 
-    @Select("SELECT * FROM ichiban_prizes")
-    List<IchibanPrize> findAll();
+        @Delete("DELETE FROM ichiban_prizes WHERE id = #{id}")
+        int deleteById(Long id);
+
+        @Select("SELECT * FROM ichiban_prizes")
+        List<IchibanPrize> findAll();
 }

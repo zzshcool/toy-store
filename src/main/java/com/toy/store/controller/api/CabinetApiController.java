@@ -4,7 +4,7 @@ import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.CabinetService;
 import com.toy.store.service.TokenService;
 import lombok.Data;
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 public class CabinetApiController {
 
     private final CabinetService cabinetService;
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
 
     @GetMapping
     public ApiResponse<Map<String, Object>> getCabinet(@CurrentUser TokenService.TokenInfo info) {
@@ -156,7 +156,7 @@ public class CabinetApiController {
     private Long getMemberId(TokenService.TokenInfo info) {
         if (info == null)
             return null;
-        return memberRepository.findByUsername(info.getUsername())
+        return memberMapper.findByUsername(info.getUsername())
                 .map(Member::getId)
                 .orElse(null);
     }
@@ -183,8 +183,8 @@ public class CabinetApiController {
         map.put("itemCount", request.getItemCount());
         map.put("isFreeShipping", request.getIsFreeShipping());
         map.put("shippingFee", request.getShippingFee());
-        map.put("status", request.getStatus().name());
-        map.put("statusDisplay", request.getStatus().getDisplayName());
+        map.put("status", request.getStatusEnum().name());
+        map.put("statusDisplay", request.getStatusEnum().getDisplayName());
         map.put("trackingNumber", request.getTrackingNumber());
         map.put("shippingCompany", request.getShippingCompany());
         map.put("createdAt", request.getCreatedAt());

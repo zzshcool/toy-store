@@ -1,22 +1,31 @@
 package com.toy.store.service;
 
 import com.toy.store.model.MemberMission;
-import com.toy.store.repository.MemberMissionRepository;
-import lombok.RequiredArgsConstructor;
+import com.toy.store.mapper.MemberMissionMapper;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class MissionService {
 
-    private final MemberMissionRepository missionRepository;
+    private final MemberMissionMapper missionMapper;
     private final MemberService memberService;
     private final SystemSettingService settingService;
+
+    public MissionService(
+            MemberMissionMapper missionMapper,
+            @Lazy MemberService memberService,
+            @Lazy SystemSettingService settingService) {
+        this.missionMapper = missionMapper;
+        this.memberService = memberService;
+        this.settingService = settingService;
+    }
 
     /**
      * 更新任務進度
@@ -24,8 +33,8 @@ public class MissionService {
     @Transactional
     public void updateMissionProgress(Long memberId, MemberMission.MissionType type, int amount) {
         LocalDate today = LocalDate.now();
-        Optional<MemberMission> missionOpt = missionRepository.findByMemberIdAndMissionDateAndType(memberId, today,
-                type);
+        Optional<MemberMission> missionOpt = missionMapper.findByMemberIdAndMissionDateAndType(
+                memberId, today, type.name());
 
         if (missionOpt.isPresent()) {
             MemberMission mission = missionOpt.get();
@@ -36,13 +45,13 @@ public class MissionService {
                     memberService.addBonusPoints(memberId, mission.getRewardBonusPoints());
                     mission.setRewardClaimed(true);
                 }
-                missionRepository.save(mission);
+                missionMapper.update(mission);
             }
         } else {
             // 如果今日任務尚未初始化，先初始化
             initDailyMissions(memberId);
             // 遞迴調用以執行更新
-            missionRepository.findByMemberIdAndMissionDateAndType(memberId, today, type)
+            missionMapper.findByMemberIdAndMissionDateAndType(memberId, today, type.name())
                     .ifPresent(m -> {
                         if (!m.isCompleted()) {
                             m.addProgress(amount);
@@ -50,7 +59,7 @@ public class MissionService {
                                 memberService.addBonusPoints(memberId, m.getRewardBonusPoints());
                                 m.setRewardClaimed(true);
                             }
-                            missionRepository.save(m);
+                            missionMapper.update(m);
                         }
                     });
         }
@@ -62,7 +71,7 @@ public class MissionService {
     @Transactional
     public void initDailyMissions(Long memberId) {
         LocalDate today = LocalDate.now();
-        List<MemberMission> existing = missionRepository.findByMemberIdAndMissionDate(memberId, today);
+        List<MemberMission> existing = missionMapper.findByMemberIdAndMissionDate(memberId, today);
         if (existing.isEmpty()) {
             // 從系統設定取得任務配置
             int loginReward = settingService.getMissionDailyLoginReward();
@@ -87,6 +96,10 @@ public class MissionService {
         mission.setType(type);
         mission.setTargetValue(target);
         mission.setRewardBonusPoints(reward);
-        missionRepository.save(mission);
+        mission.setCurrentProgress(0);
+        mission.setIsCompleted(false);
+        mission.setRewardClaimed(false);
+        mission.setCreatedAt(LocalDateTime.now());
+        missionMapper.insert(mission);
     }
 }

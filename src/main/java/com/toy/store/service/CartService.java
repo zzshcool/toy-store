@@ -5,46 +5,59 @@ import com.toy.store.model.Cart;
 import com.toy.store.model.CartItem;
 import com.toy.store.model.Member;
 import com.toy.store.model.Product;
-import com.toy.store.repository.CartRepository;
-import com.toy.store.repository.MemberRepository;
-import com.toy.store.repository.ProductRepository;
-import lombok.RequiredArgsConstructor;
+import com.toy.store.mapper.CartMapper;
+import com.toy.store.mapper.MemberMapper;
+import com.toy.store.mapper.ProductMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class CartService {
 
-    private final CartRepository cartRepository;
-    private final ProductRepository productRepository;
-    private final MemberRepository memberRepository;
+    private final CartMapper cartMapper;
+    private final ProductMapper productMapper;
+    private final MemberMapper memberMapper;
+
+    public CartService(
+            CartMapper cartMapper,
+            ProductMapper productMapper,
+            MemberMapper memberMapper) {
+        this.cartMapper = cartMapper;
+        this.productMapper = productMapper;
+        this.memberMapper = memberMapper;
+    }
 
     public Cart getCartByMemberId(Long memberId) {
-        return cartRepository.findByMemberId(memberId)
+        return cartMapper.findByMemberId(memberId)
                 .orElseGet(() -> {
-                    Member member = memberRepository.findById(memberId)
+                    Member member = memberMapper.findById(memberId)
                             .orElseThrow(() -> new AppException("會員不存在"));
                     Cart newCart = new Cart();
-                    newCart.setMember(member);
-                    return cartRepository.save(newCart);
+                    newCart.setMemberId(memberId);
+                    newCart.setCreatedAt(LocalDateTime.now());
+                    newCart.setItems(new ArrayList<>());
+                    cartMapper.insert(newCart);
+                    return newCart;
                 });
     }
 
     @Transactional
     public Cart addToCart(Long memberId, Long productId, Integer quantity) {
         Cart cart = getCartByMemberId(memberId);
-        Product product = productRepository.findById(productId)
+        Product product = productMapper.findById(productId)
                 .orElseThrow(() -> new AppException("產品不存在"));
 
         if (product.getStock() < quantity) {
             throw new AppException("庫存不足");
         }
 
+        // 查找現有項目
         Optional<CartItem> existingItem = cart.getItems().stream()
-                .filter(item -> item.getProduct().getId().equals(productId))
+                .filter(item -> item.getProductId().equals(productId))
                 .findFirst();
 
         if (existingItem.isPresent()) {
@@ -52,12 +65,14 @@ public class CartService {
             item.setQuantity(item.getQuantity() + quantity);
         } else {
             CartItem newItem = new CartItem();
-            newItem.setProduct(product);
+            newItem.setCartId(cart.getId());
+            newItem.setProductId(productId);
             newItem.setQuantity(quantity);
-            cart.addItem(newItem);
+            cart.getItems().add(newItem);
         }
 
-        return cartRepository.save(cart);
+        cartMapper.update(cart);
+        return cart;
     }
 
     @Transactional
@@ -69,21 +84,23 @@ public class CartService {
                 .orElseThrow(() -> new AppException("購物車項目不存在"));
 
         if (quantity <= 0) {
-            cart.removeItem(item);
+            cart.getItems().remove(item);
         } else {
-            if (item.getProduct().getStock() < quantity) {
+            Product product = productMapper.findById(item.getProductId()).orElse(null);
+            if (product != null && product.getStock() < quantity) {
                 throw new AppException("庫存不足");
             }
             item.setQuantity(quantity);
         }
 
-        return cartRepository.save(cart);
+        cartMapper.update(cart);
+        return cart;
     }
 
     @Transactional
     public void clearCart(Long memberId) {
         Cart cart = getCartByMemberId(memberId);
         cart.getItems().clear();
-        cartRepository.save(cart);
+        cartMapper.update(cart);
     }
 }

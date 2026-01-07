@@ -2,7 +2,7 @@ package com.toy.store.controller.api;
 
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.*;
-import com.toy.store.repository.*;
+import com.toy.store.mapper.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -18,16 +18,16 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RbacApiController {
 
-    private final AdminUserRepository adminUserRepository;
-    private final AdminRoleRepository roleRepository;
-    private final AdminPermissionRepository permissionRepository;
+    private final AdminUserMapper adminUserMapper;
+    private final AdminRoleMapper adminRoleMapper;
+    private final AdminPermissionMapper adminPermissionMapper;
     private final PasswordEncoder passwordEncoder;
 
     // ==================== 管理員帳號管理 ====================
 
     @GetMapping("/admins")
     public ApiResponse<List<Map<String, Object>>> getAllAdmins() {
-        List<AdminUser> admins = adminUserRepository.findAll();
+        List<AdminUser> admins = adminUserMapper.findAll();
         List<Map<String, Object>> result = admins.stream().map(this::mapAdmin).collect(Collectors.toList());
         return ApiResponse.ok(result);
     }
@@ -38,13 +38,13 @@ public class RbacApiController {
         String password = (String) request.get("password");
         String email = (String) request.get("email");
         @SuppressWarnings("unchecked")
-        List<Long> roleIds = (List<Long>) request.get("roleIds");
+        List<Number> roleIds = (List<Number>) request.get("roleIds");
 
         if (username == null || password == null) {
             return ApiResponse.error("帳號和密碼為必填");
         }
 
-        if (adminUserRepository.findByUsername(username).isPresent()) {
+        if (adminUserMapper.findByUsername(username).isPresent()) {
             return ApiResponse.error("帳號已存在");
         }
 
@@ -53,13 +53,15 @@ public class RbacApiController {
         admin.setPassword(passwordEncoder.encode(password));
         admin.setEmail(email);
 
+        adminUserMapper.insert(admin);
+
         if (roleIds != null && !roleIds.isEmpty()) {
-            Set<AdminRole> roles = new HashSet<>(roleRepository.findAllById(roleIds));
-            admin.setRoles(roles);
+            for (Number roleId : roleIds) {
+                adminUserMapper.addRoleToAdmin(admin.getId(), roleId.longValue());
+            }
         }
 
-        adminUserRepository.save(admin);
-        return ApiResponse.ok(mapAdmin(admin), "管理員建立成功");
+        return ApiResponse.ok(mapAdmin(adminUserMapper.findById(admin.getId()).orElse(admin)), "管理員建立成功");
     }
 
     @PutMapping("/admins/{id}")
@@ -67,7 +69,7 @@ public class RbacApiController {
             @PathVariable Long id,
             @RequestBody Map<String, Object> request) {
 
-        return adminUserRepository.findById(id)
+        return adminUserMapper.findById(id)
                 .map(admin -> {
                     String email = (String) request.get("email");
                     String password = (String) request.get("password");
@@ -80,24 +82,28 @@ public class RbacApiController {
                     if (password != null && !password.isEmpty()) {
                         admin.setPassword(passwordEncoder.encode(password));
                     }
+
+                    adminUserMapper.update(admin);
+
                     if (roleIds != null) {
-                        List<Long> ids = roleIds.stream().map(Number::longValue).collect(Collectors.toList());
-                        Set<AdminRole> roles = new HashSet<>(roleRepository.findAllById(ids));
-                        admin.setRoles(roles);
+                        adminUserMapper.removeAllRolesFromAdmin(admin.getId());
+                        for (Number roleId : roleIds) {
+                            adminUserMapper.addRoleToAdmin(admin.getId(), roleId.longValue());
+                        }
                     }
 
-                    adminUserRepository.save(admin);
-                    return ApiResponse.ok(mapAdmin(admin), "更新成功");
+                    return ApiResponse.ok(mapAdmin(adminUserMapper.findById(admin.getId()).orElse(admin)), "更新成功");
                 })
                 .orElseGet(() -> ApiResponse.error("管理員不存在"));
     }
 
     @DeleteMapping("/admins/{id}")
     public ApiResponse<Void> deleteAdmin(@PathVariable Long id) {
-        if (!adminUserRepository.existsById(id)) {
+        if (adminUserMapper.findById(id).isEmpty()) {
             return ApiResponse.error("管理員不存在");
         }
-        adminUserRepository.deleteById(id);
+        adminUserMapper.removeAllRolesFromAdmin(id);
+        adminUserMapper.deleteById(id);
         return ApiResponse.ok(null, "刪除成功");
     }
 
@@ -105,7 +111,7 @@ public class RbacApiController {
 
     @GetMapping("/roles")
     public ApiResponse<List<Map<String, Object>>> getAllRoles() {
-        List<AdminRole> roles = roleRepository.findAll();
+        List<AdminRole> roles = adminRoleMapper.findAll();
         List<Map<String, Object>> result = roles.stream().map(this::mapRole).collect(Collectors.toList());
         return ApiResponse.ok(result);
     }
@@ -120,19 +126,20 @@ public class RbacApiController {
             return ApiResponse.error("角色名稱為必填");
         }
 
-        if (roleRepository.findByName(name).isPresent()) {
+        if (adminRoleMapper.findByName(name).isPresent()) {
             return ApiResponse.error("角色名稱已存在");
         }
 
         AdminRole role = new AdminRole(name);
+        adminRoleMapper.insert(role);
+
         if (permissionIds != null && !permissionIds.isEmpty()) {
-            List<Long> ids = permissionIds.stream().map(Number::longValue).collect(Collectors.toList());
-            Set<AdminPermission> perms = new HashSet<>(permissionRepository.findAllById(ids));
-            role.setPermissions(perms);
+            for (Number permId : permissionIds) {
+                adminRoleMapper.addPermissionToRole(role.getId(), permId.longValue());
+            }
         }
 
-        roleRepository.save(role);
-        return ApiResponse.ok(mapRole(role), "角色建立成功");
+        return ApiResponse.ok(mapRole(adminRoleMapper.findById(role.getId()).orElse(role)), "角色建立成功");
     }
 
     @PutMapping("/roles/{id}")
@@ -140,7 +147,7 @@ public class RbacApiController {
             @PathVariable Long id,
             @RequestBody Map<String, Object> request) {
 
-        return roleRepository.findById(id)
+        return adminRoleMapper.findById(id)
                 .map(role -> {
                     String name = (String) request.get("name");
                     @SuppressWarnings("unchecked")
@@ -148,25 +155,28 @@ public class RbacApiController {
 
                     if (name != null && !name.isEmpty()) {
                         role.setName(name);
-                    }
-                    if (permissionIds != null) {
-                        List<Long> ids = permissionIds.stream().map(Number::longValue).collect(Collectors.toList());
-                        Set<AdminPermission> perms = new HashSet<>(permissionRepository.findAllById(ids));
-                        role.setPermissions(perms);
+                        adminRoleMapper.update(role);
                     }
 
-                    roleRepository.save(role);
-                    return ApiResponse.ok(mapRole(role), "更新成功");
+                    if (permissionIds != null) {
+                        adminRoleMapper.removeAllPermissionsFromRole(role.getId());
+                        for (Number permId : permissionIds) {
+                            adminRoleMapper.addPermissionToRole(role.getId(), permId.longValue());
+                        }
+                    }
+
+                    return ApiResponse.ok(mapRole(adminRoleMapper.findById(role.getId()).orElse(role)), "更新成功");
                 })
                 .orElseGet(() -> ApiResponse.error("角色不存在"));
     }
 
     @DeleteMapping("/roles/{id}")
     public ApiResponse<Void> deleteRole(@PathVariable Long id) {
-        if (!roleRepository.existsById(id)) {
+        if (adminRoleMapper.findById(id).isEmpty()) {
             return ApiResponse.error("角色不存在");
         }
-        roleRepository.deleteById(id);
+        adminRoleMapper.removeAllPermissionsFromRole(id);
+        adminRoleMapper.deleteById(id);
         return ApiResponse.ok(null, "刪除成功");
     }
 
@@ -174,7 +184,7 @@ public class RbacApiController {
 
     @GetMapping("/permissions")
     public ApiResponse<List<Map<String, Object>>> getAllPermissions() {
-        List<AdminPermission> perms = permissionRepository.findAll();
+        List<AdminPermission> perms = adminPermissionMapper.findAll();
         List<Map<String, Object>> result = perms.stream().map(this::mapPermission).collect(Collectors.toList());
         return ApiResponse.ok(result);
     }
@@ -189,7 +199,7 @@ public class RbacApiController {
             return ApiResponse.error("權限代碼和名稱為必填");
         }
 
-        if (permissionRepository.findByCode(code).isPresent()) {
+        if (adminPermissionMapper.findByCode(code).isPresent()) {
             return ApiResponse.error("權限代碼已存在");
         }
 
@@ -198,16 +208,16 @@ public class RbacApiController {
         perm.setName(name);
         perm.setDescription(description);
 
-        permissionRepository.save(perm);
+        adminPermissionMapper.insert(perm);
         return ApiResponse.ok(mapPermission(perm), "權限建立成功");
     }
 
     @DeleteMapping("/permissions/{id}")
     public ApiResponse<Void> deletePermission(@PathVariable Long id) {
-        if (!permissionRepository.existsById(id)) {
+        if (adminPermissionMapper.findById(id).isEmpty()) {
             return ApiResponse.error("權限不存在");
         }
-        permissionRepository.deleteById(id);
+        adminPermissionMapper.deleteById(id);
         return ApiResponse.ok(null, "刪除成功");
     }
 
@@ -218,10 +228,21 @@ public class RbacApiController {
         map.put("id", admin.getId());
         map.put("username", admin.getUsername());
         map.put("email", admin.getEmail());
-        map.put("roles", admin.getRoles().stream()
+
+        List<AdminRole> roles = adminUserMapper.findRolesByAdminId(admin.getId());
+        map.put("roles", roles.stream()
                 .map(r -> Map.of("id", r.getId(), "name", r.getName()))
                 .collect(Collectors.toList()));
-        map.put("permissions", admin.getPermissions());
+
+        // 權限匯總
+        Set<String> permissions = new HashSet<>();
+        for (AdminRole role : roles) {
+            List<AdminPermission> rolePerms = adminRoleMapper.findPermissionsByRoleId(role.getId());
+            for (AdminPermission p : rolePerms) {
+                permissions.add(p.getCode());
+            }
+        }
+        map.put("permissions", permissions);
         return map;
     }
 
@@ -229,7 +250,9 @@ public class RbacApiController {
         Map<String, Object> map = new HashMap<>();
         map.put("id", role.getId());
         map.put("name", role.getName());
-        map.put("permissions", role.getPermissions().stream()
+
+        List<AdminPermission> perms = adminRoleMapper.findPermissionsByRoleId(role.getId());
+        map.put("permissions", perms.stream()
                 .map(p -> Map.of("id", p.getId(), "code", p.getCode(), "name", p.getName()))
                 .collect(Collectors.toList()));
         return map;

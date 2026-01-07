@@ -1,7 +1,7 @@
 package com.toy.store.scheduler;
 
 import com.toy.store.model.Member;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BonusExpiryScheduler {
 
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
     private final MessageService messageService;
 
     private static final int BONUS_VALIDITY_DAYS = 365;
@@ -30,7 +30,7 @@ public class BonusExpiryScheduler {
     public void checkBonusExpiry() {
         log.info("開始執行紅利過期檢查...");
 
-        List<Member> membersWithBonus = memberRepository.findAll();
+        List<Member> membersWithBonus = memberMapper.findAll();
         int notifiedCount = 0;
 
         for (Member member : membersWithBonus) {

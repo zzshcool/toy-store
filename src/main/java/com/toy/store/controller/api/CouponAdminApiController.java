@@ -2,7 +2,7 @@ package com.toy.store.controller.api;
 
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.Coupon;
-import com.toy.store.repository.CouponRepository;
+import com.toy.store.mapper.CouponMapper;
 import com.toy.store.service.CouponService;
 import com.toy.store.service.MemberTagService;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 public class CouponAdminApiController {
 
     private final CouponService couponService;
-    private final CouponRepository couponRepository;
+    private final CouponMapper couponMapper;
     private final MemberTagService tagService;
 
     /**
@@ -32,7 +32,7 @@ public class CouponAdminApiController {
      */
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> getAllCoupons() {
-        List<Coupon> coupons = couponRepository.findAll();
+        List<Coupon> coupons = couponMapper.findAll();
         List<Map<String, Object>> result = coupons.stream()
                 .map(this::mapCoupon)
                 .collect(Collectors.toList());
@@ -62,7 +62,8 @@ public class CouponAdminApiController {
             LocalDateTime validFrom = LocalDateTime.now();
             LocalDateTime validUntil = validFrom.plusDays(30);
 
-            Coupon coupon = couponService.createCoupon(name, code, type, value, description, validFrom, validUntil);
+            Coupon coupon = couponService.createCoupon(name, code, type.name(), value, description, validFrom,
+                    validUntil);
             return ApiResponse.ok(mapCoupon(coupon));
         } catch (Exception e) {
             return ApiResponse.error("建立失敗: " + e.getMessage());
@@ -131,10 +132,10 @@ public class CouponAdminApiController {
      */
     @PutMapping("/{couponId}/toggle")
     public ApiResponse<Void> toggleCoupon(@PathVariable Long couponId) {
-        return couponRepository.findById(couponId)
+        return couponMapper.findById(couponId)
                 .map(coupon -> {
                     coupon.setActive(!coupon.isActive());
-                    couponRepository.save(coupon);
+                    couponMapper.update(coupon);
                     return ApiResponse.<Void>ok(null);
                 })
                 .orElse(ApiResponse.error("優惠券不存在"));
@@ -145,12 +146,12 @@ public class CouponAdminApiController {
         map.put("id", c.getId());
         map.put("name", c.getName());
         map.put("code", c.getCode());
-        map.put("type", c.getType() != null ? c.getType().name() : null);
-        map.put("value", c.getValue());
+        map.put("type", c.getDiscountType());
+        map.put("value", c.getDiscountValue());
         map.put("description", c.getDescription());
         map.put("active", c.isActive());
-        map.put("validFrom", c.getValidFrom() != null ? c.getValidFrom().toString() : null);
-        map.put("validUntil", c.getValidUntil() != null ? c.getValidUntil().toString() : null);
+        map.put("validFrom", c.getStartDate() != null ? c.getStartDate().toString() : null);
+        map.put("validUntil", c.getEndDate() != null ? c.getEndDate().toString() : null);
         return map;
     }
 }

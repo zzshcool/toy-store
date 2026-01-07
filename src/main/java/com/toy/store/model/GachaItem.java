@@ -18,4 +18,13 @@ public class GachaItem {
     private String imageUrl;
     private String rarity = "NORMAL";
     private Integer weight = 1;
+    private java.math.BigDecimal estimatedValue = java.math.BigDecimal.ZERO;
+
+    public Long getIpId() {
+        return themeId;
+    }
+
+    public void setIpId(Long ipId) {
+        this.themeId = ipId;
+    }
 }

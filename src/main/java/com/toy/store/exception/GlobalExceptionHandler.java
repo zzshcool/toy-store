@@ -1,7 +1,6 @@
 package com.toy.store.exception;
 
 import com.toy.store.dto.ApiResponse;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,12 +28,12 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 處理實體不存在例外
+     * 處理資源不存在例外
      */
-    @ExceptionHandler(EntityNotFoundException.class)
+    @ExceptionHandler(ResourceNotFoundException.class)
     @ResponseBody
-    public ResponseEntity<ApiResponse<Void>> handleEntityNotFound(EntityNotFoundException e) {
-        log.warn("實體不存在: {}", e.getMessage());
+    public ResponseEntity<ApiResponse<Void>> handleResourceNotFound(ResourceNotFoundException e) {
+        log.warn("資源不存在: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(e.getMessage() != null ? e.getMessage() : "資源不存在"));
     }

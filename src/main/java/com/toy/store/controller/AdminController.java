@@ -2,9 +2,7 @@ package com.toy.store.controller;
 
 import com.toy.store.annotation.CurrentUser;
 import com.toy.store.model.*;
-import com.toy.store.repository.AdminActionLogRepository;
-import com.toy.store.repository.AdminUserRepository;
-import com.toy.store.repository.CategoryRepository;
+import com.toy.store.mapper.*;
 import com.toy.store.service.AdminService;
 import com.toy.store.service.TokenService;
 import jakarta.servlet.http.Cookie;
@@ -18,6 +16,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Controller
@@ -26,11 +25,12 @@ import java.util.*;
 public class AdminController {
 
     private final AdminService adminService;
-    private final AdminUserRepository adminUserRepository;
-    private final AdminActionLogRepository adminActionLogRepository;
+    private final AdminUserMapper adminUserMapper;
+    private final AdminActionLogMapper adminActionLogMapper;
     private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
-    private final CategoryRepository categoryRepository;
+    private final CategoryMapper categoryMapper;
+    private final SubCategoryMapper subCategoryMapper;
 
     @GetMapping("/login")
     public String adminLogin() {
@@ -41,7 +41,7 @@ public class AdminController {
     public String loginSubmit(@RequestParam String username, @RequestParam String password,
             HttpServletResponse response, HttpServletRequest request) {
 
-        Optional<AdminUser> adminOpt = adminUserRepository.findByUsername(username);
+        Optional<AdminUser> adminOpt = adminUserMapper.findByUsername(username);
 
         if (adminOpt.isPresent()) {
             AdminUser admin = adminOpt.get();
@@ -56,8 +56,12 @@ public class AdminController {
             }
         }
 
-        adminActionLogRepository.save(new AdminActionLog(
-                username, "LOGIN_FAILED", "Invalid credentials", "IP: " + request.getRemoteAddr()));
+        AdminActionLog log = new AdminActionLog();
+        log.setAction("LOGIN_FAILED");
+        log.setDetails("Invalid credentials for user: " + username);
+        log.setIpAddress(request.getRemoteAddr());
+        log.setCreatedAt(LocalDateTime.now());
+        adminActionLogMapper.insert(log);
 
         return "redirect:/admin/login?error";
     }
@@ -100,7 +104,7 @@ public class AdminController {
         model.addAllAttributes(data);
 
         model.addAttribute("newProduct", new Product());
-        model.addAttribute("newTheme", new GachaTheme());
+        // model.addAttribute("newTheme", new GachaTheme()); // 假設 GachaTheme 也是 model
         model.addAttribute("newActivity", new Activity());
         model.addAttribute("newCategory", new Category());
 
@@ -136,9 +140,7 @@ public class AdminController {
     @GetMapping("/api/subcategories/{categoryId}")
     @ResponseBody
     public List<SubCategory> getSubCategories(@PathVariable Long categoryId) {
-        return categoryRepository.findById(categoryId)
-                .map(Category::getSubCategories)
-                .orElse(Collections.emptyList());
+        return subCategoryMapper.findByCategoryId(categoryId);
     }
 
     // --- Member Management ---
@@ -207,8 +209,8 @@ public class AdminController {
 
     @PostMapping("/members/update")
     public String updateMember(@RequestParam Long id, @RequestParam String email, @RequestParam String nickname,
-            @RequestParam boolean enabled, @RequestParam MemberLevel level, @CurrentUser TokenService.TokenInfo info) {
-        adminService.updateMember(id, email, nickname, enabled, level, info != null ? info.getUsername() : "System");
+            @RequestParam boolean enabled, @RequestParam Long levelId, @CurrentUser TokenService.TokenInfo info) {
+        adminService.updateMember(id, email, nickname, enabled, levelId, info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=members";
     }
 
@@ -368,7 +370,7 @@ public class AdminController {
             @RequestParam BigDecimal value, @RequestParam String description,
             @RequestParam(required = false) String validFrom, @RequestParam(required = false) String validUntil,
             @CurrentUser TokenService.TokenInfo info) {
-        adminService.createCoupon(name, code, type, value, description, validFrom, validUntil,
+        adminService.createCoupon(name, code, type.name(), value, description, validFrom, validUntil,
                 info != null ? info.getUsername() : "System");
         return "redirect:/admin?tab=coupons";
     }

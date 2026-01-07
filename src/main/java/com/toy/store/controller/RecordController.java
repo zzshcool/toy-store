@@ -5,9 +5,9 @@ import com.toy.store.exception.AppException;
 import com.toy.store.model.GachaRecord;
 import com.toy.store.model.Member;
 import com.toy.store.model.Transaction;
-import com.toy.store.repository.GachaRecordRepository;
-import com.toy.store.repository.MemberRepository;
-import com.toy.store.repository.TransactionRepository;
+import com.toy.store.mapper.GachaRecordMapper;
+import com.toy.store.mapper.MemberMapper;
+import com.toy.store.mapper.TransactionMapper;
 import com.toy.store.service.TokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -23,9 +23,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RecordController {
 
-    private final MemberRepository memberRepository;
-    private final TransactionRepository transactionRepository;
-    private final GachaRecordRepository gachaRecordRepository;
+    private final MemberMapper memberMapper;
+    private final TransactionMapper transactionMapper;
+    private final GachaRecordMapper gachaRecordMapper;
 
     /**
      * 交易紀錄頁面
@@ -36,9 +36,9 @@ public class RecordController {
             return "redirect:/login";
         }
 
-        Member member = memberRepository.findByUsername(info.getUsername())
+        Member member = memberMapper.findByUsername(info.getUsername())
                 .orElseThrow(() -> new AppException("找不到會員資料"));
-        List<Transaction> transactions = transactionRepository.findByMemberIdOrderByTimestampDesc(member.getId());
+        List<Transaction> transactions = transactionMapper.findByMemberIdOrderByTimestampDesc(member.getId());
 
         model.addAttribute("transactions", transactions);
         model.addAttribute("member", member);
@@ -54,9 +54,9 @@ public class RecordController {
             return "redirect:/login";
         }
 
-        Member member = memberRepository.findByUsername(info.getUsername())
+        Member member = memberMapper.findByUsername(info.getUsername())
                 .orElseThrow(() -> new AppException("找不到會員資料"));
-        List<GachaRecord> records = gachaRecordRepository.findByMemberIdOrderByCreatedAtDesc(member.getId());
+        List<GachaRecord> records = gachaRecordMapper.findByMemberIdOrderByCreatedAtDesc(member.getId());
 
         model.addAttribute("records", records);
         model.addAttribute("member", member);

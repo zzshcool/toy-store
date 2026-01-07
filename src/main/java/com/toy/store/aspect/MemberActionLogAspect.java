@@ -1,7 +1,7 @@
 package com.toy.store.aspect;
 
 import com.toy.store.model.MemberActionLog;
-import com.toy.store.repository.MemberActionLogRepository;
+import com.toy.store.mapper.MemberActionLogMapper;
 import com.toy.store.security.services.UserDetailsImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @RequiredArgsConstructor
 public class MemberActionLogAspect {
 
-    private final MemberActionLogRepository logRepository;
+    private final MemberActionLogMapper logMapper;
 
     @Pointcut("execution(* com.toy.store.controller.*.*(..)) && !execution(* com.toy.store.controller.AdminController.*(..))")
     public void memberControllerMethods() {
@@ -44,7 +44,7 @@ public class MemberActionLogAspect {
                 }
 
                 MemberActionLog actionLog = new MemberActionLog(user.getId(), user.getUsername(), uri, method);
-                logRepository.save(actionLog);
+                logMapper.insert(actionLog);
             }
         } catch (Exception e) {
             log.warn("Failed to log member action: {}", e.getMessage());

@@ -1,7 +1,7 @@
 package com.toy.store.controller;
 
 import com.toy.store.model.RedeemShopItem;
-import com.toy.store.repository.RedeemShopItemRepository;
+import com.toy.store.mapper.RedeemShopItemMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -16,11 +16,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequiredArgsConstructor
 public class RedeemShopController {
 
-    private final RedeemShopItemRepository itemRepository;
+    private final RedeemShopItemMapper itemMapper;
 
     @GetMapping
     public String index(Model model) {
-        model.addAttribute("items", itemRepository.findByStatusOrderBySortOrderAsc(RedeemShopItem.Status.ACTIVE));
+        model.addAttribute("items", itemMapper.findByStatusOrderBySortOrderAsc(RedeemShopItem.Status.ACTIVE.name()));
         return "redeem-shop";
     }
 }

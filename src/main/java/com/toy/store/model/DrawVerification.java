@@ -13,13 +13,35 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class DrawVerification {
     private Long id;
-    private Long memberId;
-    private String verificationCode;
-    private String gameType;
+    private String gameType; // ICHIBAN, BINGO, ROULETTE, GACHA, BLIND_BOX
     private Long gameId;
-    private Long slotId;
-    private String status = "PENDING"; // PENDING, VERIFIED, EXPIRED
-    private LocalDateTime verifiedAt;
-    private LocalDateTime expiresAt;
+    private String gameName;
+    private String randomSeed;
+    private String hashValue;
+    private String resultJson;
+    private Boolean completed = false;
+    private LocalDateTime completedAt;
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    // 枚舉類型
+    public enum GameType {
+        ICHIBAN, BINGO, ROULETTE, GACHA, BLIND_BOX
+    }
+
+    // 便捷方法
+    public GameType getGameTypeEnum() {
+        try {
+            return gameType != null ? GameType.valueOf(gameType) : null;
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    public void setGameType(GameType type) {
+        this.gameType = type != null ? type.name() : null;
+    }
+
+    public boolean isCompleted() {
+        return Boolean.TRUE.equals(completed);
+    }
 }

@@ -1,7 +1,7 @@
 package com.toy.store.controller;
 
 import com.toy.store.model.Member;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.TokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -12,13 +12,13 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 @RequiredArgsConstructor
 public class GlobalControllerAdvice {
 
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
 
     @ModelAttribute("currentUser")
     public Member getCurrentUser(HttpServletRequest request) {
         TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("memberTokenInfo");
         if (info != null && TokenService.ROLE_USER.equals(info.getRole())) {
-            return memberRepository.findByUsername(info.getUsername()).orElse(null);
+            return memberMapper.findByUsername(info.getUsername()).orElse(null);
         }
         return null;
     }

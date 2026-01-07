@@ -1,9 +1,10 @@
 package com.toy.store.controller.api;
 
 import com.toy.store.dto.ApiResponse;
+import com.toy.store.model.Member;
 import com.toy.store.model.ShipmentRequest;
 import com.toy.store.model.Transaction;
-import com.toy.store.repository.*;
+import com.toy.store.mapper.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 後台儀表板統計 API
@@ -20,11 +22,11 @@ import java.util.*;
 @RequiredArgsConstructor
 public class DashboardApiController {
 
-    private final MemberRepository memberRepository;
-    private final CabinetItemRepository cabinetItemRepository;
-    private final TransactionRepository transactionRepository;
-    private final GachaRecordRepository gachaRecordRepository;
-    private final ShipmentRequestRepository shipmentRequestRepository;
+    private final MemberMapper memberMapper;
+    private final CabinetItemMapper cabinetItemMapper;
+    private final TransactionMapper transactionMapper;
+    private final GachaRecordMapper gachaRecordMapper;
+    private final ShipmentRequestMapper shipmentRequestMapper;
 
     /**
      * 獲取總覽 KPI 數據
@@ -38,20 +40,23 @@ public class DashboardApiController {
         LocalDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay();
 
         // 會員統計
-        kpi.put("totalMembers", memberRepository.count());
-        kpi.put("todayNewMembers", countTodayNewMembers(todayStart, todayEnd));
+        kpi.put("totalMembers", memberMapper.count());
+        kpi.put("todayNewMembers", memberMapper.countByCreatedAtBetween(todayStart, todayEnd));
 
         // 交易統計
-        kpi.put("todayRevenue", calculateTodayRevenue(todayStart, todayEnd));
-        kpi.put("monthRevenue", calculateMonthRevenue(monthStart));
+        BigDecimal todayRevenue = transactionMapper.sumPositiveAmountBetween(todayStart, todayEnd);
+        kpi.put("todayRevenue", todayRevenue != null ? todayRevenue : BigDecimal.ZERO);
+
+        BigDecimal monthRevenue = transactionMapper.sumPositiveAmountSince(monthStart);
+        kpi.put("monthRevenue", monthRevenue != null ? monthRevenue : BigDecimal.ZERO);
 
         // 抽獎統計
-        kpi.put("todayDraws", countTodayDraws(todayStart, todayEnd));
-        kpi.put("totalDraws", gachaRecordRepository.count());
+        kpi.put("todayDraws", gachaRecordMapper.countByCreatedAtBetween(todayStart, todayEnd));
+        kpi.put("totalDraws", gachaRecordMapper.count());
 
         // 發貨統計
         kpi.put("pendingShipments", countPendingShipments());
-        kpi.put("totalPrizes", cabinetItemRepository.count());
+        kpi.put("totalPrizes", cabinetItemMapper.count());
 
         return ApiResponse.ok(kpi);
     }
@@ -65,7 +70,7 @@ public class DashboardApiController {
         List<Long> data = new ArrayList<>();
 
         // 使用總會員數減去當天之後的會員來估算每天的累計會員數
-        long totalMembers = memberRepository.count();
+        long totalMembers = memberMapper.count();
 
         for (int i = 6; i >= 0; i--) {
             LocalDate date = LocalDate.now().minusDays(i);
@@ -97,7 +102,7 @@ public class DashboardApiController {
 
             LocalDateTime dayStart = date.atStartOfDay();
             LocalDateTime dayEnd = dayStart.plusDays(1);
-            BigDecimal dayRevenue = transactionRepository.sumPositiveAmountBetween(dayStart, dayEnd);
+            BigDecimal dayRevenue = transactionMapper.sumPositiveAmountBetween(dayStart, dayEnd);
             data.add(dayRevenue != null ? dayRevenue : BigDecimal.ZERO);
         }
 
@@ -114,14 +119,18 @@ public class DashboardApiController {
     public ApiResponse<List<Map<String, Object>>> getLatestTransactions() {
         List<Map<String, Object>> transactions = new ArrayList<>();
 
-        List<Transaction> latestTxs = transactionRepository.findTop10ByOrderByTimestampDesc();
+        List<Transaction> latestTxs = transactionMapper.findTop10ByOrderByCreatedAtDesc();
         for (Transaction tx : latestTxs) {
             Map<String, Object> txMap = new HashMap<>();
             txMap.put("id", tx.getId());
-            txMap.put("member", tx.getMember() != null ? tx.getMember().getUsername() : "Unknown");
-            txMap.put("type", tx.getType() != null ? tx.getType().name() : "UNKNOWN");
+
+            String username = memberMapper.findById(tx.getMemberId())
+                    .map(Member::getUsername)
+                    .orElse("Unknown");
+            txMap.put("member", username);
+            txMap.put("type", tx.getType());
             txMap.put("amount", tx.getAmount());
-            txMap.put("time", formatRelativeTime(tx.getTimestamp()));
+            txMap.put("time", formatRelativeTime(tx.getCreatedAt()));
             transactions.add(txMap);
         }
 
@@ -137,13 +146,13 @@ public class DashboardApiController {
         List<Map<String, Object>> games = new ArrayList<>();
 
         // 簡化：返回各種遊戲類型的抽獎統計
-        long ichibanCount = gachaRecordRepository.count(); // 簡化計算
-        long totalRevenue = ichibanCount * 680; // 估計平均單價
+        long gachaCount = gachaRecordMapper.count(); // 簡化計算
+        long totalRevenue = gachaCount * 680; // 估計平均單價
 
         Map<String, Object> game = new HashMap<>();
         game.put("rank", 1);
         game.put("name", "全站抽獎統計");
-        game.put("draws", ichibanCount);
+        game.put("draws", gachaCount);
         game.put("revenue", BigDecimal.valueOf(totalRevenue));
         games.add(game);
 
@@ -152,31 +161,11 @@ public class DashboardApiController {
 
     // ========== 輔助方法 ==========
 
-    private long countTodayNewMembers(LocalDateTime start, LocalDateTime end) {
-        // 需要在 MemberRepository 添加相應方法，暫用 0 代替
-        // 實際應該: return memberRepository.countByCreatedAtBetween(start, end);
-        return memberRepository.count() > 0 ? Math.min(memberRepository.count(), 10) : 0;
-    }
-
-    private BigDecimal calculateTodayRevenue(LocalDateTime start, LocalDateTime end) {
-        BigDecimal result = transactionRepository.sumPositiveAmountBetween(start, end);
-        return result != null ? result : BigDecimal.ZERO;
-    }
-
-    private BigDecimal calculateMonthRevenue(LocalDateTime monthStart) {
-        BigDecimal result = transactionRepository.sumPositiveAmountSince(monthStart);
-        return result != null ? result : BigDecimal.ZERO;
-    }
-
-    private long countTodayDraws(LocalDateTime start, LocalDateTime end) {
-        return gachaRecordRepository.countByCreatedAtBetween(start, end);
-    }
-
     private long countPendingShipments() {
-        List<ShipmentRequest.Status> pendingStatuses = Arrays.asList(
-                ShipmentRequest.Status.PENDING,
-                ShipmentRequest.Status.PROCESSING);
-        return shipmentRequestRepository.countByStatusIn(pendingStatuses);
+        List<String> pendingStatuses = Arrays.asList(
+                ShipmentRequest.Status.PENDING.name(),
+                ShipmentRequest.Status.PROCESSING.name());
+        return shipmentRequestMapper.countByStatusIn(pendingStatuses);
     }
 
     private String formatRelativeTime(LocalDateTime time) {

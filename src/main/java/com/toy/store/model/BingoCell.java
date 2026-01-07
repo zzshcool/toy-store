@@ -77,4 +77,9 @@ public class BingoCell implements GachaProbabilityEngine.ProbableItem {
         this.row = (position - 1) / gridSize;
         this.col = (position - 1) % gridSize;
     }
+
+    // Boolean getter 兼容
+    public Boolean getIsRevealed() {
+        return isRevealed != null && isRevealed;
+    }
 }

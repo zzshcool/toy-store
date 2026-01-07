@@ -21,4 +21,8 @@ public class AdminRole {
 
     // 權限（非持久化，由 Service 層填充）
     private transient Set<AdminPermission> permissions = new HashSet<>();
+
+    public AdminRole(String name) {
+        this.name = name;
+    }
 }

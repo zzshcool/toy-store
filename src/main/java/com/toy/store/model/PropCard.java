@@ -23,4 +23,31 @@ public class PropCard {
     private String status = "AVAILABLE"; // AVAILABLE, USED, EXPIRED
     private LocalDateTime usedAt;
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    public enum CardType {
+        DOUBLE_PRIZE, PICK_BOX, LOCK_BOX, REVEAL_ALL, EXTRA_DRAW,
+        HINT, PEEK, SWAP
+    }
+
+    public CardType getCardTypeEnum() {
+        try {
+            return cardType != null ? CardType.valueOf(cardType) : null;
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    public void setCardType(CardType type) {
+        this.cardType = type != null ? type.name() : null;
+    }
+
+    // 使用卡片
+    public boolean use() {
+        if ("USED".equals(this.status) || "EXPIRED".equals(this.status)) {
+            return false;
+        }
+        this.status = "USED";
+        this.usedAt = LocalDateTime.now();
+        return true;
+    }
 }

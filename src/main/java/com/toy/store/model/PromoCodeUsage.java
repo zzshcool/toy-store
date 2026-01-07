@@ -16,4 +16,14 @@ public class PromoCodeUsage {
     private Long promoCodeId;
     private Long memberId;
     private LocalDateTime usedAt = LocalDateTime.now();
+
+    // 關聯對象（非資料庫欄位）
+    private transient PromoCode promoCode;
+
+    public void setPromoCode(PromoCode promoCode) {
+        this.promoCode = promoCode;
+        if (promoCode != null) {
+            this.promoCodeId = promoCode.getId();
+        }
+    }
 }

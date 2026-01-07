@@ -1,7 +1,7 @@
 package com.toy.store.security.services;
 
 import com.toy.store.model.AdminUser;
-import com.toy.store.repository.AdminUserRepository;
+import com.toy.store.mapper.AdminUserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -13,13 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AdminUserDetailsService implements UserDetailsService {
 
-    private final AdminUserRepository adminUserRepository;
+    private final AdminUserMapper adminUserMapper;
 
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         try {
-            AdminUser user = adminUserRepository.findByUsername(username)
+            AdminUser user = adminUserMapper.findByUsername(username)
                     .orElseThrow(() -> new UsernameNotFoundException("Admin Not Found with username: " + username));
             return AdminUserDetails.build(user);
         } catch (UsernameNotFoundException e) {

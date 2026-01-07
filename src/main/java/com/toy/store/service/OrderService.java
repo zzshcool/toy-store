@@ -2,10 +2,9 @@ package com.toy.store.service;
 
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
-import com.toy.store.repository.MemberCouponRepository;
-import com.toy.store.repository.OrderRepository;
-import com.toy.store.repository.ProductRepository;
-import lombok.RequiredArgsConstructor;
+import com.toy.store.mapper.MemberCouponMapper;
+import com.toy.store.mapper.OrderMapper;
+import com.toy.store.mapper.ProductMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,14 +12,26 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class OrderService {
 
-    private final OrderRepository orderRepository;
+    private final OrderMapper orderMapper;
     private final CartService cartService;
     private final TransactionService transactionService;
-    private final ProductRepository productRepository;
-    private final MemberCouponRepository memberCouponRepository;
+    private final ProductMapper productMapper;
+    private final MemberCouponMapper memberCouponMapper;
+
+    public OrderService(
+            OrderMapper orderMapper,
+            CartService cartService,
+            TransactionService transactionService,
+            ProductMapper productMapper,
+            MemberCouponMapper memberCouponMapper) {
+        this.orderMapper = orderMapper;
+        this.cartService = cartService;
+        this.transactionService = transactionService;
+        this.productMapper = productMapper;
+        this.memberCouponMapper = memberCouponMapper;
+    }
 
     @Transactional
     public Order checkout(Long memberId, Long couponId) {
@@ -34,7 +45,8 @@ public class OrderService {
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (CartItem item : cartItems) {
-            Product product = item.getProduct();
+            Product product = productMapper.findById(item.getProductId())
+                    .orElseThrow(() -> new AppException("產品不存在"));
             if (product.getStock() < item.getQuantity()) {
                 throw new AppException(
                         "商品 " + product.getName() + " 庫存不足 (需求: " + item.getQuantity() + ")");
@@ -42,7 +54,7 @@ public class OrderService {
             totalAmount = totalAmount.add(product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
 
             product.setStock(product.getStock() - item.getQuantity());
-            productRepository.save(product);
+            productMapper.update(product);
         }
 
         // Apply Coupon Logic (To be implemented)
@@ -58,19 +70,19 @@ public class OrderService {
     }
 
     public List<Order> getMemberOrders(Long memberId) {
-        return orderRepository.findByMemberIdOrderByCreateTimeDesc(memberId);
+        return orderMapper.findByMemberIdOrderByCreateTimeDesc(memberId);
     }
 
     @Transactional
     public void refundOrder(Long orderId, Long memberId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderMapper.findById(orderId)
                 .orElseThrow(() -> new AppException("找不到訂單"));
 
-        if (!order.getMember().getId().equals(memberId)) {
+        if (!order.getMemberId().equals(memberId)) {
             throw new AppException("無權限申請退款");
         }
 
-        if (order.getStatus() == Order.OrderStatus.REFUNDED || order.getStatus() == Order.OrderStatus.CANCELLED) {
+        if ("REFUNDED".equals(order.getStatus()) || "CANCELLED".equals(order.getStatus())) {
             throw new AppException("訂單已退款或取消");
         }
 
@@ -78,15 +90,11 @@ public class OrderService {
         transactionService.updateWalletBalance(memberId, order.getTotalPrice(), Transaction.TransactionType.REFUND,
                 "REFUND Order #" + orderId);
 
-        // 2. Restore Stock
-        for (OrderItem item : order.getItems()) {
-            Product product = item.getProduct();
-            product.setStock(product.getStock() + item.getQuantity());
-            productRepository.save(product);
-        }
+        // 2. Restore Stock - 需要另外查詢訂單項目
+        // TODO: 需要 OrderItemMapper 來查詢訂單項目
 
         // 3. Update Order Status
-        order.setStatus(Order.OrderStatus.REFUNDED);
-        orderRepository.save(order);
+        order.setStatus(Order.OrderStatus.REFUNDED.name());
+        orderMapper.update(order);
     }
 }

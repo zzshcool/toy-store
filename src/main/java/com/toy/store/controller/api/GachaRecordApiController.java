@@ -2,8 +2,8 @@ package com.toy.store.controller.api;
 
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.GachaRecord;
-import com.toy.store.repository.GachaRecordRepository;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.GachaRecordMapper;
+import com.toy.store.mapper.MemberMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,14 +20,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GachaRecordApiController {
 
-    private final GachaRecordRepository gachaRecordRepository;
-    private final MemberRepository memberRepository;
+    private final GachaRecordMapper gachaRecordMapper;
+    private final MemberMapper memberMapper;
 
     @GetMapping("/recent")
     public ApiResponse<List<Map<String, Object>>> getRecentRecords(
             @RequestParam(defaultValue = "10") int limit) {
 
-        List<GachaRecord> records = gachaRecordRepository.findTop20ByOrderByCreatedAtDesc();
+        List<GachaRecord> records = gachaRecordMapper.findTop20ByOrderByCreatedAtDesc();
 
         List<Map<String, Object>> result = records.stream()
                 .limit(limit)
@@ -40,7 +40,7 @@ public class GachaRecordApiController {
     private Map<String, Object> recordToPublicMap(GachaRecord record) {
         Map<String, Object> map = new HashMap<>();
 
-        String nickname = memberRepository.findById(record.getMemberId())
+        String nickname = memberMapper.findById(record.getMemberId())
                 .map(m -> m.getNickname() != null ? m.getNickname() : m.getUsername())
                 .orElse("玩家");
         if (nickname.length() > 2) {

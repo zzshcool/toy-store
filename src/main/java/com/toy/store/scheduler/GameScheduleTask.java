@@ -1,7 +1,7 @@
 package com.toy.store.scheduler;
 
 import com.toy.store.model.*;
-import com.toy.store.repository.*;
+import com.toy.store.mapper.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,7 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GameScheduleTask {
 
-    private final IchibanBoxRepository ichibanBoxRepository;
+    private final IchibanBoxMapper ichibanBoxMapper;
 
     @Scheduled(cron = "0 * * * * ?")
     @Transactional
@@ -28,13 +28,13 @@ public class GameScheduleTask {
         int launched = 0;
         int ended = 0;
 
-        List<IchibanBox> ichibanBoxes = ichibanBoxRepository.findAll();
+        List<IchibanBox> ichibanBoxes = ichibanBoxMapper.findAll();
         for (IchibanBox box : ichibanBoxes) {
             if (box.getStatus() == IchibanBox.Status.DRAFT &&
                     box.getStartTime() != null &&
                     now.isAfter(box.getStartTime())) {
                 box.setStatus(IchibanBox.Status.ACTIVE);
-                ichibanBoxRepository.save(box);
+                ichibanBoxMapper.update(box);
                 launched++;
                 log.info("一番賞 [{}] 自動上架", box.getName());
             }
@@ -42,7 +42,7 @@ public class GameScheduleTask {
                     box.getEndTime() != null &&
                     now.isAfter(box.getEndTime())) {
                 box.setStatus(IchibanBox.Status.ENDED);
-                ichibanBoxRepository.save(box);
+                ichibanBoxMapper.update(box);
                 ended++;
                 log.info("一番賞 [{}] 自動下架", box.getName());
             }

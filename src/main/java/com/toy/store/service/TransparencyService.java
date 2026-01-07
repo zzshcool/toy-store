@@ -3,8 +3,7 @@ package com.toy.store.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.toy.store.model.DrawVerification;
-import com.toy.store.repository.DrawVerificationRepository;
-import lombok.RequiredArgsConstructor;
+import com.toy.store.mapper.DrawVerificationMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,13 +21,16 @@ import java.util.*;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class TransparencyService {
 
-    private final DrawVerificationRepository verificationRepository;
+    private final DrawVerificationMapper verificationMapper;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final SecureRandom secureRandom = new SecureRandom();
+
+    public TransparencyService(DrawVerificationMapper verificationMapper) {
+        this.verificationMapper = verificationMapper;
+    }
 
     /**
      * 初始化遊戲驗證記錄（遊戲開始時調用）
@@ -40,24 +42,28 @@ public class TransparencyService {
             String gameName) {
 
         // 檢查是否已存在
-        return verificationRepository.findByGameTypeAndGameId(gameType, gameId)
-                .orElseGet(() -> {
-                    // 生成隨機種子
-                    String seed = generateRandomSeed();
+        Optional<DrawVerification> existing = verificationMapper.findByGameTypeAndGameId(gameType.name(), gameId);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
 
-                    // 計算初始哈希值
-                    String initialHash = computeSHA256(seed + gameType + gameId + gameName);
+        // 生成隨機種子
+        String seed = generateRandomSeed();
 
-                    DrawVerification verification = new DrawVerification();
-                    verification.setGameType(gameType);
-                    verification.setGameId(gameId);
-                    verification.setGameName(gameName);
-                    verification.setRandomSeed(seed);
-                    verification.setHashValue(initialHash);
-                    verification.setCreatedAt(LocalDateTime.now());
+        // 計算初始哈希值
+        String initialHash = computeSHA256(seed + gameType + gameId + gameName);
 
-                    return verificationRepository.save(verification);
-                });
+        DrawVerification verification = new DrawVerification();
+        verification.setGameType(gameType);
+        verification.setGameId(gameId);
+        verification.setGameName(gameName);
+        verification.setRandomSeed(seed);
+        verification.setHashValue(initialHash);
+        verification.setCompleted(false);
+        verification.setCreatedAt(LocalDateTime.now());
+
+        verificationMapper.insert(verification);
+        return verification;
     }
 
     /**
@@ -72,7 +78,7 @@ public class TransparencyService {
             String prizeName,
             int slot) {
 
-        verificationRepository.findByGameTypeAndGameId(gameType, gameId).ifPresent(verification -> {
+        verificationMapper.findByGameTypeAndGameId(gameType.name(), gameId).ifPresent(verification -> {
             if (verification.isCompleted()) {
                 return;
             }
@@ -83,7 +89,7 @@ public class TransparencyService {
             String newHash = computeSHA256(verification.getHashValue() + newData);
             verification.setHashValue(newHash);
 
-            verificationRepository.save(verification);
+            verificationMapper.update(verification);
         });
     }
 
@@ -96,7 +102,7 @@ public class TransparencyService {
             Long gameId,
             List<Map<String, Object>> results) {
 
-        verificationRepository.findByGameTypeAndGameId(gameType, gameId).ifPresent(verification -> {
+        verificationMapper.findByGameTypeAndGameId(gameType.name(), gameId).ifPresent(verification -> {
             try {
                 // 記錄完整結果 JSON
                 String resultJson = objectMapper.writeValueAsString(results);
@@ -109,7 +115,7 @@ public class TransparencyService {
                 verification.setCompleted(true);
                 verification.setCompletedAt(LocalDateTime.now());
 
-                verificationRepository.save(verification);
+                verificationMapper.update(verification);
                 log.info("遊戲 {} ({}) 驗證記錄已完成，哈希值: {}",
                         verification.getGameName(), gameId, finalHash);
             } catch (JsonProcessingException e) {
@@ -122,7 +128,7 @@ public class TransparencyService {
      * 驗證哈希值是否正確
      */
     public boolean verifyHash(Long verificationId, String providedHash) {
-        return verificationRepository.findById(verificationId)
+        return verificationMapper.findById(verificationId)
                 .map(v -> v.getHashValue().equals(providedHash))
                 .orElse(false);
     }
@@ -131,7 +137,7 @@ public class TransparencyService {
      * 獲取已完售遊戲的驗證記錄
      */
     public List<DrawVerification> getCompletedVerifications() {
-        return verificationRepository.findTop10ByCompletedTrueOrderByCompletedAtDesc();
+        return verificationMapper.findByCompletedTrueOrderByCompletedAtDesc();
     }
 
     /**
@@ -139,7 +145,7 @@ public class TransparencyService {
      */
     public Optional<DrawVerification> getVerification(
             DrawVerification.GameType gameType, Long gameId) {
-        return verificationRepository.findByGameTypeAndGameId(gameType, gameId);
+        return verificationMapper.findByGameTypeAndGameId(gameType.name(), gameId);
     }
 
     /**

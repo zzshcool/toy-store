@@ -1,12 +1,12 @@
 package com.toy.store.service;
 
 import com.toy.store.model.*;
-import com.toy.store.repository.*;
-import lombok.RequiredArgsConstructor;
+import com.toy.store.mapper.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -14,11 +14,17 @@ import java.util.*;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class LogisticsService {
 
-    private final LogisticsRecordRepository logisticsRepository;
-    private final ShipmentRequestRepository shipmentRepository;
+    private final LogisticsRecordMapper logisticsMapper;
+    private final ShipmentRequestMapper shipmentMapper;
+
+    public LogisticsService(
+            LogisticsRecordMapper logisticsMapper,
+            ShipmentRequestMapper shipmentMapper) {
+        this.logisticsMapper = logisticsMapper;
+        this.shipmentMapper = shipmentMapper;
+    }
 
     /**
      * 批次匯入物流單號
@@ -39,7 +45,7 @@ public class LogisticsService {
                 String providerStr = item.get("provider");
 
                 // 驗證發貨申請存在
-                ShipmentRequest shipment = shipmentRepository.findById(shipmentId).orElse(null);
+                ShipmentRequest shipment = shipmentMapper.findById(shipmentId).orElse(null);
                 if (shipment == null) {
                     errors.add("發貨單 " + shipmentId + " 不存在");
                     failed++;
@@ -55,19 +61,24 @@ public class LogisticsService {
                 }
 
                 // 創建或更新物流記錄
-                LogisticsRecord record = logisticsRepository.findByShipmentId(shipmentId)
+                LogisticsRecord record = logisticsMapper.findByShipmentId(shipmentId)
                         .orElseGet(LogisticsRecord::new);
                 record.setShipmentId(shipmentId);
                 record.setTrackingNo(trackingNo);
                 record.setProvider(provider);
                 record.setStatus(LogisticsRecord.LogisticsStatus.SHIPPED);
-                record.setLastUpdate(java.time.LocalDateTime.now());
-                logisticsRepository.save(record);
+                record.setLastUpdate(LocalDateTime.now());
+
+                if (record.getId() == null) {
+                    logisticsMapper.insert(record);
+                } else {
+                    logisticsMapper.update(record);
+                }
 
                 // 更新發貨申請狀態
                 shipment.setTrackingNumber(trackingNo);
-                shipment.setStatus(ShipmentRequest.Status.SHIPPED);
-                shipmentRepository.save(shipment);
+                shipment.setStatusEnum(ShipmentRequest.Status.SHIPPED);
+                shipmentMapper.update(shipment);
 
                 success++;
             } catch (Exception e) {
@@ -90,13 +101,13 @@ public class LogisticsService {
      */
     @Transactional
     public void updateLogisticsStatus(String trackingNo, LogisticsRecord.LogisticsStatus status) {
-        logisticsRepository.findByTrackingNo(trackingNo).ifPresent(record -> {
+        logisticsMapper.findByTrackingNo(trackingNo).ifPresent(record -> {
             record.setStatus(status);
-            record.setLastUpdate(java.time.LocalDateTime.now());
+            record.setLastUpdate(LocalDateTime.now());
             if (status == LogisticsRecord.LogisticsStatus.DELIVERED) {
-                record.setDeliveredAt(java.time.LocalDateTime.now());
+                record.setDeliveredAt(LocalDateTime.now());
             }
-            logisticsRepository.save(record);
+            logisticsMapper.update(record);
         });
     }
 
@@ -104,13 +115,13 @@ public class LogisticsService {
      * 查詢物流狀態
      */
     public Optional<LogisticsRecord> getLogisticsRecord(Long shipmentId) {
-        return logisticsRepository.findByShipmentId(shipmentId);
+        return logisticsMapper.findByShipmentId(shipmentId);
     }
 
     /**
      * 獲取待處理的物流記錄
      */
     public List<LogisticsRecord> getPendingLogistics() {
-        return logisticsRepository.findByStatus(LogisticsRecord.LogisticsStatus.PENDING);
+        return logisticsMapper.findByStatus(LogisticsRecord.LogisticsStatus.PENDING.name());
     }
 }

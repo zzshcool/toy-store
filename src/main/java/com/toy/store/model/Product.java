@@ -31,10 +31,15 @@ public class Product {
     private String imageUrl;
 
     private Status status = Status.AVAILABLE;
+    private Tag tag = Tag.NONE;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public enum Status {
         AVAILABLE, PREORDER, OUT_OF_STOCK, DISCONTINUED
+    }
+
+    public enum Tag {
+        NONE, NEW_ARRIVAL, BEST_SELLER, LIMITED
     }
 }

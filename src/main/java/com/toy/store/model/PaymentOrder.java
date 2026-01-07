@@ -29,7 +29,19 @@ public class PaymentOrder {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    private String thirdPartyTradeNo;
+
+    private LocalDateTime updatedAt;
+
     public enum PaymentStatus {
         PENDING, PAID, FAILED, CANCELLED, REFUNDED
+    }
+
+    public enum PaymentMethod {
+        CREDIT_CARD, LINE_PAY, ECPAY, BANK_TRANSFER, WALLET
+    }
+
+    public void setMethod(PaymentMethod method) {
+        this.paymentMethod = method != null ? method.name() : null;
     }
 }

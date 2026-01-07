@@ -72,7 +72,7 @@ public class TransparencyAdminApiController {
     private Map<String, Object> mapVerification(DrawVerification v) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", v.getId());
-        map.put("gameType", v.getGameType().name());
+        map.put("gameType", v.getGameType());
         map.put("gameId", v.getGameId());
         map.put("gameName", v.getGameName());
         map.put("hashValue", v.getHashValue());

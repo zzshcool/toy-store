@@ -3,8 +3,8 @@ package com.toy.store.controller.api;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.PromoCode;
 import com.toy.store.model.PromoCodeUsage;
-import com.toy.store.repository.PromoCodeRepository;
-import com.toy.store.repository.PromoCodeUsageRepository;
+import com.toy.store.mapper.PromoCodeMapper;
+import com.toy.store.mapper.PromoCodeUsageMapper;
 import com.toy.store.service.PromoCodeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,15 +25,15 @@ import java.util.stream.Collectors;
 public class PromoCodeAdminApiController {
 
     private final PromoCodeService promoCodeService;
-    private final PromoCodeRepository promoCodeRepository;
-    private final PromoCodeUsageRepository usageRepository;
+    private final PromoCodeMapper promoCodeMapper;
+    private final PromoCodeUsageMapper usageMapper;
 
     /**
      * 取得所有禮包碼
      */
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> getAllPromoCodes() {
-        List<PromoCode> codes = promoCodeRepository.findAll();
+        List<PromoCode> codes = promoCodeMapper.findAll();
         List<Map<String, Object>> result = codes.stream()
                 .map(this::mapPromoCode)
                 .collect(Collectors.toList());
@@ -80,10 +80,10 @@ public class PromoCodeAdminApiController {
      */
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deletePromoCode(@PathVariable Long id) {
-        if (!promoCodeRepository.existsById(id)) {
+        if (promoCodeMapper.findById(id).isEmpty()) {
             return ApiResponse.error("禮包碼不存在");
         }
-        promoCodeRepository.deleteById(id);
+        promoCodeMapper.deleteById(id);
         return ApiResponse.ok(null);
     }
 
@@ -92,12 +92,12 @@ public class PromoCodeAdminApiController {
      */
     @PostMapping("/{id}/toggle")
     public ApiResponse<Map<String, Object>> togglePromoCode(@PathVariable Long id) {
-        PromoCode code = promoCodeRepository.findById(id).orElse(null);
+        PromoCode code = promoCodeMapper.findById(id).orElse(null);
         if (code == null) {
             return ApiResponse.error("禮包碼不存在");
         }
-        code.setEnabled(!code.isEnabled());
-        promoCodeRepository.save(code);
+        code.setEnabled(!code.getEnabled());
+        promoCodeMapper.update(code);
         return ApiResponse.ok(mapPromoCode(code));
     }
 
@@ -106,7 +106,7 @@ public class PromoCodeAdminApiController {
      */
     @GetMapping("/{id}/usages")
     public ApiResponse<List<Map<String, Object>>> getUsages(@PathVariable Long id) {
-        List<PromoCodeUsage> usages = usageRepository.findByPromoCodeId(id);
+        List<PromoCodeUsage> usages = usageMapper.findByPromoCodeId(id);
         List<Map<String, Object>> result = usages.stream().map(u -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", u.getId());
@@ -123,12 +123,12 @@ public class PromoCodeAdminApiController {
         map.put("code", code.getCode());
         map.put("name", code.getName());
         map.put("description", code.getDescription());
-        map.put("type", code.getType().name());
-        map.put("rewardType", code.getRewardType().name());
+        map.put("type", code.getCodeType() != null ? code.getCodeType().name() : null);
+        map.put("rewardType", code.getRewardTypeEnum() != null ? code.getRewardTypeEnum().name() : null);
         map.put("rewardValue", code.getRewardValue());
         map.put("maxUses", code.getMaxUses());
         map.put("usedCount", code.getUsedCount());
-        map.put("enabled", code.isEnabled());
+        map.put("enabled", code.getEnabled());
         map.put("validUntil", code.getValidUntil() != null ? code.getValidUntil().toString() : null);
         map.put("createdAt", code.getCreatedAt() != null ? code.getCreatedAt().toString() : null);
         return map;

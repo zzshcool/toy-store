@@ -35,6 +35,38 @@ public class IchibanPrize {
     private Integer shardsValue = 0; // 碎片價值
 
     public enum Rank {
-        A, B, C, D, E, F, G, LAST
+        A, B, C, D, E, F, G, LAST;
+
+        public int getOrder() {
+            return ordinal();
+        }
+
+        public String getDisplayName() {
+            if (this == LAST) {
+                return "最終賞";
+            }
+            return name() + "賞";
+        }
+    }
+
+    public Integer getTotalQuantity() {
+        return quantity;
+    }
+
+    private Integer sortOrder;
+
+    public void setSortOrder(int order) {
+        this.sortOrder = order;
+    }
+
+    public Integer getSortOrder() {
+        return sortOrder;
+    }
+
+    // 減少剩餘數量
+    public void decreaseQuantity() {
+        if (remainingQuantity != null && remainingQuantity > 0) {
+            remainingQuantity--;
+        }
     }
 }

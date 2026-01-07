@@ -2,22 +2,32 @@ package com.toy.store.service;
 
 import com.toy.store.model.GachaRecord;
 import com.toy.store.model.Transaction;
-import com.toy.store.repository.GachaRecordRepository;
-import lombok.RequiredArgsConstructor;
+import com.toy.store.mapper.GachaRecordMapper;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /**
  * Gacha 遊戲服務基類
  * 提供扣款、紀錄、碎片發放等共同邏輯
  */
-@RequiredArgsConstructor
 public abstract class BaseGachaService {
 
-    protected final GachaRecordRepository recordRepository;
+    protected final GachaRecordMapper recordMapper;
     protected final TransactionService transactionService;
     protected final ShardService shardService;
     protected final MissionService missionService;
+
+    protected BaseGachaService(
+            GachaRecordMapper recordMapper,
+            TransactionService transactionService,
+            ShardService shardService,
+            MissionService missionService) {
+        this.recordMapper = recordMapper;
+        this.transactionService = transactionService;
+        this.shardService = shardService;
+        this.missionService = missionService;
+    }
 
     /**
      * 處理錢包扣款
@@ -48,7 +58,8 @@ public abstract class BaseGachaService {
     protected void saveIchibanRecord(Long memberId, Long boxId, String prizeName, String prizeRank, int shards,
             BigDecimal value) {
         GachaRecord record = GachaRecord.createIchibanRecord(memberId, boxId, prizeName, prizeRank, shards, value);
-        recordRepository.save(record);
+        record.setCreatedAt(LocalDateTime.now());
+        recordMapper.insert(record);
 
         // 觸發抽獎任務
         try {
@@ -65,7 +76,8 @@ public abstract class BaseGachaService {
             int luckyAdd, boolean isGuarantee, BigDecimal value) {
         GachaRecord record = GachaRecord.createRouletteRecord(memberId, gameId, prizeName, shards, luckyAdd,
                 isGuarantee, value);
-        recordRepository.save(record);
+        record.setCreatedAt(LocalDateTime.now());
+        recordMapper.insert(record);
 
         // 觸發抽獎任務
         try {
@@ -80,7 +92,8 @@ public abstract class BaseGachaService {
      */
     protected void saveBingoRecord(Long memberId, Long gameId, String prizeName, int shards, BigDecimal value) {
         GachaRecord record = GachaRecord.createBingoRecord(memberId, gameId, prizeName, shards, value);
-        recordRepository.save(record);
+        record.setCreatedAt(LocalDateTime.now());
+        recordMapper.insert(record);
 
         // 觸發抽獎任務
         try {

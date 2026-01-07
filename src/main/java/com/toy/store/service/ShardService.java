@@ -2,11 +2,11 @@ package com.toy.store.service;
 
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
-import com.toy.store.repository.*;
-import lombok.RequiredArgsConstructor;
+import com.toy.store.mapper.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
 
@@ -15,22 +15,34 @@ import java.util.Random;
  * 處理碎片查詢、兌換等邏輯
  */
 @Service
-@RequiredArgsConstructor
 public class ShardService {
 
-    private final MemberLuckyValueRepository luckyValueRepository;
-    private final ShardTransactionRepository shardTransactionRepository;
-    private final RedeemShopItemRepository redeemShopRepository;
-    private final GachaRecordRepository recordRepository;
+    private final MemberLuckyValueMapper luckyValueMapper;
+    private final ShardTransactionMapper shardTransactionMapper;
+    private final RedeemShopItemMapper redeemShopMapper;
+    private final GachaRecordMapper recordMapper;
     private final SystemSettingService settingService;
 
     private final Random random = new Random();
+
+    public ShardService(
+            MemberLuckyValueMapper luckyValueMapper,
+            ShardTransactionMapper shardTransactionMapper,
+            RedeemShopItemMapper redeemShopMapper,
+            GachaRecordMapper recordMapper,
+            SystemSettingService settingService) {
+        this.luckyValueMapper = luckyValueMapper;
+        this.shardTransactionMapper = shardTransactionMapper;
+        this.redeemShopMapper = redeemShopMapper;
+        this.recordMapper = recordMapper;
+        this.settingService = settingService;
+    }
 
     /**
      * 取得會員碎片餘額
      */
     public int getShardBalance(Long memberId) {
-        return luckyValueRepository.findByMemberId(memberId)
+        return luckyValueMapper.findByMemberId(memberId)
                 .map(MemberLuckyValue::getShardBalance)
                 .orElse(0);
     }
@@ -39,21 +51,21 @@ public class ShardService {
      * 取得會員碎片交易紀錄
      */
     public List<ShardTransaction> getTransactions(Long memberId) {
-        return shardTransactionRepository.findTop20ByMemberIdOrderByCreatedAtDesc(memberId);
+        return shardTransactionMapper.findTop20ByMemberIdOrderByCreatedAtDesc(memberId);
     }
 
     /**
      * 取得所有可兌換商品
      */
     public List<RedeemShopItem> getAvailableItems() {
-        return redeemShopRepository.findByStockGreaterThanOrderBySortOrderAsc(0);
+        return redeemShopMapper.findByStockGreaterThanOrderBySortOrderAsc(0);
     }
 
     /**
      * 取得所有商品（含售罄）
      */
     public List<RedeemShopItem> getAllItems() {
-        return redeemShopRepository.findAllByOrderBySortOrderAsc();
+        return redeemShopMapper.findAllByOrderBySortOrderAsc();
     }
 
     /**
@@ -61,14 +73,14 @@ public class ShardService {
      */
     @Transactional
     public RedeemResult redeem(Long memberId, Long itemId) {
-        RedeemShopItem item = redeemShopRepository.findById(itemId)
+        RedeemShopItem item = redeemShopMapper.findById(itemId)
                 .orElseThrow(() -> new AppException("商品不存在"));
 
         if (!item.hasStock()) {
             throw new AppException("商品已售罄");
         }
 
-        MemberLuckyValue luckyValue = luckyValueRepository.findByMemberId(memberId)
+        MemberLuckyValue luckyValue = luckyValueMapper.findByMemberId(memberId)
                 .orElseThrow(() -> new AppException("會員資料不存在"));
 
         if (!luckyValue.hasEnoughShards(item.getShardCost())) {
@@ -77,16 +89,17 @@ public class ShardService {
 
         // 扣除碎片
         luckyValue.spendShards(item.getShardCost());
-        luckyValueRepository.save(luckyValue);
+        luckyValueMapper.update(luckyValue);
 
         // 減少庫存
         item.decreaseStock();
-        redeemShopRepository.save(item);
+        redeemShopMapper.update(item);
 
         // 記錄交易
         ShardTransaction tx = ShardTransaction.createSpend(memberId, item.getShardCost(),
                 "兌換: " + item.getName(), itemId);
-        shardTransactionRepository.save(tx);
+        tx.setCreatedAt(LocalDateTime.now());
+        shardTransactionMapper.insert(tx);
 
         return new RedeemResult(item, luckyValue.getShardBalance());
     }
@@ -97,22 +110,33 @@ public class ShardService {
     @Transactional
     public int convertDuplicate(Long memberId, String prizeName) {
         // 檢查是否有重複
-        List<GachaRecord> records = recordRepository.findByMemberIdAndPrizeName(memberId, prizeName);
+        List<GachaRecord> records = recordMapper.findByMemberIdAndPrizeName(memberId, prizeName);
         if (records.size() < 2) {
             return 0; // 沒有重複
         }
 
         int duplicateShards = settingService.getIntSetting(SystemSetting.GACHA_DUPLICATE_SHARD, 300);
 
-        MemberLuckyValue luckyValue = luckyValueRepository.findByMemberId(memberId)
-                .orElse(new MemberLuckyValue(memberId));
+        MemberLuckyValue luckyValue = luckyValueMapper.findByMemberId(memberId)
+                .orElseGet(() -> {
+                    MemberLuckyValue newLuckyValue = new MemberLuckyValue();
+                    newLuckyValue.setMemberId(memberId);
+                    newLuckyValue.setLuckyValue(0);
+                    newLuckyValue.setShardBalance(0);
+                    return newLuckyValue;
+                });
         luckyValue.addShards(duplicateShards);
-        luckyValueRepository.save(luckyValue);
+        if (luckyValue.getId() == null) {
+            luckyValueMapper.insert(luckyValue);
+        } else {
+            luckyValueMapper.update(luckyValue);
+        }
 
         ShardTransaction tx = ShardTransaction.createEarn(memberId, duplicateShards,
                 ShardTransaction.TransactionType.EARN_DUPLICATE,
                 "重複款轉換: " + prizeName, "DUPLICATE", null);
-        shardTransactionRepository.save(tx);
+        tx.setCreatedAt(LocalDateTime.now());
+        shardTransactionMapper.insert(tx);
 
         return duplicateShards;
     }
@@ -122,15 +146,26 @@ public class ShardService {
      */
     @Transactional
     public void addBonusShards(Long memberId, int amount, String description) {
-        MemberLuckyValue luckyValue = luckyValueRepository.findByMemberId(memberId)
-                .orElse(new MemberLuckyValue(memberId));
+        MemberLuckyValue luckyValue = luckyValueMapper.findByMemberId(memberId)
+                .orElseGet(() -> {
+                    MemberLuckyValue newLuckyValue = new MemberLuckyValue();
+                    newLuckyValue.setMemberId(memberId);
+                    newLuckyValue.setLuckyValue(0);
+                    newLuckyValue.setShardBalance(0);
+                    return newLuckyValue;
+                });
         luckyValue.addShards(amount);
-        luckyValueRepository.save(luckyValue);
+        if (luckyValue.getId() == null) {
+            luckyValueMapper.insert(luckyValue);
+        } else {
+            luckyValueMapper.update(luckyValue);
+        }
 
         ShardTransaction tx = ShardTransaction.createEarn(memberId, amount,
                 ShardTransaction.TransactionType.EARN_BONUS,
                 description, "BONUS", null);
-        shardTransactionRepository.save(tx);
+        tx.setCreatedAt(LocalDateTime.now());
+        shardTransactionMapper.insert(tx);
     }
 
     // =====================================================
@@ -151,15 +186,26 @@ public class ShardService {
      */
     @Transactional
     public void addGachaShards(Long memberId, int amount, String sourceType, Long sourceId, String description) {
-        MemberLuckyValue luckyValue = luckyValueRepository.findByMemberId(memberId)
-                .orElse(new MemberLuckyValue(memberId));
+        MemberLuckyValue luckyValue = luckyValueMapper.findByMemberId(memberId)
+                .orElseGet(() -> {
+                    MemberLuckyValue newLuckyValue = new MemberLuckyValue();
+                    newLuckyValue.setMemberId(memberId);
+                    newLuckyValue.setLuckyValue(0);
+                    newLuckyValue.setShardBalance(0);
+                    return newLuckyValue;
+                });
         luckyValue.addShards(amount);
-        luckyValueRepository.save(luckyValue);
+        if (luckyValue.getId() == null) {
+            luckyValueMapper.insert(luckyValue);
+        } else {
+            luckyValueMapper.update(luckyValue);
+        }
 
         ShardTransaction tx = ShardTransaction.createEarn(memberId, amount,
                 ShardTransaction.TransactionType.EARN_DRAW,
                 description, sourceType, sourceId);
-        shardTransactionRepository.save(tx);
+        tx.setCreatedAt(LocalDateTime.now());
+        shardTransactionMapper.insert(tx);
     }
 
     /**

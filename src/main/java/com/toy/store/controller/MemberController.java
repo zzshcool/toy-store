@@ -4,7 +4,7 @@ import com.toy.store.dto.ApiResponse;
 import com.toy.store.dto.SignupRequest;
 import com.toy.store.exception.AppException;
 import com.toy.store.model.Member;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.MemberService;
 import com.toy.store.service.TokenService;
 import com.toy.store.annotation.CurrentUser;
@@ -32,7 +32,7 @@ import java.time.LocalDate;
 public class MemberController {
 
     private final MemberService memberService;
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
     private final TokenService tokenService;
 
     @GetMapping("/login")
@@ -130,7 +130,7 @@ public class MemberController {
         if (user == null)
             return "redirect:/login";
 
-        memberRepository.findByUsername(user.getUsername()).ifPresent(member -> model.addAttribute("member", member));
+        memberMapper.findByUsername(user.getUsername()).ifPresent(member -> model.addAttribute("member", member));
         return "topup";
     }
 

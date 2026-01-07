@@ -2,9 +2,8 @@ package com.toy.store.service;
 
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
-import com.toy.store.repository.*;
+import com.toy.store.mapper.*;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,41 +16,53 @@ import java.util.Random;
  * 對應規格書 §4.D 動漫周邊系統
  */
 @Service
-@RequiredArgsConstructor
 public class BlindBoxService {
 
-    private final BlindBoxRepository boxRepository;
-    private final BlindBoxItemRepository itemRepository;
-    private final PropCardRepository propCardRepository;
-    private final MemberRepository memberRepository;
+    private final BlindBoxMapper boxMapper;
+    private final BlindBoxItemMapper itemMapper;
+    private final PropCardMapper propCardMapper;
+    private final MemberMapper memberMapper;
     private final TransactionService transactionService;
+
+    public BlindBoxService(
+            BlindBoxMapper boxMapper,
+            BlindBoxItemMapper itemMapper,
+            PropCardMapper propCardMapper,
+            MemberMapper memberMapper,
+            TransactionService transactionService) {
+        this.boxMapper = boxMapper;
+        this.itemMapper = itemMapper;
+        this.propCardMapper = propCardMapper;
+        this.memberMapper = memberMapper;
+        this.transactionService = transactionService;
+    }
 
     /**
      * 取得所有進行中的盲盒
      */
     public List<BlindBox> getActiveBoxes() {
-        return boxRepository.findByStatusOrderByCreatedAtDesc(BlindBox.Status.ACTIVE);
+        return boxMapper.findByStatusOrderByCreatedAtDesc(BlindBox.Status.ACTIVE.name());
     }
 
     /**
      * 取得所有盲盒（包含售完）
      */
     public List<BlindBox> getAllBoxes() {
-        return boxRepository.findAll();
+        return boxMapper.findAll();
     }
 
     /**
      * 取得盲盒詳情
      */
     public BlindBox getBoxWithItems(Long boxId) {
-        return boxRepository.findById(boxId).orElse(null);
+        return boxMapper.findById(boxId).orElse(null);
     }
 
     /**
      * 取得盲盒內的所有單品
      */
     public List<BlindBoxItem> getItems(Long boxId) {
-        return itemRepository.findByBlindBox_IdOrderByBoxNumberAsc(boxId);
+        return itemMapper.findByBlindBoxIdOrderByBoxNumberAsc(boxId);
     }
 
     /**
@@ -59,7 +70,7 @@ public class BlindBoxService {
      */
     @Transactional
     public BlindBoxItem lockItem(Long boxId, Integer boxNumber, Long memberId) {
-        BlindBoxItem item = itemRepository.findByBlindBox_IdAndBoxNumber(boxId, boxNumber)
+        BlindBoxItem item = itemMapper.findByBlindBoxIdAndBoxNumber(boxId, boxNumber)
                 .orElseThrow(() -> new AppException("盒子不存在"));
 
         if (item.getStatus() == BlindBoxItem.Status.SOLD) {
@@ -80,7 +91,8 @@ public class BlindBoxService {
         }
 
         item.lock(memberId);
-        return itemRepository.save(item);
+        itemMapper.update(item);
+        return item;
     }
 
     /**
@@ -88,7 +100,7 @@ public class BlindBoxService {
      */
     @Transactional
     public PurchaseResult purchaseItem(Long boxId, Integer boxNumber, Long memberId) {
-        BlindBoxItem item = itemRepository.findByBlindBox_IdAndBoxNumber(boxId, boxNumber)
+        BlindBoxItem item = itemMapper.findByBlindBoxIdAndBoxNumber(boxId, boxNumber)
                 .orElseThrow(() -> new AppException("盒子不存在"));
 
         // 驗證狀態
@@ -102,12 +114,13 @@ public class BlindBoxService {
 
         if (item.isLockExpired()) {
             item.releaseLock();
-            itemRepository.save(item);
+            itemMapper.update(item);
             throw new AppException("鎖定已過期，請重新選擇");
         }
 
-        BlindBox box = item.getBlindBox();
-        Member member = memberRepository.findById(memberId)
+        BlindBox box = boxMapper.findById(boxId)
+                .orElseThrow(() -> new AppException("盲盒不存在"));
+        Member member = memberMapper.findById(memberId)
                 .orElseThrow(() -> new AppException("會員不存在"));
 
         // 扣除代幣
@@ -116,13 +129,13 @@ public class BlindBoxService {
 
         // 完成購買
         item.purchase(memberId);
-        itemRepository.save(item);
+        itemMapper.update(item);
 
         // 發放碎片獎勵
         int shards = calculateShards(item);
         if (shards > 0) {
             member.setPoints(member.getPoints() + shards);
-            memberRepository.save(member);
+            memberMapper.update(member);
         }
 
         return new PurchaseResult(item, price, shards);
@@ -133,17 +146,17 @@ public class BlindBoxService {
      */
     @Transactional
     public FullBoxResult purchaseFullBox(Long boxId, Long memberId) {
-        BlindBox box = boxRepository.findById(boxId)
+        BlindBox box = boxMapper.findById(boxId)
                 .orElseThrow(() -> new AppException("盲盒不存在"));
 
-        List<BlindBoxItem> availableItems = itemRepository.findByBlindBox_IdAndStatus(boxId,
-                BlindBoxItem.Status.AVAILABLE);
+        List<BlindBoxItem> availableItems = itemMapper.findByBlindBoxIdAndStatus(boxId,
+                BlindBoxItem.Status.AVAILABLE.name());
 
         if (availableItems.isEmpty()) {
             throw new AppException("此盲盒已售罄");
         }
 
-        Member member = memberRepository.findById(memberId)
+        Member member = memberMapper.findById(memberId)
                 .orElseThrow(() -> new AppException("會員不存在"));
 
         // 計算全包價格（使用優惠價）
@@ -155,18 +168,18 @@ public class BlindBoxService {
         for (BlindBoxItem item : availableItems) {
             item.purchase(memberId);
             totalShards += calculateShards(item);
+            itemMapper.update(item);
         }
-        itemRepository.saveAll(availableItems);
 
         // 發放碎片
         if (totalShards > 0) {
             member.setPoints(member.getPoints() + totalShards);
-            memberRepository.save(member);
+            memberMapper.update(member);
         }
 
         // 更新盲盒狀態
         box.setStatus(BlindBox.Status.SOLD_OUT);
-        boxRepository.save(box);
+        boxMapper.update(box);
 
         return new FullBoxResult(availableItems, fullPrice, totalShards);
     }
@@ -176,8 +189,8 @@ public class BlindBoxService {
      */
     @Transactional
     public PurchaseResult randomPurchase(Long boxId, Long memberId) {
-        List<BlindBoxItem> availableItems = itemRepository.findByBlindBox_IdAndStatus(boxId,
-                BlindBoxItem.Status.AVAILABLE);
+        List<BlindBoxItem> availableItems = itemMapper.findByBlindBoxIdAndStatus(boxId,
+                BlindBoxItem.Status.AVAILABLE.name());
 
         if (availableItems.isEmpty()) {
             throw new AppException("此盲盒已售罄");
@@ -189,7 +202,7 @@ public class BlindBoxService {
 
         // 鎖定並購買
         selectedItem.lock(memberId);
-        itemRepository.save(selectedItem);
+        itemMapper.update(selectedItem);
 
         return purchaseItem(boxId, selectedItem.getBoxNumber(), memberId);
     }
@@ -198,16 +211,16 @@ public class BlindBoxService {
      * 使用道具卡 - 提示卡
      */
     public List<BlindBoxItem> useHintCard(Long boxId, Long memberId) {
-        PropCard card = propCardRepository.findByMemberIdAndCardType(memberId, PropCard.CardType.HINT)
+        PropCard card = propCardMapper.findByMemberIdAndCardType(memberId, PropCard.CardType.HINT.name())
                 .orElseThrow(() -> new AppException("您沒有提示卡"));
 
         if (!card.use()) {
             throw new AppException("提示卡已用完或已過期");
         }
-        propCardRepository.save(card);
+        propCardMapper.update(card);
 
         // 返回過濾後的盒子列表（排除某個稀有度）
-        List<BlindBoxItem> items = itemRepository.findByBlindBox_IdAndStatus(boxId, BlindBoxItem.Status.AVAILABLE);
+        List<BlindBoxItem> items = itemMapper.findByBlindBoxIdAndStatus(boxId, BlindBoxItem.Status.AVAILABLE.name());
 
         // 隨機排除一個稀有度等級的提示
         BlindBoxItem.Rarity[] rarities = BlindBoxItem.Rarity.values();
@@ -222,16 +235,16 @@ public class BlindBoxService {
      * 使用道具卡 - 透視卡
      */
     public BlindBoxItem usePeekCard(Long boxId, Integer boxNumber, Long memberId) {
-        PropCard card = propCardRepository.findByMemberIdAndCardType(memberId, PropCard.CardType.PEEK)
+        PropCard card = propCardMapper.findByMemberIdAndCardType(memberId, PropCard.CardType.PEEK.name())
                 .orElseThrow(() -> new AppException("您沒有透視卡"));
 
         if (!card.use()) {
             throw new AppException("透視卡已用完或已過期");
         }
-        propCardRepository.save(card);
+        propCardMapper.update(card);
 
         // 返回盒子內容詳情
-        return itemRepository.findByBlindBox_IdAndBoxNumber(boxId, boxNumber)
+        return itemMapper.findByBlindBoxIdAndBoxNumber(boxId, boxNumber)
                 .orElseThrow(() -> new AppException("盒子不存在"));
     }
 
@@ -240,27 +253,27 @@ public class BlindBoxService {
      */
     @Transactional
     public BlindBoxItem useSwapCard(Long boxId, Integer currentBoxNumber, Long memberId) {
-        PropCard card = propCardRepository.findByMemberIdAndCardType(memberId, PropCard.CardType.SWAP)
+        PropCard card = propCardMapper.findByMemberIdAndCardType(memberId, PropCard.CardType.SWAP.name())
                 .orElseThrow(() -> new AppException("您沒有換一盒道具"));
 
         if (!card.use()) {
             throw new AppException("換一盒道具已用完或已過期");
         }
-        propCardRepository.save(card);
+        propCardMapper.update(card);
 
         // 釋放當前鎖定
-        BlindBoxItem currentItem = itemRepository.findByBlindBox_IdAndBoxNumber(boxId, currentBoxNumber)
+        BlindBoxItem currentItem = itemMapper.findByBlindBoxIdAndBoxNumber(boxId, currentBoxNumber)
                 .orElseThrow(() -> new AppException("盒子不存在"));
 
         if (currentItem.getStatus() == BlindBoxItem.Status.LOCKED
                 && memberId.equals(currentItem.getLockedByMemberId())) {
             currentItem.releaseLock();
-            itemRepository.save(currentItem);
+            itemMapper.update(currentItem);
         }
 
         // 隨機選擇新盒子
-        List<BlindBoxItem> availableItems = itemRepository.findByBlindBox_IdAndStatus(boxId,
-                BlindBoxItem.Status.AVAILABLE);
+        List<BlindBoxItem> availableItems = itemMapper.findByBlindBoxIdAndStatus(boxId,
+                BlindBoxItem.Status.AVAILABLE.name());
         if (availableItems.isEmpty()) {
             throw new AppException("沒有其他可選盒子");
         }
@@ -268,17 +281,18 @@ public class BlindBoxService {
         Random random = new Random();
         BlindBoxItem newItem = availableItems.get(random.nextInt(availableItems.size()));
         newItem.lock(memberId);
-        return itemRepository.save(newItem);
+        itemMapper.update(newItem);
+        return newItem;
     }
 
     /**
      * 試抽（模擬）
      */
     public TrialResult trial(Long boxId, int count) {
-        BlindBox box = boxRepository.findById(boxId)
+        BlindBox box = boxMapper.findById(boxId)
                 .orElseThrow(() -> new AppException("盲盒不存在"));
 
-        List<BlindBoxItem> items = itemRepository.findByBlindBox_IdAndStatus(boxId, BlindBoxItem.Status.AVAILABLE);
+        List<BlindBoxItem> items = itemMapper.findByBlindBoxIdAndStatus(boxId, BlindBoxItem.Status.AVAILABLE.name());
         if (items.isEmpty()) {
             throw new AppException("此盲盒已售罄，無法試抽");
         }

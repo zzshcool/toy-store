@@ -4,10 +4,9 @@ import com.toy.store.exception.ResourceNotFoundException;
 import com.toy.store.model.Coupon;
 import com.toy.store.model.Member;
 import com.toy.store.model.MemberCoupon;
-import com.toy.store.repository.CouponRepository;
-import com.toy.store.repository.MemberCouponRepository;
-import com.toy.store.repository.MemberRepository;
-import lombok.RequiredArgsConstructor;
+import com.toy.store.mapper.CouponMapper;
+import com.toy.store.mapper.MemberCouponMapper;
+import com.toy.store.mapper.MemberMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,15 +18,23 @@ import java.util.List;
  * 優惠券服務
  */
 @Service
-@RequiredArgsConstructor
 public class CouponService {
 
-    private final CouponRepository couponRepository;
-    private final MemberCouponRepository memberCouponRepository;
-    private final MemberRepository memberRepository;
+    private final CouponMapper couponMapper;
+    private final MemberCouponMapper memberCouponMapper;
+    private final MemberMapper memberMapper;
+
+    public CouponService(
+            CouponMapper couponMapper,
+            MemberCouponMapper memberCouponMapper,
+            MemberMapper memberMapper) {
+        this.couponMapper = couponMapper;
+        this.memberCouponMapper = memberCouponMapper;
+        this.memberMapper = memberMapper;
+    }
 
     @Transactional
-    public Coupon createCoupon(String name, String code, Coupon.CouponType type, BigDecimal value,
+    public Coupon createCoupon(String name, String code, String type, BigDecimal value,
             String description, LocalDateTime validFrom, LocalDateTime validUntil) {
         Coupon coupon = new Coupon();
         coupon.setName(name);
@@ -37,14 +44,16 @@ public class CouponService {
         coupon.setDescription(description);
         coupon.setValidFrom(validFrom);
         coupon.setValidUntil(validUntil);
-        return couponRepository.save(coupon);
+        coupon.setCreatedAt(LocalDateTime.now());
+        couponMapper.insert(coupon);
+        return coupon;
     }
 
     @Transactional
     public void distributeToMember(Long couponId, Long memberId) {
-        Coupon coupon = couponRepository.findById(couponId)
+        Coupon coupon = couponMapper.findById(couponId)
                 .orElseThrow(() -> new ResourceNotFoundException("優惠券", couponId));
-        Member member = memberRepository.findById(memberId)
+        Member member = memberMapper.findById(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("會員", memberId));
 
         if (!coupon.isActive()) {
@@ -52,34 +61,34 @@ public class CouponService {
         }
 
         MemberCoupon memberCoupon = new MemberCoupon();
-        memberCoupon.setCoupon(coupon);
-        memberCoupon.setMember(member);
-        memberCoupon.setStatus(MemberCoupon.Status.UNUSED);
-        memberCouponRepository.save(memberCoupon);
+        memberCoupon.setCouponId(couponId);
+        memberCoupon.setMemberId(memberId);
+        memberCoupon.setStatus("UNUSED");
+        memberCoupon.setObtainedAt(LocalDateTime.now());
+        memberCouponMapper.insert(memberCoupon);
     }
 
     @Transactional
     public void distributeToLevel(Long couponId, Long levelId) {
-        Coupon coupon = couponRepository.findById(couponId)
+        Coupon coupon = couponMapper.findById(couponId)
                 .orElseThrow(() -> new ResourceNotFoundException("優惠券", couponId));
 
         // 找尋該等級的所有會員
-        List<Member> members = memberRepository.findAll().stream()
-                .filter(m -> m.getLevel() != null && m.getLevel().getId().equals(levelId))
+        List<Member> members = memberMapper.findAll().stream()
+                .filter(m -> m.getMemberLevelId() != null && m.getMemberLevelId().equals(levelId))
                 .toList();
 
         for (Member member : members) {
             MemberCoupon memberCoupon = new MemberCoupon();
-            memberCoupon.setCoupon(coupon);
-            memberCoupon.setMember(member);
-            memberCoupon.setStatus(MemberCoupon.Status.UNUSED);
-            memberCouponRepository.save(memberCoupon);
+            memberCoupon.setCouponId(couponId);
+            memberCoupon.setMemberId(member.getId());
+            memberCoupon.setStatus("UNUSED");
+            memberCoupon.setObtainedAt(LocalDateTime.now());
+            memberCouponMapper.insert(memberCoupon);
         }
     }
 
     public List<MemberCoupon> getMemberCoupons(Long memberId) {
-        return memberRepository.findById(memberId)
-                .map(member -> memberCouponRepository.findByMemberAndStatus(member, MemberCoupon.Status.UNUSED))
-                .orElseGet(List::of);
+        return memberCouponMapper.findByMemberIdAndStatus(memberId, "UNUSED");
     }
 }

@@ -3,8 +3,8 @@ package com.toy.store.controller.api;
 import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.MemberSignIn;
-import com.toy.store.repository.MemberRepository;
-import com.toy.store.repository.MemberSignInRepository;
+import com.toy.store.mapper.MemberMapper;
+import com.toy.store.mapper.MemberSignInMapper;
 import com.toy.store.service.SignInService;
 import com.toy.store.service.TokenService;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +24,8 @@ import java.util.Optional;
 public class SignInApiController {
 
     private final SignInService signInService;
-    private final MemberSignInRepository signInRepository;
-    private final MemberRepository memberRepository;
+    private final MemberSignInMapper signInMapper;
+    private final MemberMapper memberMapper;
 
     /**
      * 執行每日簽到
@@ -36,10 +36,10 @@ public class SignInApiController {
             return ApiResponse.error("請先登入");
         }
 
-        return memberRepository.findByUsername(tokenInfo.getUsername())
+        return memberMapper.findByUsername(tokenInfo.getUsername())
                 .map(member -> {
                     // 檢查今日是否已簽到
-                    Optional<MemberSignIn> todaySignIn = signInRepository.findByMemberIdAndSignInDate(
+                    Optional<MemberSignIn> todaySignIn = signInMapper.findByMemberIdAndSignInDate(
                             member.getId(), LocalDate.now());
 
                     if (todaySignIn.isPresent()) {
@@ -54,7 +54,7 @@ public class SignInApiController {
                     signInService.processDailySignIn(member.getId());
 
                     // 重新查詢獲取結果
-                    MemberSignIn newSignIn = signInRepository.findByMemberIdAndSignInDate(
+                    MemberSignIn newSignIn = signInMapper.findByMemberIdAndSignInDate(
                             member.getId(), LocalDate.now()).orElse(null);
 
                     Map<String, Object> result = new HashMap<>();
@@ -80,10 +80,10 @@ public class SignInApiController {
             return ApiResponse.error("請先登入");
         }
 
-        return memberRepository.findByUsername(tokenInfo.getUsername())
+        return memberMapper.findByUsername(tokenInfo.getUsername())
                 .map(member -> {
                     LocalDate today = LocalDate.now();
-                    Optional<MemberSignIn> todaySignIn = signInRepository.findByMemberIdAndSignInDate(
+                    Optional<MemberSignIn> todaySignIn = signInMapper.findByMemberIdAndSignInDate(
                             member.getId(), today);
 
                     Map<String, Object> status = new HashMap<>();

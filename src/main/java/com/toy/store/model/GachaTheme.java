@@ -20,4 +20,22 @@ public class GachaTheme {
     private java.math.BigDecimal pricePerGacha;
     private String status = "ACTIVE";
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    public java.math.BigDecimal getPrice() {
+        return pricePerGacha;
+    }
+
+    public void setPrice(java.math.BigDecimal price) {
+        this.pricePerGacha = price;
+    }
+
+    private transient java.util.List<GachaItem> items = new java.util.ArrayList<>();
+
+    public java.util.List<GachaItem> getItems() {
+        return items;
+    }
+
+    public void setItems(java.util.List<GachaItem> items) {
+        this.items = items;
+    }
 }

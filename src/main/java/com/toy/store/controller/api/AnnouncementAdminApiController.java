@@ -2,7 +2,7 @@ package com.toy.store.controller.api;
 
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.Member;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.MemberTagService;
 import com.toy.store.service.MessageService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ public class AnnouncementAdminApiController {
 
     private final MessageService messageService;
     private final MemberTagService tagService;
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
 
     /**
      * 群發公告給所有會員
@@ -39,7 +39,7 @@ public class AnnouncementAdminApiController {
             return ApiResponse.error("內容必填");
         }
 
-        List<Member> allMembers = memberRepository.findAll();
+        List<Member> allMembers = memberMapper.findAll();
         int count = 0;
         for (Member m : allMembers) {
             messageService.sendSystemMessage(m.getId(), title, content);

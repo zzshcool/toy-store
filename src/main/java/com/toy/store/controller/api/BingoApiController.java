@@ -4,7 +4,7 @@ import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.BingoService;
 import com.toy.store.service.TokenService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class BingoApiController {
 
     private final BingoService bingoService;
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
 
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> getActiveGames() {
@@ -132,7 +132,7 @@ public class BingoApiController {
     private Long getMemberId(TokenService.TokenInfo info) {
         if (info == null)
             return null;
-        return memberRepository.findByUsername(info.getUsername())
+        return memberMapper.findByUsername(info.getUsername())
                 .map(Member::getId)
                 .orElse(null);
     }

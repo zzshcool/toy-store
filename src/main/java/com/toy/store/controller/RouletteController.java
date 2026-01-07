@@ -1,7 +1,7 @@
 package com.toy.store.controller;
 
 import com.toy.store.model.RouletteGame;
-import com.toy.store.repository.RouletteGameRepository;
+import com.toy.store.mapper.RouletteGameMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -16,11 +16,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequiredArgsConstructor
 public class RouletteController {
 
-    private final RouletteGameRepository gameRepository;
+    private final RouletteGameMapper gameMapper;
 
     @GetMapping
     public String index(Model model) {
-        model.addAttribute("games", gameRepository.findByStatus(RouletteGame.Status.ACTIVE));
+        model.addAttribute("games", gameMapper.findByStatus(RouletteGame.Status.ACTIVE.name()));
         return "roulette";
     }
 }

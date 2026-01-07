@@ -16,6 +16,8 @@ public class AdminActionLog {
 
     private Long adminId;
 
+    private String adminName;
+
     private String action;
 
     private String targetType;

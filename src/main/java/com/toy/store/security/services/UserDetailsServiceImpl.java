@@ -1,7 +1,7 @@
 package com.toy.store.security.services;
 
 import com.toy.store.model.Member;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -13,13 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
 
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         try {
-            Member member = memberRepository.findByUsername(username)
+            Member member = memberMapper.findByUsername(username)
                     .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
             return UserDetailsImpl.build(member);
         } catch (UsernameNotFoundException e) {

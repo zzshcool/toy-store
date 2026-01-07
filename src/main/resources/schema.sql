@@ -159,6 +159,7 @@ CREATE TABLE IF NOT EXISTS coupons (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     code VARCHAR(50) UNIQUE,
+    type VARCHAR(50),
     discount_type VARCHAR(20),
     discount_value DECIMAL(15,2),
     min_purchase DECIMAL(15,2) DEFAULT 0.00,
@@ -222,6 +223,7 @@ CREATE TABLE IF NOT EXISTS ichiban_prizes (
     remaining_quantity INT,
     estimated_value DECIMAL(15,2),
     shards_value INT DEFAULT 0,
+    sort_order INT DEFAULT 0,
     INDEX idx_box_id (box_id)
 );
 
@@ -249,6 +251,9 @@ CREATE TABLE IF NOT EXISTS roulette_games (
     description TEXT,
     image_url VARCHAR(500),
     price_per_spin DECIMAL(15,2) NOT NULL,
+    max_slots INT DEFAULT 25,
+    total_slots INT DEFAULT 8,
+    total_draws INT DEFAULT 0,
     status VARCHAR(20) DEFAULT 'ACTIVE',
     guarantee_spins INT DEFAULT 10,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -268,6 +273,10 @@ CREATE TABLE IF NOT EXISTS roulette_slots (
     tier VARCHAR(20) DEFAULT 'NORMAL',
     shards_reward INT DEFAULT 0,
     lucky_value_reward INT DEFAULT 0,
+    slot_order INT DEFAULT 0,
+    slot_type VARCHAR(50) DEFAULT 'NORMAL',
+    shard_amount INT DEFAULT 0,
+    color VARCHAR(20),
     INDEX idx_game_id (game_id)
 );
 
@@ -654,6 +663,7 @@ CREATE TABLE IF NOT EXISTS redeem_shop_items (
     point_cost INT NOT NULL,
     stock INT DEFAULT 0,
     status VARCHAR(20) DEFAULT 'ACTIVE',
+    sort_order INT DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

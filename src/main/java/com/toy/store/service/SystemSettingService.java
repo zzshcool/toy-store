@@ -1,8 +1,7 @@
 package com.toy.store.service;
 
 import com.toy.store.model.SystemSetting;
-import com.toy.store.repository.SystemSettingRepository;
-import lombok.RequiredArgsConstructor;
+import com.toy.store.mapper.SystemSettingMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.annotation.PostConstruct;
@@ -13,10 +12,13 @@ import java.util.List;
  * 管理功能開關與遊戲參數配置
  */
 @Service
-@RequiredArgsConstructor
 public class SystemSettingService {
 
-    private final SystemSettingRepository settingRepository;
+    private final SystemSettingMapper settingMapper;
+
+    public SystemSettingService(SystemSettingMapper settingMapper) {
+        this.settingMapper = settingMapper;
+    }
 
     /**
      * 初始化預設設定（應用程式啟動時執行）
@@ -62,8 +64,12 @@ public class SystemSettingService {
     }
 
     private void createIfNotExists(String key, String value, String description) {
-        if (!settingRepository.existsBySettingKey(key)) {
-            settingRepository.save(new SystemSetting(key, value, description));
+        if (!settingMapper.existsBySettingKey(key)) {
+            SystemSetting setting = new SystemSetting();
+            setting.setSettingKey(key);
+            setting.setSettingValue(value);
+            setting.setDescription(description);
+            settingMapper.insert(setting);
         }
     }
 
@@ -71,7 +77,7 @@ public class SystemSettingService {
      * 取得設定值
      */
     public String getSetting(String key) {
-        return settingRepository.findBySettingKey(key)
+        return settingMapper.findBySettingKey(key)
                 .map(SystemSetting::getSettingValue)
                 .orElse(null);
     }
@@ -103,11 +109,14 @@ public class SystemSettingService {
      */
     @Transactional
     public void updateSetting(String key, String value) {
-        settingRepository.findBySettingKey(key).ifPresentOrElse(setting -> {
+        settingMapper.findBySettingKey(key).ifPresentOrElse(setting -> {
             setting.setSettingValue(value);
-            settingRepository.save(setting);
+            settingMapper.update(setting);
         }, () -> {
-            settingRepository.save(new SystemSetting(key, value, null));
+            SystemSetting newSetting = new SystemSetting();
+            newSetting.setSettingKey(key);
+            newSetting.setSettingValue(value);
+            settingMapper.insert(newSetting);
         });
     }
 
@@ -115,7 +124,7 @@ public class SystemSettingService {
      * 取得所有設定
      */
     public List<SystemSetting> getAllSettings() {
-        return settingRepository.findAll();
+        return settingMapper.findAll();
     }
 
     // 便捷方法：檢查模組是否啟用

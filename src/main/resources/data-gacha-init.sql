@@ -65,7 +65,7 @@ INSERT INTO ichiban_boxes (id, ip_id, name, description, image_url, price_per_dr
 
 -- ########## 3. 一番賞獎品 (ID 顯式定址: 10 * (box_id-1) + offset) ##########
 -- 為熱門 IP 提供特化獎項名稱
-INSERT INTO ichiban_prizes (id, box_id, rank, name, description, image_url, estimated_value, total_quantity, remaining_quantity, sort_order) VALUES
+INSERT INTO ichiban_prizes (id, box_id, `rank`, name, description, image_url, estimated_value, quantity, remaining_quantity, sort_order) VALUES
 -- IP 1: 洛克人 (Rockman)
 (1, 1, 'A', '洛克人 X 1/12 比例可動公仔 (艾克斯)', '精細塗裝，含多種手口更換件', '/images/prize/rockman_a.jpg', 2800, 1, 1, 1),
 (2, 1, 'B', '洛克人 Zero 經典紅色裝甲模型', '動漫忠實還原，Z噴氣配件', '/images/prize/rockman_b.jpg', 2200, 2, 2, 2),
@@ -86,7 +86,7 @@ INSERT INTO ichiban_prizes (id, box_id, rank, name, description, image_url, esti
 (111, 12, 'A', '鬼滅之刃 煉獄杏壽郎 炎之呼吸公仔', '大哥沒有輸！華麗火焰效果', '/images/prize/kimetsu_a.jpg', 3000, 1, 1, 1);
 
 -- 補全其餘 150+ 獎項 (使用更具商業感的生成方式)
-INSERT INTO ichiban_prizes (id, box_id, rank, name, description, image_url, estimated_value, total_quantity, remaining_quantity, sort_order)
+INSERT INTO ichiban_prizes (id, box_id, `rank`, name, description, image_url, estimated_value, quantity, remaining_quantity, sort_order)
 SELECT 
     (b.id - 1) * 10 + r.idx, 
     b.id, r.rnk, 
@@ -122,6 +122,11 @@ WHERE NOT EXISTS (SELECT 1 FROM ichiban_prizes p2 WHERE p2.id = (b.id - 1) * 10 
 
 -- ########## 4. 一番賞格子 (80 格) ##########
 INSERT INTO ichiban_slots (box_id, slot_number, prize_id, status)
+WITH RECURSIVE seq_80 AS (
+    SELECT 1 AS x
+    UNION ALL
+    SELECT x + 1 FROM seq_80 WHERE x < 80
+)
 SELECT 
     b.id, s.x, 
     (b.id - 1) * 10 + 
@@ -139,7 +144,7 @@ SELECT
     END, 
     'AVAILABLE'
 FROM ichiban_boxes b
-CROSS JOIN SYSTEM_RANGE(1, 80) s;
+CROSS JOIN seq_80 s;
 
 -- ########## 5. 轉盤與九宮格特化獎項 ##########
 INSERT INTO roulette_games (id, ip_id, name, description, image_url, price_per_spin, max_slots, total_slots, total_draws, status, created_at)
@@ -161,7 +166,12 @@ INSERT INTO bingo_games (id, ip_id, name, description, image_url, price_per_dig,
 SELECT id, id, CONCAT(name, ' 驚喜九宮格'), '挖開格子，收集相同角色連線！', '/images/bingo/generic.jpg', 120, 3, 'ACTIVE', '聖杯級神祕大禮包', '/images/reward/bingo.jpg', 1200, NOW() FROM gacha_ips;
 
 INSERT INTO bingo_cells (game_id, position, row_num, col_num, prize_name, prize_description, is_revealed)
-SELECT g.id, s.x, (s.x-1)/3, (s.x-1)%3, '隱藏碎片', '20 碎片', FALSE FROM bingo_games g CROSS JOIN SYSTEM_RANGE(1, 9) s;
+WITH RECURSIVE seq_9 AS (
+    SELECT 1 AS x
+    UNION ALL
+    SELECT x + 1 FROM seq_9 WHERE x < 9
+)
+SELECT g.id, s.x, (s.x-1)/3, (s.x-1)%3, '隱藏碎片', '20 碎片', FALSE FROM bingo_games g CROSS JOIN seq_9 s;
 
 -- ########## 6. 兌換商店階梯級商品 (ID 1-10) ##########
 INSERT INTO redeem_shop_items (id, name, description, image_url, shard_cost, estimated_value, stock, total_stock, item_type, status, sort_order, created_at) VALUES 

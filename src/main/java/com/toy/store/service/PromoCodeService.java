@@ -1,8 +1,7 @@
 package com.toy.store.service;
 
 import com.toy.store.model.*;
-import com.toy.store.repository.*;
-import lombok.RequiredArgsConstructor;
+import com.toy.store.mapper.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -17,14 +17,22 @@ import java.util.Optional;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class PromoCodeService {
 
-    private final PromoCodeRepository promoCodeRepository;
-    private final PromoCodeUsageRepository usageRepository;
-    private final MemberRepository memberRepository;
+    private final PromoCodeMapper promoCodeMapper;
+    private final PromoCodeUsageMapper usageMapper;
+    private final MemberMapper memberMapper;
 
     private final SecureRandom random = new SecureRandom();
+
+    public PromoCodeService(
+            PromoCodeMapper promoCodeMapper,
+            PromoCodeUsageMapper usageMapper,
+            MemberMapper memberMapper) {
+        this.promoCodeMapper = promoCodeMapper;
+        this.usageMapper = usageMapper;
+        this.memberMapper = memberMapper;
+    }
 
     /**
      * 生成用戶專屬推薦碼
@@ -32,8 +40,10 @@ public class PromoCodeService {
     @Transactional
     public PromoCode generateReferralCode(Long memberId) {
         // 檢查是否已有推薦碼
-        Optional<PromoCode> existing = promoCodeRepository.findByCreatorMemberId(memberId)
-                .stream().filter(c -> c.getType() == PromoCode.CodeType.REFERRAL).findFirst();
+        List<PromoCode> existingCodes = promoCodeMapper.findByCreatorMemberId(memberId);
+        Optional<PromoCode> existing = existingCodes.stream()
+                .filter(c -> c.getCodeType() == PromoCode.CodeType.REFERRAL)
+                .findFirst();
         if (existing.isPresent()) {
             return existing.get();
         }
@@ -42,14 +52,17 @@ public class PromoCodeService {
         code.setCode(generateUniqueCode("REF"));
         code.setName("用戶推薦碼");
         code.setDescription("邀請好友註冊，雙方各得獎勵");
-        code.setType(PromoCode.CodeType.REFERRAL);
-        code.setRewardType(PromoCode.RewardType.TOKENS);
+        code.setCodeType(PromoCode.CodeType.REFERRAL);
+        code.setRewardTypeEnum(PromoCode.RewardType.TOKENS);
         code.setRewardValue(BigDecimal.valueOf(50)); // 50 代幣
         code.setMaxUses(0); // 無限
         code.setPerUserLimit(1);
         code.setCreatorMemberId(memberId);
+        code.setEnabled(true);
+        code.setCreatedAt(LocalDateTime.now());
+        promoCodeMapper.insert(code);
 
-        return promoCodeRepository.save(code);
+        return code;
     }
 
     /**
@@ -64,14 +77,17 @@ public class PromoCodeService {
         code.setCode(generateUniqueCode("GIFT"));
         code.setName(name);
         code.setDescription(description);
-        code.setType(PromoCode.CodeType.GIFT);
-        code.setRewardType(rewardType);
+        code.setCodeType(PromoCode.CodeType.GIFT);
+        code.setRewardTypeEnum(rewardType);
         code.setRewardValue(rewardValue);
         code.setMaxUses(maxUses);
         code.setPerUserLimit(1);
         code.setValidUntil(validUntil);
+        code.setEnabled(true);
+        code.setCreatedAt(LocalDateTime.now());
+        promoCodeMapper.insert(code);
 
-        return promoCodeRepository.save(code);
+        return code;
     }
 
     /**
@@ -79,7 +95,7 @@ public class PromoCodeService {
      */
     @Transactional
     public String redeemCode(Long memberId, String codeStr) {
-        PromoCode code = promoCodeRepository.findByCode(codeStr.toUpperCase()).orElse(null);
+        PromoCode code = promoCodeMapper.findByCode(codeStr.toUpperCase()).orElse(null);
         if (code == null) {
             return "無效的兌換碼";
         }
@@ -95,13 +111,13 @@ public class PromoCodeService {
         }
 
         // 檢查使用次數
-        long userUsageCount = usageRepository.countByPromoCodeIdAndMemberId(code.getId(), memberId);
+        long userUsageCount = usageMapper.countByPromoCodeIdAndMemberId(code.getId(), memberId);
         if (userUsageCount >= code.getPerUserLimit()) {
             return "您已達到此兌換碼使用上限";
         }
 
         // 發放獎勵
-        Member member = memberRepository.findById(memberId).orElse(null);
+        Member member = memberMapper.findById(memberId).orElse(null);
         if (member == null) {
             return "會員不存在";
         }
@@ -110,17 +126,18 @@ public class PromoCodeService {
 
         // 記錄使用
         PromoCodeUsage usage = new PromoCodeUsage();
-        usage.setPromoCode(code);
+        usage.setPromoCodeId(code.getId());
         usage.setMemberId(memberId);
-        usageRepository.save(usage);
+        usage.setUsedAt(LocalDateTime.now());
+        usageMapper.insert(usage);
 
         // 更新使用次數
         code.setUsedCount(code.getUsedCount() + 1);
-        promoCodeRepository.save(code);
+        promoCodeMapper.update(code);
 
         // 如果是推薦碼，給推薦人也發獎勵
-        if (code.getType() == PromoCode.CodeType.REFERRAL && code.getCreatorMemberId() != null) {
-            memberRepository.findById(code.getCreatorMemberId()).ifPresent(referrer -> {
+        if (code.getCodeType() == PromoCode.CodeType.REFERRAL && code.getCreatorMemberId() != null) {
+            memberMapper.findById(code.getCreatorMemberId()).ifPresent(referrer -> {
                 applyReward(referrer, code);
                 log.info("推薦人 {} 獲得推薦獎勵", referrer.getUsername());
             });
@@ -134,17 +151,17 @@ public class PromoCodeService {
      * 發放獎勵
      */
     private String applyReward(Member member, PromoCode code) {
-        switch (code.getRewardType()) {
+        switch (code.getRewardTypeEnum()) {
             case TOKENS:
                 member.setPlatformWalletBalance(
                         member.getPlatformWalletBalance().add(code.getRewardValue()));
-                memberRepository.save(member);
+                memberMapper.update(member);
                 return "獲得 " + code.getRewardValue().intValue() + " 代幣";
 
             case BONUS:
                 int bonus = code.getRewardValue().intValue();
                 member.setBonusPoints((member.getBonusPoints() != null ? member.getBonusPoints() : 0) + bonus);
-                memberRepository.save(member);
+                memberMapper.update(member);
                 return "獲得 " + bonus + " 紅利點數";
 
             case SHARDS:
@@ -168,7 +185,7 @@ public class PromoCodeService {
         String code = sb.toString();
 
         // 確保唯一
-        if (promoCodeRepository.existsByCode(code)) {
+        if (promoCodeMapper.existsByCode(code)) {
             return generateUniqueCode(prefix);
         }
         return code;
@@ -178,7 +195,7 @@ public class PromoCodeService {
      * 獲取用戶的推薦碼
      */
     public Optional<PromoCode> getMemberReferralCode(Long memberId) {
-        return promoCodeRepository.findByCreatorMemberId(memberId)
-                .stream().filter(c -> c.getType() == PromoCode.CodeType.REFERRAL).findFirst();
+        return promoCodeMapper.findByCreatorMemberId(memberId)
+                .stream().filter(c -> c.getCodeType() == PromoCode.CodeType.REFERRAL).findFirst();
     }
 }

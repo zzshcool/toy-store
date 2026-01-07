@@ -2,8 +2,8 @@ package com.toy.store.scheduler;
 
 import com.toy.store.model.Member;
 import com.toy.store.model.MemberLevel;
-import com.toy.store.repository.MemberLevelRepository;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberLevelMapper;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +23,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class VipReviewScheduler {
 
-    private final MemberRepository memberRepository;
-    private final MemberLevelRepository memberLevelRepository;
+    private final MemberMapper memberMapper;
+    private final MemberLevelMapper memberLevelMapper;
     private final MessageService messageService;
 
     @Scheduled(cron = "0 0 2 1 1,4,7,10 ?")
@@ -32,8 +32,8 @@ public class VipReviewScheduler {
     public void performQuarterlyVipReview() {
         log.info("開始執行季度 VIP 保級檢查...");
 
-        List<Member> allMembers = memberRepository.findAll();
-        List<MemberLevel> allLevels = memberLevelRepository.findByEnabledTrueOrderBySortOrderAsc();
+        List<Member> allMembers = memberMapper.findAll();
+        List<MemberLevel> allLevels = memberLevelMapper.findByEnabledTrueOrderBySortOrderAsc();
 
         if (allLevels.isEmpty()) {
             log.warn("沒有啟用的會員等級，跳過保級檢查");
@@ -58,7 +58,7 @@ public class VipReviewScheduler {
                 if (newLevel != null && !newLevel.equals(currentLevel)) {
                     member.setLevel(newLevel);
                     member.setLastLevelReviewDate(LocalDate.now());
-                    memberRepository.save(member);
+                    memberMapper.update(member);
 
                     messageService.sendWarningMessage(
                             member.getId(),
@@ -72,7 +72,7 @@ public class VipReviewScheduler {
                 }
             } else {
                 member.setLastLevelReviewDate(LocalDate.now());
-                memberRepository.save(member);
+                memberMapper.update(member);
             }
 
             reviewedCount++;

@@ -3,7 +3,7 @@ package com.toy.store.controller;
 import com.toy.store.annotation.CurrentUser;
 import com.toy.store.model.Member;
 import com.toy.store.model.Order;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.OrderService;
 import com.toy.store.service.TokenService;
 import lombok.RequiredArgsConstructor;
@@ -20,12 +20,12 @@ import java.util.Optional;
 public class OrderController {
 
     private final OrderService orderService;
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
 
     private Optional<Member> getMember(TokenService.TokenInfo info) {
         if (info == null)
             return Optional.empty();
-        return memberRepository.findByUsername(info.getUsername());
+        return memberMapper.findByUsername(info.getUsername());
     }
 
     @PostMapping("/checkout")

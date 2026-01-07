@@ -200,7 +200,7 @@ public class MemberService {
         transactionService.updateWalletBalance(
                 member.getId(),
                 amount,
-                Transaction.Type.RECHARGE,
+                Transaction.TransactionType.RECHARGE,
                 "TOPUP-" + paymentMethod);
 
         Long id = member.getId();

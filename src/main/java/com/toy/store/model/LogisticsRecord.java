@@ -18,7 +18,30 @@ public class LogisticsRecord {
     private String trackingNo;
     private String carrier;
     private String status = "PENDING";
+    private LocalDateTime lastUpdate;
     private LocalDateTime shippedAt;
     private LocalDateTime deliveredAt;
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    public enum LogisticsProvider {
+        POSTAL, SF_EXPRESS, BLACK_CAT, CONVENIENCE_STORE, TCAT
+    }
+
+    public enum LogisticsStatus {
+        PENDING, IN_TRANSIT, SHIPPED, DELIVERED, RETURNED
+    }
+
+    public void setStatus(LogisticsStatus status) {
+        if (status != null) {
+            this.status = status.name();
+        }
+    }
+
+    public void setProvider(LogisticsProvider provider) {
+        this.carrier = provider != null ? provider.name() : null;
+    }
+
+    public void setShipmentId(Long shipmentId) {
+        this.shipmentRequestId = shipmentId;
+    }
 }

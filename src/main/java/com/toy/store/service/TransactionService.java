@@ -46,7 +46,7 @@ public class TransactionService {
      * @throws RuntimeException if member not found or insufficient funds
      */
     @Transactional
-    public void updateWalletBalance(Long memberId, BigDecimal amount, Transaction.Type type, String refId) {
+    public void updateWalletBalance(Long memberId, BigDecimal amount, Transaction.TransactionType type, String refId) {
         Member member = memberMapper.findById(memberId)
                 .orElseThrow(() -> new AppException("會員不存在"));
 
@@ -72,7 +72,7 @@ public class TransactionService {
             }
         }
 
-        if (type == Transaction.Type.RECHARGE) {
+        if (type == Transaction.TransactionType.RECHARGE) {
             member.setMonthlyRecharge(member.getMonthlyRecharge().add(amount));
             checkAndUpgradeLevel(member);
         }
@@ -95,7 +95,7 @@ public class TransactionService {
      */
     @Transactional
     public void deductBalance(Long memberId, BigDecimal amount, String description) {
-        updateWalletBalance(memberId, amount.negate(), Transaction.Type.PURCHASE, description);
+        updateWalletBalance(memberId, amount.negate(), Transaction.TransactionType.PURCHASE, description);
     }
 
     /**
@@ -103,7 +103,7 @@ public class TransactionService {
      */
     @Transactional
     public void addBalance(Long memberId, BigDecimal amount, String description) {
-        updateWalletBalance(memberId, amount, Transaction.Type.REFUND, description);
+        updateWalletBalance(memberId, amount, Transaction.TransactionType.REFUND, description);
     }
 
     private void checkAndUpgradeLevel(Member member) {

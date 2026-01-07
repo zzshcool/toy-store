@@ -4,7 +4,7 @@ import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.BlindBoxService;
 import com.toy.store.service.TokenService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class BlindBoxApiController {
 
     private final BlindBoxService blindBoxService;
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
 
     /**
      * 取得所有盲盒（包含售完）
@@ -218,7 +218,7 @@ public class BlindBoxApiController {
     private Long getMemberId(TokenService.TokenInfo info) {
         if (info == null)
             return null;
-        return memberRepository.findByUsername(info.getUsername())
+        return memberMapper.findByUsername(info.getUsername())
                 .map(Member::getId)
                 .orElse(null);
     }

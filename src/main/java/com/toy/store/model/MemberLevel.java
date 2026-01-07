@@ -25,4 +25,29 @@ public class MemberLevel {
     private String description;
 
     private String iconUrl;
+
+    public BigDecimal getThreshold() {
+        return minGrowthValue != null ? BigDecimal.valueOf(minGrowthValue) : BigDecimal.ZERO;
+    }
+
+    public void setThreshold(Long threshold) {
+        this.minGrowthValue = threshold;
+    }
+
+    public void setThreshold(BigDecimal threshold) {
+        this.minGrowthValue = threshold != null ? threshold.longValue() : 0L;
+    }
+
+    private Integer sortOrder = 0;
+
+    public Integer getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(int order) {
+        this.sortOrder = order;
+    }
+
+    private String monthlyReward;
+    private boolean enabled = true;
 }

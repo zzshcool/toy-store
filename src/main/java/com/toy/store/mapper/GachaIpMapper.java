@@ -12,33 +12,36 @@ import java.util.Optional;
 @Mapper
 public interface GachaIpMapper {
 
-    @Select("SELECT * FROM gacha_ips WHERE id = #{id}")
-    Optional<GachaIp> findById(Long id);
+        @Select("SELECT * FROM gacha_ips WHERE id = #{id}")
+        Optional<GachaIp> findById(Long id);
 
-    @Select("SELECT * FROM gacha_ips")
-    List<GachaIp> findAll();
+        @Select("SELECT * FROM gacha_ips")
+        List<GachaIp> findAll();
 
-    @Select("SELECT * FROM gacha_ips WHERE status = #{status}")
-    List<GachaIp> findByStatus(String status);
+        @Select("SELECT * FROM gacha_ips WHERE status = #{status}")
+        List<GachaIp> findByStatus(String status);
 
-    @Select("SELECT * FROM gacha_ips WHERE name = #{name}")
-    Optional<GachaIp> findByName(String name);
+        @Select("SELECT * FROM gacha_ips WHERE name = #{name}")
+        Optional<GachaIp> findByName(String name);
 
-    @Insert("INSERT INTO gacha_ips (name, description, image_url, status, created_at, updated_at) " +
-            "VALUES (#{name}, #{description}, #{imageUrl}, #{status}, #{createdAt}, #{updatedAt})")
-    @Options(useGeneratedKeys = true, keyProperty = "id")
-    int insert(GachaIp gachaIp);
+        @Select("SELECT * FROM gacha_ips ORDER BY created_at DESC")
+        List<GachaIp> findAllByOrderByCreatedAtDesc();
 
-    @Update("UPDATE gacha_ips SET name = #{name}, description = #{description}, " +
-            "image_url = #{imageUrl}, status = #{status}, updated_at = #{updatedAt} WHERE id = #{id}")
-    int update(GachaIp gachaIp);
+        @Insert("INSERT INTO gacha_ips (name, description, image_url, status, created_at, updated_at) " +
+                        "VALUES (#{name}, #{description}, #{imageUrl}, #{status}, #{createdAt}, #{updatedAt})")
+        @Options(useGeneratedKeys = true, keyProperty = "id")
+        int insert(GachaIp gachaIp);
 
-    @Delete("DELETE FROM gacha_ips WHERE id = #{id}")
-    int deleteById(Long id);
+        @Update("UPDATE gacha_ips SET name = #{name}, description = #{description}, " +
+                        "image_url = #{imageUrl}, status = #{status}, updated_at = #{updatedAt} WHERE id = #{id}")
+        int update(GachaIp gachaIp);
 
-    @Select("SELECT * FROM gacha_ips LIMIT #{limit} OFFSET #{offset}")
-    List<GachaIp> findAllPaged(@Param("offset") int offset, @Param("limit") int limit);
+        @Delete("DELETE FROM gacha_ips WHERE id = #{id}")
+        int deleteById(Long id);
 
-    @Select("SELECT COUNT(*) FROM gacha_ips")
-    long count();
+        @Select("SELECT * FROM gacha_ips LIMIT #{limit} OFFSET #{offset}")
+        List<GachaIp> findAllPaged(@Param("offset") int offset, @Param("limit") int limit);
+
+        @Select("SELECT COUNT(*) FROM gacha_ips")
+        long count();
 }

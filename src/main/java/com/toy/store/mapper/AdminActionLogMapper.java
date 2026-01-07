@@ -24,9 +24,9 @@ public interface AdminActionLogMapper {
     @Select("SELECT COUNT(*) FROM admin_action_logs")
     long count();
 
-    @Insert("INSERT INTO admin_action_logs (admin_id, action, target_type, target_id, details, ip_address, created_at) "
+    @Insert("INSERT INTO admin_action_logs (admin_id, admin_name, action, target_type, target_id, details, ip_address, created_at) "
             +
-            "VALUES (#{adminId}, #{action}, #{targetType}, #{targetId}, #{details}, #{ipAddress}, #{createdAt})")
+            "VALUES (#{adminId}, #{adminName}, #{action}, #{targetType}, #{targetId}, #{details}, #{ipAddress}, #{createdAt})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(AdminActionLog log);
 

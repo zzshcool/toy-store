@@ -4,7 +4,7 @@ import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.ShardService;
 import com.toy.store.service.TokenService;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 public class ShardApiController {
 
     private final ShardService shardService;
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
 
     @GetMapping("/shards/balance")
     public ApiResponse<Map<String, Object>> getBalance(@CurrentUser TokenService.TokenInfo info) {
@@ -82,7 +82,7 @@ public class ShardApiController {
     private Long getMemberId(TokenService.TokenInfo info) {
         if (info == null)
             return null;
-        return memberRepository.findByUsername(info.getUsername())
+        return memberMapper.findByUsername(info.getUsername())
                 .map(Member::getId)
                 .orElse(null);
     }
@@ -90,8 +90,9 @@ public class ShardApiController {
     private Map<String, Object> transactionToMap(ShardTransaction tx) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", tx.getId());
-        map.put("type", tx.getType().name());
-        map.put("typeDisplay", tx.getType().getDisplayName());
+        map.put("type", tx.getType());
+        ShardTransaction.TransactionType typeEnum = tx.getTypeEnum();
+        map.put("typeDisplay", typeEnum != null ? typeEnum.name() : tx.getType());
         map.put("amount", tx.getAmount());
         map.put("description", tx.getDescription());
         map.put("createdAt", tx.getCreatedAt());
@@ -109,9 +110,10 @@ public class ShardApiController {
         map.put("stock", item.getStock());
         map.put("totalStock", item.getTotalStock());
         map.put("stockPercentage", item.getStockPercentage());
-        map.put("itemType", item.getItemType().name());
-        map.put("itemTypeDisplay", item.getItemType().getDisplayName());
-        map.put("status", item.getStatus().name());
+        map.put("itemType", item.getItemType());
+        RedeemShopItem.ItemType itemTypeEnum = item.getItemTypeEnum();
+        map.put("itemTypeDisplay", itemTypeEnum != null ? itemTypeEnum.name() : item.getItemType());
+        map.put("status", item.getStatus());
         map.put("hasStock", item.hasStock());
         return map;
     }

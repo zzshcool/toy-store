@@ -1,7 +1,7 @@
 package com.toy.store.controller;
 
 import com.toy.store.annotation.CurrentUser;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.CabinetService;
 import com.toy.store.service.TokenService;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +19,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class CabinetController {
 
     private final CabinetService cabinetService;
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
 
     @GetMapping
     public String cabinetPage(Model model, @CurrentUser TokenService.TokenInfo info) {
         if (info != null) {
-            memberRepository.findByUsername(info.getUsername()).ifPresent(member -> {
+            memberMapper.findByUsername(info.getUsername()).ifPresent(member -> {
                 int count = cabinetService.getCabinetCount(member.getId());
                 model.addAttribute("cabinetCount", count);
             });

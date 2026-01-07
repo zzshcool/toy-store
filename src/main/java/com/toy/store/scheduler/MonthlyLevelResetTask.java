@@ -2,8 +2,8 @@ package com.toy.store.scheduler;
 
 import com.toy.store.model.Member;
 import com.toy.store.model.MemberLevel;
-import com.toy.store.repository.MemberLevelRepository;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberLevelMapper;
+import com.toy.store.mapper.MemberMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -16,14 +16,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MonthlyLevelResetTask {
 
-    private final MemberRepository memberRepository;
-    private final MemberLevelRepository memberLevelRepository;
+    private final MemberMapper memberMapper;
+    private final MemberLevelMapper memberLevelMapper;
 
     @Scheduled(cron = "0 0 0 1 * ?")
     @Transactional
     public void resetMemberLevels() {
-        List<Member> members = memberRepository.findAll();
-        List<MemberLevel> levels = memberLevelRepository.findByEnabledTrueOrderBySortOrderAsc();
+        List<Member> members = memberMapper.findAll();
+        List<MemberLevel> levels = memberLevelMapper.findByEnabledTrueOrderBySortOrderAsc();
 
         if (levels.isEmpty())
             return;
@@ -50,7 +50,7 @@ public class MonthlyLevelResetTask {
             }
 
             member.setMonthlyRecharge(BigDecimal.ZERO);
-            memberRepository.save(member);
+            memberMapper.update(member);
         }
     }
 }

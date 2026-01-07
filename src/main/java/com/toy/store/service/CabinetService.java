@@ -2,9 +2,7 @@ package com.toy.store.service;
 
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
-import com.toy.store.repository.*;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
+import com.toy.store.mapper.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,54 +15,69 @@ import java.util.List;
  * 對應規格書 §4.D, §8.A - 獎品收集與發貨系統
  */
 @Service
-@RequiredArgsConstructor
 public class CabinetService {
 
     private static final int FREE_SHIPPING_THRESHOLD = 5;
     private static final BigDecimal DEFAULT_SHIPPING_FEE = new BigDecimal("60");
 
-    private final CabinetItemRepository itemRepository;
-    private final ShipmentRequestRepository shipmentRepository;
-    private final MemberRepository memberRepository;
+    private final CabinetItemMapper itemMapper;
+    private final ShipmentRequestMapper shipmentMapper;
+    private final MemberMapper memberMapper;
+
+    public CabinetService(
+            CabinetItemMapper itemMapper,
+            ShipmentRequestMapper shipmentMapper,
+            MemberMapper memberMapper) {
+        this.itemMapper = itemMapper;
+        this.shipmentMapper = shipmentMapper;
+        this.memberMapper = memberMapper;
+    }
 
     /**
      * 新增獎品到盒櫃
      */
     @Transactional
-    public CabinetItem addToCabinet(Long memberId, CabinetItem.SourceType sourceType, Long sourceId,
+    public CabinetItem addToCabinet(Long memberId, String sourceType, Long sourceId,
             String prizeName, String prizeDescription, String prizeImageUrl, String prizeRank) {
         CabinetItem item = new CabinetItem();
         item.setMemberId(memberId);
-        item.setSourceType(sourceType);
+        // 將 String 轉換為 SourceType 枚舉
+        try {
+            item.setSourceType(CabinetItem.SourceType.valueOf(sourceType));
+        } catch (IllegalArgumentException e) {
+            item.setSourceType(CabinetItem.SourceType.ICHIBAN); // 默認值
+        }
         item.setSourceId(sourceId);
-        item.setPrizeName(prizeName);
-        item.setPrizeDescription(prizeDescription);
-        item.setPrizeImageUrl(prizeImageUrl);
-        item.setPrizeRank(prizeRank);
+        item.setItemName(prizeName);
+        item.setItemDescription(prizeDescription);
+        item.setItemImageUrl(prizeImageUrl);
+        item.setItemRank(prizeRank);
         item.setStatus(CabinetItem.Status.IN_CABINET);
+        item.setObtainedAt(LocalDateTime.now());
 
-        return itemRepository.save(item);
+        itemMapper.insert(item);
+        return item;
     }
 
     /**
      * 取得會員盒櫃內的獎品
      */
     public List<CabinetItem> getCabinetItems(Long memberId) {
-        return itemRepository.findByMemberIdAndStatusOrderByObtainedAtDesc(memberId, CabinetItem.Status.IN_CABINET);
+        return itemMapper.findByMemberIdAndStatusOrderByObtainedAtDesc(memberId, CabinetItem.Status.IN_CABINET.name());
     }
 
     /**
      * 取得會員所有獎品（含已發貨）
      */
     public List<CabinetItem> getAllItems(Long memberId) {
-        return itemRepository.findByMemberIdOrderByObtainedAtDesc(memberId);
+        return itemMapper.findByMemberIdOrderByObtainedAtDesc(memberId);
     }
 
     /**
      * 盒櫃獎品數量
      */
     public int getCabinetCount(Long memberId) {
-        return itemRepository.countItemsInCabinet(memberId);
+        return itemMapper.countItemsInCabinet(memberId);
     }
 
     /**
@@ -89,14 +102,17 @@ public class CabinetService {
         }
 
         // 驗證獎品歸屬
-        List<CabinetItem> items = itemRepository.findAllById(itemIds);
-        for (CabinetItem item : items) {
+        List<CabinetItem> items = new java.util.ArrayList<>();
+        for (Long itemId : itemIds) {
+            CabinetItem item = itemMapper.findById(itemId)
+                    .orElseThrow(() -> new AppException("獎品不存在: " + itemId));
             if (!memberId.equals(item.getMemberId())) {
                 throw new AppException("部分獎品不屬於您");
             }
             if (item.getStatus() != CabinetItem.Status.IN_CABINET) {
                 throw new AppException("部分獎品已申請發貨");
             }
+            items.add(item);
         }
 
         // 計算運費
@@ -112,9 +128,10 @@ public class CabinetService {
         request.setItemCount(items.size());
         request.setIsFreeShipping(shippingInfo.isFreeShipping());
         request.setShippingFee(shippingInfo.getFee());
-        request.setStatus(ShipmentRequest.Status.PENDING);
+        request.setStatusEnum(ShipmentRequest.Status.PENDING);
+        request.setCreatedAt(LocalDateTime.now());
 
-        request = shipmentRepository.save(request);
+        shipmentMapper.insert(request);
 
         // 更新獎品狀態
         final Long requestId = request.getId();
@@ -122,8 +139,8 @@ public class CabinetService {
             item.setStatus(CabinetItem.Status.PENDING_SHIP);
             item.setShipmentRequestId(requestId);
             item.setRequestedAt(LocalDateTime.now());
+            itemMapper.update(item);
         });
-        itemRepository.saveAll(items);
 
         return request;
     }
@@ -132,7 +149,7 @@ public class CabinetService {
      * 取得會員的發貨申請
      */
     public List<ShipmentRequest> getMemberShipments(Long memberId) {
-        return shipmentRepository.findByMemberIdOrderByCreatedAtDesc(memberId);
+        return shipmentMapper.findByMemberIdOrderByCreatedAtDesc(memberId);
     }
 
     /**
@@ -140,28 +157,28 @@ public class CabinetService {
      */
     @Transactional
     public void cancelShipment(Long memberId, Long requestId) {
-        ShipmentRequest request = shipmentRepository.findById(requestId)
+        ShipmentRequest request = shipmentMapper.findById(requestId)
                 .orElseThrow(() -> new AppException("發貨申請不存在"));
 
         if (!memberId.equals(request.getMemberId())) {
             throw new AppException("此發貨申請不屬於您");
         }
 
-        if (request.getStatus() != ShipmentRequest.Status.PENDING) {
+        if (request.getStatusEnum() != ShipmentRequest.Status.PENDING) {
             throw new AppException("此發貨申請無法取消");
         }
 
         // 返還獎品到盒櫃
-        List<CabinetItem> items = itemRepository.findByShipmentRequestId(requestId);
+        List<CabinetItem> items = itemMapper.findByShipmentRequestId(requestId);
         items.forEach(item -> {
             item.setStatus(CabinetItem.Status.IN_CABINET);
             item.setShipmentRequestId(null);
             item.setRequestedAt(null);
+            itemMapper.update(item);
         });
-        itemRepository.saveAll(items);
 
-        request.setStatus(ShipmentRequest.Status.CANCELLED);
-        shipmentRepository.save(request);
+        request.setStatusEnum(ShipmentRequest.Status.CANCELLED);
+        shipmentMapper.update(request);
     }
 
     /**
@@ -169,7 +186,7 @@ public class CabinetService {
      */
     @Transactional
     public int exchangeForPoints(Long memberId, Long itemId) {
-        CabinetItem item = itemRepository.findById(itemId)
+        CabinetItem item = itemMapper.findById(itemId)
                 .orElseThrow(() -> new AppException("獎品不存在"));
 
         if (!memberId.equals(item.getMemberId())) {
@@ -184,14 +201,14 @@ public class CabinetService {
         int points = calculateExchangePoints(item);
 
         // 更新會員積分
-        Member member = memberRepository.findById(memberId)
+        Member member = memberMapper.findById(memberId)
                 .orElseThrow(() -> new AppException("會員不存在"));
         member.setPoints(member.getPoints() + points);
-        memberRepository.save(member);
+        memberMapper.update(member);
 
         // 更新獎品狀態
         item.setStatus(CabinetItem.Status.EXCHANGED);
-        itemRepository.save(item);
+        itemMapper.update(item);
 
         return points;
     }
@@ -217,7 +234,7 @@ public class CabinetService {
      * 取得待處理的發貨申請
      */
     public List<ShipmentRequest> getPendingShipments() {
-        return shipmentRepository.findByStatusOrderByCreatedAtAsc(ShipmentRequest.Status.PENDING);
+        return shipmentMapper.findByStatusOrderByCreatedAtAsc(ShipmentRequest.Status.PENDING.name());
     }
 
     /**
@@ -226,10 +243,10 @@ public class CabinetService {
     @Transactional
     public ShipmentRequest updateShipmentStatus(Long requestId, ShipmentRequest.Status status,
             String trackingNumber, String shippingCompany, String note) {
-        ShipmentRequest request = shipmentRepository.findById(requestId)
+        ShipmentRequest request = shipmentMapper.findById(requestId)
                 .orElseThrow(() -> new AppException("發貨申請不存在"));
 
-        request.setStatus(status);
+        request.setStatusEnum(status);
         if (trackingNumber != null)
             request.setTrackingNumber(trackingNumber);
         if (shippingCompany != null)
@@ -240,28 +257,50 @@ public class CabinetService {
         if (status == ShipmentRequest.Status.SHIPPED) {
             request.setShippedAt(LocalDateTime.now());
             // 更新獎品狀態
-            List<CabinetItem> items = itemRepository.findByShipmentRequestId(requestId);
-            items.forEach(item -> item.setStatus(CabinetItem.Status.SHIPPED));
-            itemRepository.saveAll(items);
+            List<CabinetItem> items = itemMapper.findByShipmentRequestId(requestId);
+            items.forEach(item -> {
+                item.setStatus(CabinetItem.Status.SHIPPED);
+                itemMapper.update(item);
+            });
         }
 
         if (status == ShipmentRequest.Status.DELIVERED) {
             request.setDeliveredAt(LocalDateTime.now());
             // 更新獎品狀態
-            List<CabinetItem> items = itemRepository.findByShipmentRequestId(requestId);
-            items.forEach(item -> item.setStatus(CabinetItem.Status.DELIVERED));
-            itemRepository.saveAll(items);
+            List<CabinetItem> items = itemMapper.findByShipmentRequestId(requestId);
+            items.forEach(item -> {
+                item.setStatus(CabinetItem.Status.DELIVERED);
+                itemMapper.update(item);
+            });
         }
 
-        return shipmentRepository.save(request);
+        shipmentMapper.update(request);
+        return request;
     }
 
     // ============== DTO ==============
 
-    @Data
     public static class ShippingInfo {
         private final boolean freeShipping;
         private final BigDecimal fee;
         private final int itemsNeededForFree; // 還差幾件免運
+
+        public ShippingInfo(boolean freeShipping, BigDecimal fee, int itemsNeededForFree) {
+            this.freeShipping = freeShipping;
+            this.fee = fee;
+            this.itemsNeededForFree = itemsNeededForFree;
+        }
+
+        public boolean isFreeShipping() {
+            return freeShipping;
+        }
+
+        public BigDecimal getFee() {
+            return fee;
+        }
+
+        public int getItemsNeededForFree() {
+            return itemsNeededForFree;
+        }
     }
 }

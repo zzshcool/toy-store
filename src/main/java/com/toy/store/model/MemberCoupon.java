@@ -17,5 +17,6 @@ public class MemberCoupon {
     private Long couponId;
     private String status = "UNUSED"; // UNUSED, USED, EXPIRED
     private LocalDateTime usedAt;
+    private LocalDateTime obtainedAt = LocalDateTime.now();
     private LocalDateTime createdAt = LocalDateTime.now();
 }

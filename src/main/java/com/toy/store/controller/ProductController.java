@@ -3,14 +3,15 @@ package com.toy.store.controller;
 import com.toy.store.model.Member;
 import com.toy.store.model.MemberActionLog;
 import com.toy.store.model.Product;
-import com.toy.store.repository.MemberActionLogRepository;
-import com.toy.store.repository.MemberRepository;
-import com.toy.store.repository.ProductRepository;
+import com.toy.store.mapper.MemberActionLogMapper;
+import com.toy.store.mapper.MemberMapper;
+import com.toy.store.mapper.ProductMapper;
 import com.toy.store.service.ProductService;
 import com.toy.store.service.TokenService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,9 +33,9 @@ import java.util.Map;
 public class ProductController {
 
     private final ProductService productService;
-    private final ProductRepository productRepository;
-    private final MemberActionLogRepository memberActionLogRepository;
-    private final MemberRepository memberRepository;
+    private final ProductMapper productMapper;
+    private final MemberActionLogMapper memberActionLogMapper;
+    private final MemberMapper memberMapper;
 
     @GetMapping
     public String getAllProducts(
@@ -49,19 +51,26 @@ public class ProductController {
         // Log Action (if user is logged in)
         TokenService.TokenInfo info = (TokenService.TokenInfo) request.getAttribute("currentUser");
         if (info != null && TokenService.ROLE_USER.equals(info.getRole())) {
-            memberRepository.findByUsername(info.getUsername()).ifPresent(member -> {
+            memberMapper.findByUsername(info.getUsername()).ifPresent(member -> {
                 String details = "Page: " + page;
                 if (keyword != null)
                     details += ", Keyword: " + keyword;
                 if (category != null)
                     details += ", Category: " + category;
-                memberActionLogRepository.save(new MemberActionLog(
-                        member.getId(), member.getUsername(), "VIEW_PRODUCTS", details, true));
+
+                MemberActionLog log = new MemberActionLog();
+                log.setMemberId(member.getId());
+                log.setMemberUsername(member.getUsername());
+                log.setAction("VIEW_PRODUCTS");
+                log.setDetails(details);
+                log.setSuccess(true);
+                log.setTimestamp(LocalDateTime.now());
+                memberActionLogMapper.insert(log);
             });
         }
 
-        Pageable pageable = PageRequest.of(page, size,
-                direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
+        Sort sort = direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<Product> productPage;
 
@@ -70,10 +79,19 @@ public class ProductController {
             model.addAttribute("keyword", keyword);
         } else if (category != null && !category.isEmpty()) {
             if (subCategory != null && !subCategory.isEmpty()) {
-                productPage = productRepository.findByCategoryAndSubCategory(category, subCategory, pageable);
+                int limit = pageable.getPageSize();
+                int offset = (int) pageable.getOffset();
+                List<Product> products = productMapper.findByCategoryAndSubCategory(category, subCategory, offset,
+                        limit);
+                long total = productMapper.countByCategoryAndSubCategory(category, subCategory);
+                productPage = new PageImpl<>(products, pageable, total);
                 model.addAttribute("currentSubCategory", subCategory);
             } else {
-                productPage = productRepository.findByCategory(category, pageable);
+                int limit = pageable.getPageSize();
+                int offset = (int) pageable.getOffset();
+                List<Product> products = productMapper.findByCategory(category, offset, limit);
+                long total = productMapper.countByCategory(category);
+                productPage = new PageImpl<>(products, pageable, total);
             }
             model.addAttribute("currentCategory", category);
         } else {

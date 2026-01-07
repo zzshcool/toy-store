@@ -17,5 +17,24 @@ public class MemberActionLog {
     private String action;
     private String details;
     private String ipAddress;
+    private String memberUsername;
+    private Boolean success;
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    public void setTimestamp(LocalDateTime timestamp) {
+        this.createdAt = timestamp;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return createdAt;
+    }
+
+    // 兼容建構子
+    public MemberActionLog(Long memberId, String action, String details, String ipAddress) {
+        this.memberId = memberId;
+        this.action = action;
+        this.details = details;
+        this.ipAddress = ipAddress;
+        this.createdAt = LocalDateTime.now();
+    }
 }

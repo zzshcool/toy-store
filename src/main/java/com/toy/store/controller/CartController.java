@@ -3,7 +3,7 @@ package com.toy.store.controller;
 import com.toy.store.annotation.CurrentUser;
 import com.toy.store.model.Cart;
 import com.toy.store.model.Member;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.CartService;
 import com.toy.store.service.CouponService;
 import com.toy.store.service.TokenService;
@@ -23,13 +23,13 @@ import java.util.Optional;
 public class CartController {
 
     private final CartService cartService;
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
     private final CouponService couponService;
 
     private Optional<Member> getMember(TokenService.TokenInfo info) {
         if (info == null)
             return Optional.empty();
-        return memberRepository.findByUsername(info.getUsername());
+        return memberMapper.findByUsername(info.getUsername());
     }
 
     @GetMapping

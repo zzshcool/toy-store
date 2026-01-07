@@ -4,7 +4,7 @@ import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.Member;
 import com.toy.store.model.PromoCode;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.PromoCodeService;
 import com.toy.store.service.TokenService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ import java.util.Map;
 public class PromoCodeApiController {
 
     private final PromoCodeService promoCodeService;
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
 
     @GetMapping("/my-referral")
     public ApiResponse<Map<String, Object>> getMyReferralCode(
@@ -32,7 +32,7 @@ public class PromoCodeApiController {
             return ApiResponse.error("請先登入");
         }
 
-        return memberRepository.findByUsername(tokenInfo.getUsername())
+        return memberMapper.findByUsername(tokenInfo.getUsername())
                 .map(member -> {
                     PromoCode code = promoCodeService.generateReferralCode(member.getId());
                     Map<String, Object> result = new HashMap<>();
@@ -53,7 +53,7 @@ public class PromoCodeApiController {
             return ApiResponse.error("請先登入");
         }
 
-        return memberRepository.findByUsername(tokenInfo.getUsername())
+        return memberMapper.findByUsername(tokenInfo.getUsername())
                 .map(member -> {
                     String code = request.get("code");
                     if (code == null || code.trim().isEmpty()) {

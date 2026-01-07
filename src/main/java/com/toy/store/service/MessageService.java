@@ -1,21 +1,24 @@
 package com.toy.store.service;
 
 import com.toy.store.model.MemberMessage;
-import com.toy.store.repository.MemberMessageRepository;
-import lombok.RequiredArgsConstructor;
+import com.toy.store.mapper.MemberMessageMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
  * 消息通知服務
  */
 @Service
-@RequiredArgsConstructor
 public class MessageService {
 
-    private final MemberMessageRepository messageRepository;
+    private final MemberMessageMapper messageMapper;
+
+    public MessageService(MemberMessageMapper messageMapper) {
+        this.messageMapper = messageMapper;
+    }
 
     /**
      * 發送系統消息
@@ -23,10 +26,12 @@ public class MessageService {
     public void sendSystemMessage(Long memberId, String title, String content) {
         MemberMessage msg = new MemberMessage();
         msg.setMemberId(memberId);
-        msg.setType(MemberMessage.MessageType.SYSTEM);
+        msg.setType(MemberMessage.MessageType.SYSTEM.name());
         msg.setTitle(title);
         msg.setContent(content);
-        messageRepository.save(msg);
+        msg.setIsRead(false);
+        msg.setCreatedAt(LocalDateTime.now());
+        messageMapper.insert(msg);
     }
 
     /**
@@ -35,12 +40,14 @@ public class MessageService {
     public void sendPrizeMessage(Long memberId, String prizeName, String referenceId) {
         MemberMessage msg = new MemberMessage();
         msg.setMemberId(memberId);
-        msg.setType(MemberMessage.MessageType.PRIZE);
+        msg.setType(MemberMessage.MessageType.PRIZE.name());
         msg.setTitle("🎉 恭喜中獎！");
         msg.setContent("您抽中了【" + prizeName + "】，獎品已進入盒櫃！");
         msg.setReferenceId(referenceId);
         msg.setActionUrl("/cabinet");
-        messageRepository.save(msg);
+        msg.setIsRead(false);
+        msg.setCreatedAt(LocalDateTime.now());
+        messageMapper.insert(msg);
     }
 
     /**
@@ -49,12 +56,14 @@ public class MessageService {
     public void sendShippingMessage(Long memberId, String trackingNumber, String status) {
         MemberMessage msg = new MemberMessage();
         msg.setMemberId(memberId);
-        msg.setType(MemberMessage.MessageType.SHIPPING);
+        msg.setType(MemberMessage.MessageType.SHIPPING.name());
         msg.setTitle("📦 發貨狀態更新");
         msg.setContent("您的包裹 " + trackingNumber + " " + status);
         msg.setReferenceId(trackingNumber);
         msg.setActionUrl("/cabinet");
-        messageRepository.save(msg);
+        msg.setIsRead(false);
+        msg.setCreatedAt(LocalDateTime.now());
+        messageMapper.insert(msg);
     }
 
     /**
@@ -63,11 +72,13 @@ public class MessageService {
     public void sendLevelUpMessage(Long memberId, String newLevel) {
         MemberMessage msg = new MemberMessage();
         msg.setMemberId(memberId);
-        msg.setType(MemberMessage.MessageType.LEVEL_UP);
+        msg.setType(MemberMessage.MessageType.LEVEL_UP.name());
         msg.setTitle("⬆️ 會員等級提升！");
         msg.setContent("恭喜您升級至【" + newLevel + "】，享受更多專屬優惠！");
         msg.setActionUrl("/profile");
-        messageRepository.save(msg);
+        msg.setIsRead(false);
+        msg.setCreatedAt(LocalDateTime.now());
+        messageMapper.insert(msg);
     }
 
     /**
@@ -76,31 +87,33 @@ public class MessageService {
     public void sendWarningMessage(Long memberId, String title, String content) {
         MemberMessage msg = new MemberMessage();
         msg.setMemberId(memberId);
-        msg.setType(MemberMessage.MessageType.WARNING);
+        msg.setType(MemberMessage.MessageType.WARNING.name());
         msg.setTitle("⚠️ " + title);
         msg.setContent(content);
-        messageRepository.save(msg);
+        msg.setIsRead(false);
+        msg.setCreatedAt(LocalDateTime.now());
+        messageMapper.insert(msg);
     }
 
     /**
      * 取得會員所有消息
      */
     public List<MemberMessage> getMessages(Long memberId) {
-        return messageRepository.findByMemberIdOrderByCreatedAtDesc(memberId);
+        return messageMapper.findByMemberIdOrderByCreatedAtDesc(memberId);
     }
 
     /**
      * 取得未讀消息
      */
     public List<MemberMessage> getUnreadMessages(Long memberId) {
-        return messageRepository.findByMemberIdAndReadFalseOrderByCreatedAtDesc(memberId);
+        return messageMapper.findByMemberIdAndReadFalseOrderByCreatedAtDesc(memberId);
     }
 
     /**
      * 取得未讀數量
      */
     public long getUnreadCount(Long memberId) {
-        return messageRepository.countByMemberIdAndReadFalse(memberId);
+        return messageMapper.countByMemberIdAndReadFalse(memberId);
     }
 
     /**
@@ -108,9 +121,9 @@ public class MessageService {
      */
     @Transactional
     public void markAsRead(Long messageId) {
-        messageRepository.findById(messageId).ifPresent(msg -> {
+        messageMapper.findById(messageId).ifPresent(msg -> {
             msg.setRead(true);
-            messageRepository.save(msg);
+            messageMapper.update(msg);
         });
     }
 
@@ -119,8 +132,10 @@ public class MessageService {
      */
     @Transactional
     public void markAllAsRead(Long memberId) {
-        List<MemberMessage> unread = messageRepository.findByMemberIdAndReadFalseOrderByCreatedAtDesc(memberId);
-        unread.forEach(msg -> msg.setRead(true));
-        messageRepository.saveAll(unread);
+        List<MemberMessage> unread = messageMapper.findByMemberIdAndReadFalseOrderByCreatedAtDesc(memberId);
+        unread.forEach(msg -> {
+            msg.setRead(true);
+            messageMapper.update(msg);
+        });
     }
 }

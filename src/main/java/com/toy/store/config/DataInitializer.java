@@ -1,7 +1,7 @@
 package com.toy.store.config;
 
 import com.toy.store.model.*;
-import com.toy.store.repository.*;
+import com.toy.store.mapper.*;
 import com.toy.store.service.IchibanService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,24 +21,24 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
     private final PasswordEncoder passwordEncoder;
-    private final ProductRepository productRepository;
-    private final GachaThemeRepository gachaThemeRepository;
-    private final AdminUserRepository adminUserRepository;
-    private final AdminPermissionRepository adminPermissionRepository;
-    private final AdminRoleRepository adminRoleRepository;
-    private final ActivityRepository activityRepository;
-    private final CategoryRepository categoryRepository;
-    private final SubCategoryRepository subCategoryRepository;
-    private final MemberLevelRepository memberLevelRepository;
-    private final GachaIpRepository ipRepository;
-    private final IchibanBoxRepository ichibanBoxRepository;
-    private final BingoGameRepository bingoGameRepository;
+    private final ProductMapper productMapper;
+    private final GachaThemeMapper gachaThemeMapper;
+    private final AdminUserMapper adminUserMapper;
+    private final AdminPermissionMapper adminPermissionMapper;
+    private final AdminRoleMapper adminRoleMapper;
+    private final ActivityMapper activityMapper;
+    private final CategoryMapper categoryMapper;
+    private final SubCategoryMapper subCategoryMapper;
+    private final MemberLevelMapper memberLevelMapper;
+    private final GachaIpMapper ipMapper;
+    private final IchibanBoxMapper ichibanBoxMapper;
+    private final BingoGameMapper bingoGameMapper;
     private final IchibanService ichibanService;
-    private final RouletteGameRepository rouletteGameRepository;
-    private final RouletteSlotRepository rouletteSlotRepository;
-    private final BlindBoxRepository blindBoxRepository;
+    private final RouletteGameMapper rouletteGameMapper;
+    private final RouletteSlotMapper rouletteSlotMapper;
+    private final BlindBoxMapper blindBoxMapper;
 
     // 使用環境變數設定初始密碼，未設定則生成隨機密碼
     @Value("${ADMIN_INIT_PASSWORD:}")
@@ -49,7 +49,7 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        if (adminUserRepository.findByUsername("admin").isEmpty()) {
+        if (adminUserMapper.findByUsername("admin").isEmpty()) {
             seedPermissions();
             AdminRole superAdminRole = seedSuperAdminRole();
 
@@ -62,8 +62,9 @@ public class DataInitializer implements CommandLineRunner {
             admin.setUsername("admin");
             admin.setEmail("admin@toystore.com");
             admin.setPassword(passwordEncoder.encode(adminPassword));
-            admin.getRoles().add(superAdminRole);
-            adminUserRepository.save(admin);
+            adminUserMapper.insert(admin);
+            // 添加角色關聯
+            adminUserMapper.addRoleToAdmin(admin.getId(), superAdminRole.getId());
 
             log.warn("═══════════════════════════════════════════════════════════");
             log.warn("⚠️  SECURITY WARNING: Admin account created");
@@ -73,12 +74,12 @@ public class DataInitializer implements CommandLineRunner {
             log.warn("═══════════════════════════════════════════════════════════");
         }
 
-        memberRepository.findByUsername("admin").ifPresent(member -> {
-            memberRepository.delete(member);
+        memberMapper.findByUsername("admin").ifPresent(member -> {
+            memberMapper.deleteById(member.getId());
             log.info("Legacy admin removed from members table.");
         });
 
-        if (!memberRepository.existsByUsername("user")) {
+        if (!memberMapper.existsByUsername("user")) {
             // 使用環境變數或生成隨機密碼
             String userPassword = userInitPassword.isEmpty()
                     ? UUID.randomUUID().toString().substring(0, 12)
@@ -90,7 +91,7 @@ public class DataInitializer implements CommandLineRunner {
             user.setPassword(passwordEncoder.encode(userPassword));
             user.setRole(Member.Role.USER);
             user.setPlatformWalletBalance(new BigDecimal("1000.00"));
-            memberRepository.save(user);
+            memberMapper.insert(user);
 
             log.warn("⚠️  Demo user created - Username: user, Password: {}", userPassword);
         }
@@ -119,40 +120,40 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createActivity(String title, String description, String type) {
-        if (activityRepository.findAll().stream().noneMatch(a -> a.getTitle().equals(title))) {
+        if (activityMapper.findAll().stream().noneMatch(a -> a.getTitle().equals(title))) {
             Activity activity = new Activity();
             activity.setTitle(title);
             activity.setDescription(description);
             activity.setType(type);
             activity.setExpiryDate(LocalDateTime.of(2025, 12, 31, 23, 59, 59));
             activity.setActive(true);
-            activityRepository.save(activity);
+            activityMapper.insert(activity);
         }
     }
 
     private void seedSeries(String seriesName, String[] subSeriesList) {
-        Category categoryEntity = categoryRepository.findByName(seriesName);
+        Category categoryEntity = categoryMapper.findByName(seriesName).orElse(null);
         if (categoryEntity == null) {
             categoryEntity = new Category();
             categoryEntity.setName(seriesName);
-            categoryEntity = categoryRepository.save(categoryEntity);
+            categoryMapper.insert(categoryEntity);
         }
 
-        GachaTheme theme = gachaThemeRepository.findByName(seriesName);
+        GachaTheme theme = gachaThemeMapper.findByName(seriesName);
         if (theme == null) {
             theme = new GachaTheme();
             theme.setName(seriesName);
             theme.setDescription(seriesName + " 專屬扭蛋，內含鑰匙圈、毛巾與稀有公仔！");
             theme.setPrice(new BigDecimal("100.00"));
-            theme = gachaThemeRepository.save(theme);
+            gachaThemeMapper.insert(theme);
         }
 
         for (String subSeries : subSeriesList) {
-            if (subCategoryRepository.findByNameAndCategory(subSeries, categoryEntity) == null) {
+            if (subCategoryMapper.findByNameAndCategoryId(subSeries, categoryEntity.getId()) == null) {
                 SubCategory sub = new SubCategory();
                 sub.setName(subSeries);
-                sub.setCategory(categoryEntity);
-                subCategoryRepository.save(sub);
+                sub.setCategoryId(categoryEntity.getId());
+                subCategoryMapper.insert(sub);
             }
 
             createProduct(subSeries + " 鑰匙圈", new BigDecimal("50.00"), 100, seriesName, subSeries);
@@ -166,7 +167,7 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createProduct(String name, BigDecimal price, int stock, String category, String subCategory) {
-        if (productRepository.findByName(name).isEmpty()) {
+        if (productMapper.findByName(name).isEmpty()) {
             Product product = new Product();
             product.setName(name);
             product.setPrice(price);
@@ -174,7 +175,7 @@ public class DataInitializer implements CommandLineRunner {
             product.setCategory(category);
             product.setSubCategory(subCategory);
             product.setDescription(name + " - " + category + " 正版授權商品");
-            productRepository.save(product);
+            productMapper.insert(product);
         }
     }
 
@@ -186,17 +187,17 @@ public class DataInitializer implements CommandLineRunner {
         boolean exists = theme.getItems().stream().anyMatch(i -> i.getName().equals(name));
         if (!exists) {
             GachaItem item = new GachaItem();
-            item.setTheme(theme);
+            item.setThemeId(theme.getId());
             item.setName(name);
             item.setEstimatedValue(value);
             item.setWeight(weight);
             theme.getItems().add(item);
-            gachaThemeRepository.save(theme);
+            gachaThemeMapper.update(theme);
         }
     }
 
     private void seedMemberLevels() {
-        if (memberLevelRepository.count() == 0) {
+        if (memberLevelMapper.count() == 0) {
             createLevel("VIP1 青銅", 1, 0, "基礎返利");
             createLevel("VIP2 白銀", 2, 5000, "消費返利 1%");
             createLevel("VIP3 黃金", 3, 25000, "消費返利 2%");
@@ -217,11 +218,11 @@ public class DataInitializer implements CommandLineRunner {
         level.setThreshold(new BigDecimal(threshold));
         level.setMonthlyReward(monthlyReward);
         level.setEnabled(true);
-        memberLevelRepository.save(level);
+        memberLevelMapper.insert(level);
     }
 
     private void seedBlindBoxes() {
-        if (blindBoxRepository.count() > 0)
+        if (blindBoxMapper.count() > 0)
             return;
 
         // 創建第一個盲盒
@@ -251,7 +252,7 @@ public class DataInitializer implements CommandLineRunner {
             item.setStatus(BlindBoxItem.Status.AVAILABLE);
             box1.getItems().add(item);
         }
-        blindBoxRepository.save(box1);
+        blindBoxMapper.insert(box1);
 
         // 創建第二個盲盒
         BlindBox box2 = new BlindBox();
@@ -282,7 +283,7 @@ public class DataInitializer implements CommandLineRunner {
             item.setStatus(BlindBoxItem.Status.AVAILABLE);
             box2.getItems().add(item);
         }
-        blindBoxRepository.save(box2);
+        blindBoxMapper.insert(box2);
 
         // 創建第三個盲盒：鋼彈系列
         BlindBox box3 = new BlindBox();
@@ -311,7 +312,7 @@ public class DataInitializer implements CommandLineRunner {
             item.setStatus(BlindBoxItem.Status.AVAILABLE);
             box3.getItems().add(item);
         }
-        blindBoxRepository.save(box3);
+        blindBoxMapper.insert(box3);
 
         // 創建第四個盲盒：間諜家家酒
         BlindBox box4 = new BlindBox();
@@ -340,7 +341,7 @@ public class DataInitializer implements CommandLineRunner {
             item.setStatus(BlindBoxItem.Status.AVAILABLE);
             box4.getItems().add(item);
         }
-        blindBoxRepository.save(box4);
+        blindBoxMapper.insert(box4);
 
         // 創建第五個盲盒：進擊的巨人
         BlindBox box5 = new BlindBox();
@@ -369,16 +370,19 @@ public class DataInitializer implements CommandLineRunner {
             item.setStatus(BlindBoxItem.Status.AVAILABLE);
             box5.getItems().add(item);
         }
-        blindBoxRepository.save(box5);
+        blindBoxMapper.insert(box5);
 
         System.out.println("Blind boxes created: 5 boxes with items");
     }
 
     private void seedGachaGames() {
-        if (ichibanBoxRepository.count() > 0)
+        if (ichibanBoxMapper.count() > 0)
             return;
 
-        GachaIp ip = ipRepository.findAll().get(0);
+        List<GachaIp> ips = ipMapper.findAll();
+        if (ips.isEmpty())
+            return;
+        GachaIp ip = ips.get(0);
 
         IchibanBox box = new IchibanBox();
         box.setIp(ip);
@@ -389,16 +393,11 @@ public class DataInitializer implements CommandLineRunner {
         box.setStatus(IchibanBox.Status.ACTIVE);
 
         List<IchibanPrize> prizes = new ArrayList<>();
-        prizes.add(new IchibanPrize(null, box, IchibanPrize.Rank.A,
-                "實體抱枕 - 炭治郎款", "精美抱枕", null, new BigDecimal("1200"), 2, 2, 0));
-        prizes.add(new IchibanPrize(null, box, IchibanPrize.Rank.B,
-                "實體滑鼠墊 - 禰豆子款", "大尺寸滑鼠墊", null, new BigDecimal("800"), 3, 3, 1));
-        prizes.add(new IchibanPrize(null, box, IchibanPrize.Rank.C,
-                "實體鉛筆盒 - 善逸款", "多功能鉛筆盒", null, new BigDecimal("500"), 5, 5, 2));
-        prizes.add(new IchibanPrize(null, box, IchibanPrize.Rank.D,
-                "實體筆記本 - 伊之助款", "B5 筆記本", null, new BigDecimal("300"), 10, 10, 3));
-        prizes.add(new IchibanPrize(null, box, IchibanPrize.Rank.E, "角色精美徽章",
-                "隨機角色款式", null, new BigDecimal("150"), 60, 60, 4));
+        prizes.add(createPrize(box, IchibanPrize.Rank.A, "實體抱枕 - 炭治郎款", "精美抱枕", new BigDecimal("1200"), 2, 2, 0));
+        prizes.add(createPrize(box, IchibanPrize.Rank.B, "實體滑鼠墊 - 禰豆子款", "大尺寸滑鼠墊", new BigDecimal("800"), 3, 3, 1));
+        prizes.add(createPrize(box, IchibanPrize.Rank.C, "實體鉛筆盒 - 善逸款", "多功能鉛筆盒", new BigDecimal("500"), 5, 5, 2));
+        prizes.add(createPrize(box, IchibanPrize.Rank.D, "實體筆記本 - 伊之助款", "B5 筆記本", new BigDecimal("300"), 10, 10, 3));
+        prizes.add(createPrize(box, IchibanPrize.Rank.E, "角色精美徽章", "隨機角色款式", new BigDecimal("150"), 60, 60, 4));
 
         ichibanService.createBox(box, prizes);
 
@@ -410,7 +409,7 @@ public class DataInitializer implements CommandLineRunner {
         bingo.setGridSize(3);
         bingo.setStatus(BingoGame.Status.ACTIVE);
         bingo.setBingoRewardName("限量實體抱枕 (黃金版)");
-        bingo = bingoGameRepository.save(bingo);
+        bingo = bingoGameMapper.insert(bingo) > 0 ? bingo : bingo;
 
         for (int i = 1; i <= 9; i++) {
             BingoCell cell = new BingoCell();
@@ -437,7 +436,7 @@ public class DataInitializer implements CommandLineRunner {
                 bingo.setCells(new ArrayList<>());
             bingo.getCells().add(cell);
         }
-        bingoGameRepository.save(bingo);
+        bingoGameMapper.update(bingo);
 
         RouletteGame roulette = new RouletteGame();
         roulette.setIp(ip);
@@ -446,7 +445,7 @@ public class DataInitializer implements CommandLineRunner {
         roulette.setPricePerSpin(new BigDecimal("200.00"));
         roulette.setTotalSlots(8);
         roulette.setStatus(RouletteGame.Status.ACTIVE);
-        roulette = rouletteGameRepository.save(roulette);
+        rouletteGameMapper.insert(roulette);
 
         String[] prizesRoulette = { "周邊商品徽章", "實體水杯", "精美杯墊", "鑰匙圈", "角色帆布袋", "再來一次", "限量黃金版抱枕", "實體滑鼠墊" };
         RouletteSlot.SlotType[] types = {
@@ -469,7 +468,7 @@ public class DataInitializer implements CommandLineRunner {
             slot.setWeight(types[i] == RouletteSlot.SlotType.JACKPOT ? 10 : 100);
             if (types[i] == RouletteSlot.SlotType.SHARD)
                 slot.setShardAmount(100);
-            rouletteSlotRepository.save(slot);
+            rouletteSlotMapper.insert(slot);
         }
     }
 
@@ -484,17 +483,39 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void createPermission(String code, String name) {
-        if (adminPermissionRepository.findByCode(code).isEmpty()) {
-            adminPermissionRepository.save(new AdminPermission(code, name));
+        if (adminPermissionMapper.findByCode(code).isEmpty()) {
+            AdminPermission perm = new AdminPermission();
+            perm.setCode(code);
+            perm.setName(name);
+            adminPermissionMapper.insert(perm);
         }
     }
 
     private AdminRole seedSuperAdminRole() {
-        return adminRoleRepository.findByName("超級管理員")
+        return adminRoleMapper.findByName("超級管理員")
                 .orElseGet(() -> {
-                    AdminRole role = new AdminRole("超級管理員");
-                    role.getPermissions().addAll(adminPermissionRepository.findAll());
-                    return adminRoleRepository.save(role);
+                    AdminRole role = new AdminRole();
+                    role.setName("超級管理員");
+                    adminRoleMapper.insert(role);
+                    // 添加所有權限
+                    for (AdminPermission perm : adminPermissionMapper.findAll()) {
+                        adminRoleMapper.addPermissionToRole(role.getId(), perm.getId());
+                    }
+                    return role;
                 });
+    }
+
+    private IchibanPrize createPrize(IchibanBox box, IchibanPrize.Rank rank, String name, String desc, BigDecimal val,
+            int qty, int remain, int sort) {
+        IchibanPrize p = new IchibanPrize();
+        p.setBox(box);
+        p.setRank(rank);
+        p.setName(name);
+        p.setDescription(desc);
+        p.setEstimatedValue(val);
+        p.setQuantity(qty);
+        p.setRemainingQuantity(remain);
+        p.setSortOrder(sort);
+        return p;
     }
 }

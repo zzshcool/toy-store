@@ -15,7 +15,7 @@ INSERT INTO ichiban_boxes (ip_id, name, description, image_url, price_per_draw, 
 (2, '航海王 新世界篇', '草帽海賊團全員集結！', '/images/ichiban/onepiece1.jpg', 780, 80, 30, 'ACTIVE', NOW());
 
 -- 4. 測試一番賞獎品
-INSERT INTO ichiban_prizes (box_id, rank, name, description, image_url, estimated_value, total_quantity, remaining_quantity, sort_order) VALUES 
+INSERT INTO ichiban_prizes (box_id, `rank`, name, description, image_url, estimated_value, quantity, remaining_quantity, sort_order) VALUES 
 -- 洛克人箱體獎品
 (1, 'A', '洛克人 1/6 限量公仔', '限量版精緻公仔', '/images/prize/rockman_a.jpg', 2500, 1, 1, 1),
 (1, 'B', '萊特博士 Q版公仔', '可愛Q版造型', '/images/prize/rockman_b.jpg', 1200, 2, 2, 2),

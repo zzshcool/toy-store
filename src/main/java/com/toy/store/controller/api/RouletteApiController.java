@@ -4,7 +4,7 @@ import com.toy.store.annotation.CurrentUser;
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.RouletteService;
 import com.toy.store.service.TokenService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class RouletteApiController {
 
     private final RouletteService rouletteService;
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
 
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> getActiveGames() {
@@ -74,7 +74,7 @@ public class RouletteApiController {
             return ApiResponse.error("請先登入");
         }
 
-        Member member = memberRepository.findById(memberId)
+        Member member = memberMapper.findById(memberId)
                 .orElseThrow(() -> new AppException("會員不存在"));
         Map<String, Object> result = new HashMap<>();
         result.put("luckyValue", member.getLuckyValue());
@@ -85,7 +85,7 @@ public class RouletteApiController {
     private Long getMemberId(TokenService.TokenInfo info) {
         if (info == null)
             return null;
-        return memberRepository.findByUsername(info.getUsername())
+        return memberMapper.findByUsername(info.getUsername())
                 .map(Member::getId)
                 .orElse(null);
     }
@@ -107,8 +107,9 @@ public class RouletteApiController {
         Map<String, Object> map = new HashMap<>();
         map.put("id", slot.getId());
         map.put("slotOrder", slot.getSlotOrder());
-        map.put("slotType", slot.getSlotType().name());
-        map.put("slotTypeDisplay", slot.getSlotType().getDisplayName());
+        map.put("slotType", slot.getSlotType());
+        RouletteSlot.SlotType slotTypeEnum = slot.getSlotTypeEnum();
+        map.put("slotTypeDisplay", slotTypeEnum != null ? slotTypeEnum.getDisplayName() : slot.getSlotType());
         map.put("prizeName", slot.getPrizeName());
         map.put("color", slot.getColor());
         map.put("isJackpot", slot.isJackpot());
@@ -144,7 +145,7 @@ public class RouletteApiController {
         }
 
         int mockShards = random.nextInt(20) + 1;
-        boolean isMockFreeSpin = selectedSlot.getSlotType() == RouletteSlot.SlotType.FREE_SPIN;
+        boolean isMockFreeSpin = selectedSlot.getSlotTypeEnum() == RouletteSlot.SlotType.FREE_SPIN;
 
         Map<String, Object> response = new HashMap<>();
         response.put("isTrial", true);

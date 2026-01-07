@@ -2,7 +2,7 @@ package com.toy.store.controller.api;
 
 import com.toy.store.dto.ApiResponse;
 import com.toy.store.model.MemberMessage;
-import com.toy.store.repository.MemberRepository;
+import com.toy.store.mapper.MemberMapper;
 import com.toy.store.service.MessageService;
 import com.toy.store.service.TokenService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,7 +22,7 @@ import java.util.Map;
 public class MessageApiController {
 
     private final MessageService messageService;
-    private final MemberRepository memberRepository;
+    private final MemberMapper memberMapper;
 
     @GetMapping
     public ApiResponse<List<MemberMessage>> getMessages(HttpServletRequest request) {
@@ -31,7 +31,7 @@ public class MessageApiController {
             return ApiResponse.error("請先登入");
         }
 
-        return memberRepository.findByUsername(user.getUsername())
+        return memberMapper.findByUsername(user.getUsername())
                 .map(member -> ApiResponse.ok(messageService.getMessages(member.getId())))
                 .orElse(ApiResponse.error("會員不存在"));
     }
@@ -45,7 +45,7 @@ public class MessageApiController {
             return ApiResponse.ok(result);
         }
 
-        return memberRepository.findByUsername(user.getUsername())
+        return memberMapper.findByUsername(user.getUsername())
                 .map(member -> {
                     Map<String, Object> result = new HashMap<>();
                     result.put("count", messageService.getUnreadCount(member.getId()));
@@ -76,7 +76,7 @@ public class MessageApiController {
             return ApiResponse.error("請先登入");
         }
 
-        return memberRepository.findByUsername(user.getUsername())
+        return memberMapper.findByUsername(user.getUsername())
                 .map(member -> {
                     messageService.markAllAsRead(member.getId());
                     return ApiResponse.<Void>ok(null, "已全部標記為已讀");

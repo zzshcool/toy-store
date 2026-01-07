@@ -2,11 +2,7 @@ package com.toy.store.service;
 
 import com.toy.store.exception.AppException;
 import com.toy.store.model.*;
-import com.toy.store.repository.GachaRecordRepository;
-import com.toy.store.repository.GachaThemeRepository;
-import com.toy.store.repository.MemberRepository;
-import com.toy.store.repository.OrderRepository;
-import com.toy.store.repository.MemberCouponRepository;
+import com.toy.store.mapper.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,26 +14,32 @@ import java.math.BigDecimal;
 @Service
 public class GachaService extends BaseGachaService {
 
-    private final GachaThemeRepository themeRepository;
-    private final MemberRepository memberRepository;
-    private final OrderRepository orderRepository;
-    private final MemberCouponRepository memberCouponRepository;
+    private final GachaThemeMapper themeMapper;
+    private final GachaItemMapper itemMapper;
+    private final MemberMapper memberMapper;
+    private final OrderMapper orderMapper;
+    private final MemberCouponMapper memberCouponMapper;
+    private final CouponMapper couponMapper;
     private final Random random = new Random();
 
     public GachaService(
-            GachaRecordRepository recordRepository,
+            GachaRecordMapper recordMapper,
             TransactionService transactionService,
             ShardService shardService,
             MissionService missionService,
-            GachaThemeRepository themeRepository,
-            MemberRepository memberRepository,
-            OrderRepository orderRepository,
-            MemberCouponRepository memberCouponRepository) {
-        super(recordRepository, transactionService, shardService, missionService);
-        this.themeRepository = themeRepository;
-        this.memberRepository = memberRepository;
-        this.orderRepository = orderRepository;
-        this.memberCouponRepository = memberCouponRepository;
+            GachaThemeMapper themeMapper,
+            GachaItemMapper itemMapper,
+            MemberMapper memberMapper,
+            OrderMapper orderMapper,
+            MemberCouponMapper memberCouponMapper,
+            CouponMapper couponMapper) {
+        super(recordMapper, transactionService, shardService, missionService);
+        this.themeMapper = themeMapper;
+        this.itemMapper = itemMapper;
+        this.memberMapper = memberMapper;
+        this.orderMapper = orderMapper;
+        this.memberCouponMapper = memberCouponMapper;
+        this.couponMapper = couponMapper;
     }
 
     /**
@@ -45,28 +47,33 @@ public class GachaService extends BaseGachaService {
      */
     @Transactional
     public GachaItem drawBox(Long memberId, Long themeId, Long couponId) {
-        GachaTheme theme = themeRepository.findById(themeId)
+        GachaTheme theme = themeMapper.findById(themeId)
                 .orElseThrow(() -> new AppException("找不到扭蛋主題"));
 
         boolean useCoupon = false;
 
         if (couponId != null) {
-            MemberCoupon memberCoupon = memberCouponRepository.findById(couponId)
+            MemberCoupon memberCoupon = memberCouponMapper.findById(couponId)
                     .orElseThrow(() -> new AppException("找不到優惠券"));
 
-            if (!memberCoupon.getMember().getId().equals(memberId)) {
+            if (!memberCoupon.getMemberId().equals(memberId)) {
                 throw new AppException("優惠券不屬於此會員");
             }
-            if (memberCoupon.getStatus() != MemberCoupon.Status.UNUSED) {
+            if (!"UNUSED".equals(memberCoupon.getStatus())) {
                 throw new AppException("優惠券已使用");
             }
-            if (memberCoupon.getCoupon().getType() != Coupon.CouponType.MYSTERY_BOX_FREE) {
-                throw new AppException("非扭蛋免費券類型");
+
+            // 檢查優惠券類型
+            if (memberCoupon.getCouponId() != null) {
+                Coupon coupon = couponMapper.findById(memberCoupon.getCouponId()).orElse(null);
+                if (coupon == null || !"MYSTERY_BOX_FREE".equals(coupon.getType())) {
+                    throw new AppException("非扭蛋免費券類型");
+                }
             }
 
-            memberCoupon.setStatus(MemberCoupon.Status.USED);
+            memberCoupon.setStatus("USED");
             memberCoupon.setUsedAt(LocalDateTime.now());
-            memberCouponRepository.save(memberCoupon);
+            memberCouponMapper.update(memberCoupon);
             useCoupon = true;
         }
 
@@ -75,7 +82,7 @@ public class GachaService extends BaseGachaService {
                     Transaction.TransactionType.GACHA_COST, "扭蛋消費: " + theme.getName());
         }
 
-        List<GachaItem> items = theme.getItems();
+        List<GachaItem> items = itemMapper.findByIpId(themeId);
         if (items == null || items.isEmpty()) {
             throw new AppException("此扭蛋主題沒有獎品");
         }
@@ -100,19 +107,13 @@ public class GachaService extends BaseGachaService {
         saveGachaRecord(memberId, themeId, selectedItem.getName(), shards);
 
         // Create Order Record for the Prize
+        Member member = memberMapper.findById(memberId).orElseThrow();
         Order prizeOrder = new Order();
-        prizeOrder.setMember(memberRepository.findById(memberId).orElseThrow());
+        prizeOrder.setMemberId(memberId);
         prizeOrder.setTotalPrice(BigDecimal.ZERO);
-        prizeOrder.setStatus(Order.OrderStatus.COMPLETED);
-
-        OrderItem orderItem = new OrderItem();
-        orderItem.setOrder(prizeOrder);
-        orderItem.setProductName("扭蛋獎品: " + selectedItem.getName());
-        orderItem.setPriceAtPurchase(selectedItem.getEstimatedValue());
-        orderItem.setQuantity(1);
-
-        prizeOrder.addItem(orderItem);
-        orderRepository.save(prizeOrder);
+        prizeOrder.setStatus(Order.OrderStatus.COMPLETED.name());
+        prizeOrder.setCreateTime(LocalDateTime.now());
+        orderMapper.insert(prizeOrder);
 
         return selectedItem;
     }
@@ -125,11 +126,11 @@ public class GachaService extends BaseGachaService {
         record.setPrizeName(prizeName);
         record.setShardsEarned(shards);
         record.setCreatedAt(LocalDateTime.now());
-        recordRepository.save(record);
+        recordMapper.insert(record);
     }
 
     public List<GachaTheme> getAllThemes() {
-        return themeRepository.findAll();
+        return themeMapper.findAll();
     }
 
     /**
@@ -139,10 +140,10 @@ public class GachaService extends BaseGachaService {
         if (themeId == null)
             throw new AppException("請選擇主題");
 
-        GachaTheme theme = themeRepository.findById(themeId)
+        GachaTheme theme = themeMapper.findById(themeId)
                 .orElseThrow(() -> new AppException("主題不存在"));
 
-        List<GachaItem> items = theme.getItems();
+        List<GachaItem> items = itemMapper.findByIpId(themeId);
         if (items == null || items.isEmpty()) {
             throw new AppException("該主題暫無獎品");
         }
