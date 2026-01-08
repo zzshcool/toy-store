@@ -1,6 +1,5 @@
 package com.toy.store.service;
 
-import com.toy.store.exception.AppException;
 import com.toy.store.exception.ResourceNotFoundException;
 import com.toy.store.model.*;
 import com.toy.store.mapper.*;

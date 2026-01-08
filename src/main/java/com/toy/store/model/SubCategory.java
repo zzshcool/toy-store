@@ -4,6 +4,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
  * 子分類實體 - 純 POJO (MyBatis)
  */
@@ -15,4 +17,7 @@ public class SubCategory {
     private Long categoryId;
     private String name;
     private String description;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
 }

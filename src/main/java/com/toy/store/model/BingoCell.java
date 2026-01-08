@@ -24,9 +24,9 @@ public class BingoCell implements GachaProbabilityEngine.ProbableItem {
 
     private Integer position; // 位置編號（從1開始，左上到右下）
 
-    private Integer row; // 行（0-5）
+    private Integer rowNum; // 行（0-5）
 
-    private Integer col; // 列（0-5）
+    private Integer colNum; // 列（0-5）
 
     private String prizeName;
 
@@ -74,8 +74,8 @@ public class BingoCell implements GachaProbabilityEngine.ProbableItem {
 
     // 根據位置計算行列（用於建立格子時）
     public void calculateRowCol(int gridSize) {
-        this.row = (position - 1) / gridSize;
-        this.col = (position - 1) % gridSize;
+        this.rowNum = (position - 1) / gridSize;
+        this.colNum = (position - 1) % gridSize;
     }
 
     // Boolean getter 兼容

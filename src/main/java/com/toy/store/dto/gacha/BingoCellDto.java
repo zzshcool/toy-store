@@ -23,8 +23,8 @@ public class BingoCellDto {
         BingoCellDto dto = new BingoCellDto();
         dto.setId(cell.getId());
         dto.setPosition(cell.getPosition());
-        dto.setRow(cell.getRow());
-        dto.setCol(cell.getCol());
+        dto.setRow(cell.getRowNum());
+        dto.setCol(cell.getColNum());
         dto.setRevealed(cell.getIsRevealed());
         // 只有揭曉後才暴露獎品資訊
         if (cell.getIsRevealed()) {

@@ -29,7 +29,7 @@ public interface BingoCellMapper {
 
         @Insert("INSERT INTO bingo_cells (game_id, position, row_num, col_num, prize_name, " +
                         "prize_description, prize_image_url, prize_value, is_revealed, tier) " +
-                        "VALUES (#{gameId}, #{position}, #{row}, #{col}, #{prizeName}, " +
+                        "VALUES (#{gameId}, #{position}, #{rowNum}, #{colNum}, #{prizeName}, " +
                         "#{prizeDescription}, #{prizeImageUrl}, #{prizeValue}, #{isRevealed}, #{tier})")
         @Options(useGeneratedKeys = true, keyProperty = "id")
         int insert(BingoCell cell);

@@ -415,8 +415,8 @@ public class DataInitializer implements CommandLineRunner {
             BingoCell cell = new BingoCell();
             cell.setGame(bingo);
             cell.setPosition(i);
-            cell.setRow((i - 1) / 3);
-            cell.setCol((i - 1) % 3);
+            cell.setRowNum((i - 1) / 3);
+            cell.setColNum((i - 1) % 3);
 
             if (i == 5) {
                 cell.setPrizeName("限量實體抱枕 (黃金版)");

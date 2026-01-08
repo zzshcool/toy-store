@@ -12,24 +12,24 @@ import java.util.Optional;
 @Mapper
 public interface GachaThemeMapper {
 
-    @Select("SELECT * FROM gacha_themes WHERE id = #{id}")
-    Optional<GachaTheme> findById(Long id);
+        @Select("SELECT * FROM gacha_themes WHERE id = #{id}")
+        Optional<GachaTheme> findById(Long id);
 
-    @Select("SELECT * FROM gacha_themes WHERE name = #{name}")
-    GachaTheme findByName(String name);
+        @Select("SELECT * FROM gacha_themes WHERE name = #{name}")
+        GachaTheme findByName(String name);
 
-    @Insert("INSERT INTO gacha_themes (name, description, image_url, created_at) " +
-            "VALUES (#{name}, #{description}, #{imageUrl}, #{createdAt})")
-    @Options(useGeneratedKeys = true, keyProperty = "id")
-    int insert(GachaTheme theme);
+        @Insert("INSERT INTO gacha_themes (name, description, image_url, price_per_gacha, created_at) " +
+                        "VALUES (#{name}, #{description}, #{imageUrl}, #{pricePerGacha}, #{createdAt})")
+        @Options(useGeneratedKeys = true, keyProperty = "id")
+        int insert(GachaTheme theme);
 
-    @Update("UPDATE gacha_themes SET name = #{name}, description = #{description}, " +
-            "image_url = #{imageUrl} WHERE id = #{id}")
-    int update(GachaTheme theme);
+        @Update("UPDATE gacha_themes SET name = #{name}, description = #{description}, " +
+                        "image_url = #{imageUrl} WHERE id = #{id}")
+        int update(GachaTheme theme);
 
-    @Delete("DELETE FROM gacha_themes WHERE id = #{id}")
-    int deleteById(Long id);
+        @Delete("DELETE FROM gacha_themes WHERE id = #{id}")
+        int deleteById(Long id);
 
-    @Select("SELECT * FROM gacha_themes")
-    List<GachaTheme> findAll();
+        @Select("SELECT * FROM gacha_themes")
+        List<GachaTheme> findAll();
 }

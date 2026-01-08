@@ -350,8 +350,8 @@ public class GachaAdminController {
         BingoCell cell = new BingoCell();
         cell.setGame(game);
         cell.setPosition(position);
-        cell.setRow(row);
-        cell.setCol(col);
+        cell.setRowNum(row);
+        cell.setColNum(col);
         cell.setPrizeName(prizeName);
         cell.setPrizeDescription(prizeDescription);
         cell.setIsRevealed(false);
@@ -384,8 +384,8 @@ public class GachaAdminController {
                 BingoCell cell = new BingoCell();
                 cell.setGame(game);
                 cell.setPosition(pos);
-                cell.setRow(row);
-                cell.setCol(col);
+                cell.setRowNum(row);
+                cell.setColNum(col);
                 cell.setPrizeName(defaultPrizes[(pos - 1) % defaultPrizes.length]);
                 cell.setPrizeDescription("精美周邊");
                 cell.setIsRevealed(false);

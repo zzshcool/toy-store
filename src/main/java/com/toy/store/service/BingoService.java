@@ -159,8 +159,8 @@ public class BingoService extends BaseGachaService {
         // 建立 2D 陣列方便檢查
         boolean[][] revealed = new boolean[gridSize][gridSize];
         for (BingoCell cell : cells) {
-            if (cell.getRow() < gridSize && cell.getCol() < gridSize) {
-                revealed[cell.getRow()][cell.getCol()] = cell.getIsRevealed();
+            if (cell.getRowNum() < gridSize && cell.getColNum() < gridSize) {
+                revealed[cell.getRowNum()][cell.getColNum()] = cell.getIsRevealed();
             }
         }
 

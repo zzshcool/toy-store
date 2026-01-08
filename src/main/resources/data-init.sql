@@ -1,9 +1,8 @@
 -- =============================================================================
--- 【資深後端工程師：最終重構 - 顯式 ID 與 確定性資料種子】
--- 1. 確定性 (Determinism)：硬編碼 Primary Key ID，確保開發環境數據完全可預測且易於除錯。
--- 2. 邏輯耦合：依賴顯式 ID 進行父子關聯，徹底解決自增 ID 偏移與函式相容性問題。
--- 3. 工程實務：符合「不要強制依賴物理外鍵自增」的手法，方便數據跨環境遷移。
--- 4. 模組化結構：依 IP 系列分組展示資料。
+-- TiDB Cloud Consolidated Data Initialization for Toy Store
+-- 合併 data-gacha-init.sql (完整版) + 額外優化
+-- 已轉換為 TiDB 相容語法 (row/col 對齊 Java Model, AUTO_INCREMENT 語法)
+-- Generated: 2026-01-08
 -- =============================================================================
 
 -- ########## 0. 環境重置 ##########
@@ -16,8 +15,17 @@ DELETE FROM bingo_cells;
 DELETE FROM bingo_games;
 DELETE FROM gacha_ips;
 DELETE FROM redeem_shop_items;
+DELETE FROM member_levels;
 
--- ########## 1. IP 主題 (ID 1-20) ##########
+-- ########## 1. 會員等級初始化 ##########
+INSERT INTO member_levels (id, name, min_growth_value, discount_rate, points_multiplier, description, icon_url, sort_order) VALUES
+(1, '普通會員', 0, 100.00, 1.00, '新註冊會員', '/images/level/normal.png', 1),
+(2, '銀卡會員', 1000, 98.00, 1.20, '累積成長值達1000', '/images/level/silver.png', 2),
+(3, '金卡會員', 5000, 95.00, 1.50, '累積成長值達5000', '/images/level/gold.png', 3),
+(4, '鑽石會員', 20000, 90.00, 2.00, '累積成長值達20000', '/images/level/diamond.png', 4),
+(5, 'VIP會員', 50000, 85.00, 3.00, '累積成長值達50000', '/images/level/vip.png', 5);
+
+-- ########## 2. IP 主題 (ID 1-20) ##########
 INSERT INTO gacha_ips (id, name, description, image_url, status, created_at) VALUES 
 (1, '洛克人', 'Mega Man 經典英雄系列', '/images/ip/rockman.jpg', 'ACTIVE', NOW()),
 (2, '獵人', 'Hunter × Hunter 念能力冒險', '/images/ip/hunter.jpg', 'ACTIVE', NOW()),
@@ -40,7 +48,7 @@ INSERT INTO gacha_ips (id, name, description, image_url, status, created_at) VAL
 (19, 'ONE PIECE航海王', '和之國大章節', '/images/ip/onepiece.jpg', 'ACTIVE', NOW()),
 (20, 'JoJo的奇妙冒險', '黃金之風', '/images/ip/jojo.jpg', 'ACTIVE', NOW());
 
--- ########## 2. 一番賞箱體 (ID 1-20，與 IP ID 對應) ##########
+-- ########## 3. 一番賞箱體 (ID 1-20，與 IP ID 對應) ##########
 INSERT INTO ichiban_boxes (id, ip_id, name, description, image_url, price_per_draw, max_slots, total_slots, status, created_at) VALUES 
 (1, 1, '洛克人一番賞', '經典藍色轟炸機', '/images/ichiban/rockman1.jpg', 680, 80, 80, 'ACTIVE', NOW()),
 (2, 2, '獵人一番賞', '貪婪之島限定', '/images/ichiban/hunter1.jpg', 750, 80, 80, 'ACTIVE', NOW()),
@@ -63,8 +71,7 @@ INSERT INTO ichiban_boxes (id, ip_id, name, description, image_url, price_per_dr
 (19, 19, 'ONE PIECE航海王一番賞', '和之國篇大賞', '/images/ichiban/op1.jpg', 850, 80, 80, 'ACTIVE', NOW()),
 (20, 20, 'JoJo的奇妙冒險一番賞', '黃金之風紀念', '/images/ichiban/jojo1.jpg', 780, 80, 80, 'ACTIVE', NOW());
 
--- ########## 3. 一番賞獎品 (ID 顯式定址: 10 * (box_id-1) + offset) ##########
--- 為熱門 IP 提供特化獎項名稱
+-- ########## 4. 一番賞獎品 - 特化獎項 (手動精選) ##########
 INSERT INTO ichiban_prizes (id, box_id, `rank`, name, description, image_url, estimated_value, quantity, remaining_quantity, sort_order) VALUES
 -- IP 1: 洛克人 (Rockman)
 (1, 1, 'A', '洛克人 X 1/12 比例可動公仔 (艾克斯)', '精細塗裝，含多種手口更換件', '/images/prize/rockman_a.jpg', 2800, 1, 1, 1),
@@ -72,20 +79,17 @@ INSERT INTO ichiban_prizes (id, box_id, `rank`, name, description, image_url, es
 (3, 1, 'C', '洛克人系列 亞克力立牌 (全6種)', '精美透明亞克力，可組合展示', '/images/prize/rockman_c.jpg', 450, 5, 5, 3),
 (9, 1, 'I', '洛克人經典 E 罐 造型馬克杯', '極具辨識度的回血道具造型', '/images/prize/rockman_i.jpg', 350, 15, 15, 9),
 (10, 1, 'LAST', 'LAST賞 洛克人 35 週年金色紀念公仔', '全金屬質感噴塗，收藏首選', '/images/prize/rockman_last.jpg', 5000, 1, 1, 10),
-
 -- IP 19: 航海王 (One Piece)
 (181, 19, 'A', '魯夫 尼卡形態 「解放之鼓」公仔', '震撼的太陽神姿態，帶有透明雲霧特效', '/images/prize/op_a.jpg', 3500, 1, 1, 1),
 (182, 19, 'B', '索隆 三刀流奧義 「九山八海」場景模型', '極限動態雕刻，氣勢驚人', '/images/prize/op_b.jpg', 3000, 2, 2, 2),
 (183, 19, 'C', '香吉士 魔神風腳 模型', '腿部透明發光特件', '/images/prize/op_c.jpg', 2500, 3, 3, 3),
 (190, 19, 'LAST', 'LAST賞 羅傑與白鬍子 世紀之對戰景品', '兩大傳奇決鬥場景復刻', '/images/prize/op_last.jpg', 8000, 1, 1, 10),
-
--- 其餘 IP 使用迴圈生成高品質通用名稱 (略)
--- 為節省空間，其餘獎項將根據 IP 名稱 + 特化字尾生成
+-- 其餘 IP 提供代表性獎項
 (11, 2, 'A', '獵人 奇犽 神速形態限定模型', '雷光特效環繞', '/images/prize/hunter_a.jpg', 2600, 1, 1, 1),
 (21, 3, 'A', '七龍珠 孫悟空 自在極意功 雕塑', '銀髮閃耀，氣場爆裂', '/images/prize/db_a.jpg', 3200, 1, 1, 1),
 (111, 12, 'A', '鬼滅之刃 煉獄杏壽郎 炎之呼吸公仔', '大哥沒有輸！華麗火焰效果', '/images/prize/kimetsu_a.jpg', 3000, 1, 1, 1);
 
--- 補全其餘 150+ 獎項 (使用更具商業感的生成方式)
+-- ########## 5. 一番賞獎品 - 動態補全其餘獎項 (TiDB 相容) ##########
 INSERT INTO ichiban_prizes (id, box_id, `rank`, name, description, image_url, estimated_value, quantity, remaining_quantity, sort_order)
 SELECT 
     (b.id - 1) * 10 + r.idx, 
@@ -117,16 +121,10 @@ CROSS JOIN (
     SELECT 9, 'I', 'I賞 紀念磁鐵' UNION ALL
     SELECT 10, 'LAST', 'LAST賞 隱藏紀念品'
 ) r
--- 避免與上面手動插入的 ID 衝突
 WHERE NOT EXISTS (SELECT 1 FROM ichiban_prizes p2 WHERE p2.id = (b.id - 1) * 10 + r.idx);
 
--- ########## 4. 一番賞格子 (80 格) ##########
+-- ########## 6. 一番賞格子 (80 格/箱，TiDB 相容 - 使用純 UNION ALL 替代 RECURSIVE) ##########
 INSERT INTO ichiban_slots (box_id, slot_number, prize_id, status)
-WITH RECURSIVE seq_80 AS (
-    SELECT 1 AS x
-    UNION ALL
-    SELECT x + 1 FROM seq_80 WHERE x < 80
-)
 SELECT 
     b.id, s.x, 
     (b.id - 1) * 10 + 
@@ -144,14 +142,24 @@ SELECT
     END, 
     'AVAILABLE'
 FROM ichiban_boxes b
-CROSS JOIN seq_80 s;
+CROSS JOIN (
+    SELECT 1 as x UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9 UNION ALL SELECT 10 UNION ALL
+    SELECT 11 UNION ALL SELECT 12 UNION ALL SELECT 13 UNION ALL SELECT 14 UNION ALL SELECT 15 UNION ALL SELECT 16 UNION ALL SELECT 17 UNION ALL SELECT 18 UNION ALL SELECT 19 UNION ALL SELECT 20 UNION ALL
+    SELECT 21 UNION ALL SELECT 22 UNION ALL SELECT 23 UNION ALL SELECT 24 UNION ALL SELECT 25 UNION ALL SELECT 26 UNION ALL SELECT 27 UNION ALL SELECT 28 UNION ALL SELECT 29 UNION ALL SELECT 30 UNION ALL
+    SELECT 31 UNION ALL SELECT 32 UNION ALL SELECT 33 UNION ALL SELECT 34 UNION ALL SELECT 35 UNION ALL SELECT 36 UNION ALL SELECT 37 UNION ALL SELECT 38 UNION ALL SELECT 39 UNION ALL SELECT 40 UNION ALL
+    SELECT 41 UNION ALL SELECT 42 UNION ALL SELECT 43 UNION ALL SELECT 44 UNION ALL SELECT 45 UNION ALL SELECT 46 UNION ALL SELECT 47 UNION ALL SELECT 48 UNION ALL SELECT 49 UNION ALL SELECT 50 UNION ALL
+    SELECT 51 UNION ALL SELECT 52 UNION ALL SELECT 53 UNION ALL SELECT 54 UNION ALL SELECT 55 UNION ALL SELECT 56 UNION ALL SELECT 57 UNION ALL SELECT 58 UNION ALL SELECT 59 UNION ALL SELECT 60 UNION ALL
+    SELECT 61 UNION ALL SELECT 62 UNION ALL SELECT 63 UNION ALL SELECT 64 UNION ALL SELECT 65 UNION ALL SELECT 66 UNION ALL SELECT 67 UNION ALL SELECT 68 UNION ALL SELECT 69 UNION ALL SELECT 70 UNION ALL
+    SELECT 71 UNION ALL SELECT 72 UNION ALL SELECT 73 UNION ALL SELECT 74 UNION ALL SELECT 75 UNION ALL SELECT 76 UNION ALL SELECT 77 UNION ALL SELECT 78 UNION ALL SELECT 79 UNION ALL SELECT 80
+) s;
 
--- ########## 5. 轉盤與九宮格特化獎項 ##########
+-- ########## 7. 轉盤遊戲 (動態生成 20 個) ##########
 INSERT INTO roulette_games (id, ip_id, name, description, image_url, price_per_spin, max_slots, total_slots, total_draws, status, created_at)
 SELECT id, id, CONCAT(name, ' 極速轉盤'), '最高有機率獲得 1000 碎片！', '/images/roulette/generic.jpg', 150, 25, 8, 0, 'ACTIVE', NOW() FROM gacha_ips;
 
-INSERT INTO roulette_slots (game_id, slot_order, slot_type, prize_name, prize_description, weight, shard_amount, color)
-SELECT g.id, s.idx, 
+-- ########## 8. 轉盤格子 (每個轉盤 8 格) ##########
+INSERT INTO roulette_slots (game_id, position, slot_order, slot_type, prize_name, prize_description, weight, shard_amount, color)
+SELECT g.id, s.idx, s.idx, 
     CASE WHEN s.idx = 1 THEN 'RARE' ELSE 'NORMAL' END,
     CASE WHEN s.idx = 1 THEN CONCAT(i.name, ' 官方限量徽章') ELSE '10 碎片' END,
     '精美小物', 
@@ -162,18 +170,16 @@ FROM roulette_games g
 JOIN gacha_ips i ON i.id = g.ip_id
 CROSS JOIN (SELECT 1 as idx UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8) s;
 
+-- ########## 9. 九宮格遊戲 (動態生成 20 個) ##########
 INSERT INTO bingo_games (id, ip_id, name, description, image_url, price_per_dig, grid_size, status, bingo_reward_name, bingo_reward_image_url, bingo_reward_value, created_at)
 SELECT id, id, CONCAT(name, ' 驚喜九宮格'), '挖開格子，收集相同角色連線！', '/images/bingo/generic.jpg', 120, 3, 'ACTIVE', '聖杯級神祕大禮包', '/images/reward/bingo.jpg', 1200, NOW() FROM gacha_ips;
 
+-- ########## 10. 九宮格格子 (使用 row_num/col_num 避免保留字，TiDB 相容) ##########
 INSERT INTO bingo_cells (game_id, position, row_num, col_num, prize_name, prize_description, is_revealed)
-WITH RECURSIVE seq_9 AS (
-    SELECT 1 AS x
-    UNION ALL
-    SELECT x + 1 FROM seq_9 WHERE x < 9
-)
-SELECT g.id, s.x, (s.x-1)/3, (s.x-1)%3, '隱藏碎片', '20 碎片', FALSE FROM bingo_games g CROSS JOIN seq_9 s;
+SELECT g.id, s.x, (s.x-1) DIV 3, (s.x-1) MOD 3, '隱藏碎片', '20 碎片', FALSE FROM bingo_games g 
+CROSS JOIN (SELECT 1 as x UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) s;
 
--- ########## 6. 兌換商店階梯級商品 (ID 1-10) ##########
+-- ########## 11. 兌換商店階梯級商品 (ID 1-5) ##########
 INSERT INTO redeem_shop_items (id, name, description, image_url, shard_cost, estimated_value, stock, total_stock, item_type, status, sort_order, created_at) VALUES 
 (1, '【神話級】1:4 超大魯夫 尼卡形態公仔', '全球限量 5 件，附防偽證書', '/images/redeem/nika.jpg', 50000, 25000, 5, 5, 'S_RANK', 'ACTIVE', 1, NOW()),
 (2, '【傳說級】PG 級 獨角獸鋼彈 最終決戰版', '精細組裝模型，包含全金屬套件', '/images/redeem/unicorn.jpg', 35000, 15000, 10, 10, 'A_RANK', 'ACTIVE', 2, NOW()),
@@ -181,13 +187,14 @@ INSERT INTO redeem_shop_items (id, name, description, image_url, shard_cost, est
 (4, '【稀有級】精靈寶可夢 大師球級 抱枕', '軟綿質感，巨大的 80cm 尺寸', '/images/redeem/ball.jpg', 8000, 2500, 50, 50, 'C_RANK', 'ACTIVE', 4, NOW()),
 (5, '【普通級】全 IP 角色 隨機色紙一張', '入門級收藏，有機率抽中限量版', '/images/redeem/paper.jpg', 500, 150, 1000, 1000, 'D_RANK', 'ACTIVE', 5, NOW());
 
--- ########## 7. 序列重置 ##########
-ALTER TABLE gacha_ips ALTER COLUMN id RESTART WITH 100;
-ALTER TABLE ichiban_boxes ALTER COLUMN id RESTART WITH 100;
-ALTER TABLE ichiban_prizes ALTER COLUMN id RESTART WITH 1000;
-ALTER TABLE ichiban_slots ALTER COLUMN id RESTART WITH 5000;
-ALTER TABLE roulette_games ALTER COLUMN id RESTART WITH 100;
-ALTER TABLE roulette_slots ALTER COLUMN id RESTART WITH 1000;
-ALTER TABLE bingo_games ALTER COLUMN id RESTART WITH 100;
-ALTER TABLE bingo_cells ALTER COLUMN id RESTART WITH 1000;
-ALTER TABLE redeem_shop_items ALTER COLUMN id RESTART WITH 100;
+-- ########## 12. 序列重置 (TiDB 語法) ##########
+ALTER TABLE gacha_ips AUTO_INCREMENT = 100;
+ALTER TABLE ichiban_boxes AUTO_INCREMENT = 100;
+ALTER TABLE ichiban_prizes AUTO_INCREMENT = 1000;
+ALTER TABLE ichiban_slots AUTO_INCREMENT = 5000;
+ALTER TABLE roulette_games AUTO_INCREMENT = 100;
+ALTER TABLE roulette_slots AUTO_INCREMENT = 1000;
+ALTER TABLE bingo_games AUTO_INCREMENT = 100;
+ALTER TABLE bingo_cells AUTO_INCREMENT = 1000;
+ALTER TABLE redeem_shop_items AUTO_INCREMENT = 100;
+ALTER TABLE member_levels AUTO_INCREMENT = 100;

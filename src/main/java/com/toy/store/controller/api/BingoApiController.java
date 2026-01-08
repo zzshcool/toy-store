@@ -155,8 +155,8 @@ public class BingoApiController {
         Map<String, Object> map = new HashMap<>();
         map.put("id", cell.getId());
         map.put("position", cell.getPosition());
-        map.put("row", cell.getRow());
-        map.put("col", cell.getCol());
+        map.put("row", cell.getRowNum());
+        map.put("col", cell.getColNum());
         map.put("isRevealed", cell.getIsRevealed());
         if (cell.getIsRevealed()) {
             map.put("prizeName", cell.getPrizeName());
@@ -207,8 +207,8 @@ public class BingoApiController {
 
             Map<String, Object> result = new HashMap<>();
             result.put("position", cell.getPosition());
-            result.put("row", cell.getRow());
-            result.put("col", cell.getCol());
+            result.put("row", cell.getRowNum());
+            result.put("col", cell.getColNum());
             result.put("prizeName", cell.getPrizeName());
             result.put("prizeImageUrl", cell.getPrizeImageUrl());
             result.put("shards", mockShards);
