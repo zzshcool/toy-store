@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class GachaTheme {
     private Long id;
     private Long ipId;
+    private transient GachaIp ip;
     private String name;
     private String description;
     private String imageUrl;
@@ -37,5 +38,10 @@ public class GachaTheme {
 
     public void setItems(java.util.List<GachaItem> items) {
         this.items = items;
+    }
+
+    // 取得 IP 名稱（方便顯示）
+    public String getIpName() {
+        return ip != null ? ip.getName() : "";
     }
 }

@@ -16,6 +16,7 @@ public class GachaService extends BaseGachaService {
 
     private final GachaThemeMapper themeMapper;
     private final GachaItemMapper itemMapper;
+    private final GachaIpMapper ipMapper;
     private final MemberMapper memberMapper;
     private final OrderMapper orderMapper;
     private final MemberCouponMapper memberCouponMapper;
@@ -29,6 +30,7 @@ public class GachaService extends BaseGachaService {
             MissionService missionService,
             GachaThemeMapper themeMapper,
             GachaItemMapper itemMapper,
+            GachaIpMapper ipMapper,
             MemberMapper memberMapper,
             OrderMapper orderMapper,
             MemberCouponMapper memberCouponMapper,
@@ -36,6 +38,7 @@ public class GachaService extends BaseGachaService {
         super(recordMapper, transactionService, shardService, missionService);
         this.themeMapper = themeMapper;
         this.itemMapper = itemMapper;
+        this.ipMapper = ipMapper;
         this.memberMapper = memberMapper;
         this.orderMapper = orderMapper;
         this.memberCouponMapper = memberCouponMapper;
@@ -130,7 +133,15 @@ public class GachaService extends BaseGachaService {
     }
 
     public List<GachaTheme> getAllThemes() {
-        return themeMapper.findAll();
+        List<GachaTheme> themes = themeMapper.findAll();
+        // 填充 IP 關聯
+        for (GachaTheme theme : themes) {
+            if (theme.getIpId() != null) {
+                ipMapper.findById(theme.getIpId())
+                        .ifPresent(theme::setIp);
+            }
+        }
+        return themes;
     }
 
     /**
