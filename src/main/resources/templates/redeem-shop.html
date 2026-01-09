@@ -3,258 +3,264 @@
 
 <body>
     <div th:fragment="content">
-        <link rel="stylesheet" th:href="@{/css/gacha-animations.css}">
+        <!-- 頁面專屬樣式 -->
+        <link rel="stylesheet" th:href="@{/css/game-listing.css}">
+        <link rel="stylesheet" th:href="@{/css/game-modals.css}">
 
-        <div class="container section">
-            <h2 class="section-title">💎 碎片兌換商店</h2>
+        <!-- Alpine.js 主容器 -->
+        <div class="game-page" x-data="redeemComponent">
+            <div class="container section">
+                <h2 class="section-title">💎 碎片兌換商店</h2>
 
-            <!-- 碎片餘額 -->
-            <div style="text-align: center; margin-bottom: 40px;">
-                <div class="shard-balance">
-                    <span class="shard-icon">💎</span>
-                    <span id="shardBalance">0</span>
-                    <span style="font-size: 1rem; opacity: 0.8;">碎片</span>
-                </div>
-                <p style="color: var(--text-secondary); margin-top: 15px;">
-                    抽獎獲得碎片，累積兌換稀有獎品！
-                </p>
-            </div>
-
-            <!-- 商品列表 -->
-            <div id="shopItems" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
-                <div class="text-center" style="grid-column: 1/-1; padding: 40px;">
-                    <p>載入中...</p>
-                </div>
-            </div>
-
-            <!-- 交易紀錄 -->
-            <div style="margin-top: 60px;">
-                <h3 style="margin-bottom: 20px;">📜 碎片紀錄</h3>
-                <div id="transactions"
-                    style="background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
-                    <table style="width: 100%; margin: 0;">
-                        <thead>
-                            <tr style="background: var(--bg-secondary);">
-                                <th style="padding: 15px; text-align: left;">類型</th>
-                                <th style="padding: 15px; text-align: left;">說明</th>
-                                <th style="padding: 15px; text-align: right;">數量</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transactionList">
-                            <tr>
-                                <td colspan="3" style="padding: 20px; text-align: center;">載入中...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- 兌換確認彈窗 -->
-        <div id="redeemModal"
-            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: none; align-items: center; justify-content: center;">
-            <div style="background: white; border-radius: 20px; padding: 40px; max-width: 400px; text-align: center;">
-                <h3 style="margin-bottom: 20px;">確認兌換</h3>
-                <div id="redeemItemPreview" style="margin-bottom: 20px;">
-                    <div
-                        style="width: 150px; height: 150px; background: linear-gradient(145deg, #6c5ce7, #a29bfe); border-radius: 15px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
-                        <span style="font-size: 4rem;">🎁</span>
+                <!-- 碎片餘額 -->
+                <div class="shard-balance-section">
+                    <div class="shard-balance">
+                        <span class="shard-icon">💎</span>
+                        <span x-text="formatNumber(shardBalance)">0</span>
+                        <span class="shard-unit">碎片</span>
                     </div>
-                    <h4 id="redeemItemName">商品名稱</h4>
+                    <p class="section-subtitle">抽獎獲得碎片，累積兌換稀有獎品！</p>
                 </div>
-                <p style="color: #666; margin-bottom: 20px;">
-                    需要 <span id="redeemCost"
-                        style="color: var(--gacha-purple); font-weight: bold; font-size: 1.3rem;">10000</span> 碎片
-                </p>
-                <p id="redeemError" style="color: var(--error-color); display: none; margin-bottom: 15px;">碎片不足</p>
-                <div style="display: flex; gap: 15px; justify-content: center;">
-                    <button class="btn btn-outline" onclick="closeRedeemModal()">取消</button>
-                    <button id="confirmRedeemBtn" class="btn-gacha" onclick="confirmRedeem()">確認兌換</button>
-                </div>
-            </div>
-        </div>
 
-        <!-- 兌換成功彈窗 -->
-        <div id="successModal" class="prize-reveal-overlay" style="display: none;">
-            <div class="prize-card">
-                <div style="font-size: 4rem; margin-bottom: 20px;">🎉</div>
-                <h2>兌換成功！</h2>
-                <p id="successItemName" style="font-size: 1.3rem; margin: 15px 0;"></p>
-                <p id="remainingBalance" style="color: #6c5ce7;">剩餘碎片: 0</p>
-                <button class="btn-gacha" onclick="closeSuccessModal()" style="margin-top: 20px;">太棒了！</button>
-            </div>
-        </div>
+                <!-- 商品列表 -->
+                <div class="game-grid">
+                    <!-- 載入中 -->
+                    <div x-show="items.length === 0" class="game-loading">
+                        <div class="game-loading__spinner"></div>
+                        <p>載入中...</p>
+                    </div>
 
-        <script>
-            let currentShardBalance = 0;
-            let selectedItemId = null;
-            let selectedItemCost = 0;
-
-            document.addEventListener('DOMContentLoaded', function () {
-                loadShardBalance();
-                loadShopItems();
-                loadTransactions();
-            });
-
-            function loadShardBalance() {
-                fetch('/api/shards/balance')
-                    .then(r => r.json())
-                    .then(response => {
-                        if (response.success) {
-                            currentShardBalance = response.data.balance;
-                            document.getElementById('shardBalance').textContent = currentShardBalance.toLocaleString();
-                        }
-                    });
-            }
-
-            function loadShopItems() {
-                fetch('/api/redeem-shop')
-                    .then(r => r.json())
-                    .then(response => {
-                        if (response.success && response.data.length > 0) {
-                            renderShopItems(response.data);
-                        } else {
-                            document.getElementById('shopItems').innerHTML = `
-                                <div class="text-center" style="grid-column: 1/-1; padding: 40px;">
-                                    <p>目前沒有可兌換的商品</p>
-                                </div>
-                            `;
-                        }
-                    });
-            }
-
-            function renderShopItems(items) {
-                const html = items.map(item => {
-                    const canAfford = currentShardBalance >= item.shardCost;
-                    const soldOut = !item.hasStock;
-
-                    return `
-                        <div class="redeem-card ${soldOut ? 'sold-out' : ''}" style="position: relative;">
-                            ${item.itemType !== 'PRIZE' ? `
-                                <div class="card-badge">${item.itemTypeDisplay}</div>
-                            ` : ''}
-                            <div style="height: 180px; background: linear-gradient(145deg, ${getItemColor(item.itemType)}); display: flex; align-items: center; justify-content: center;">
-                                ${item.imageUrl ? `<img src="${item.imageUrl}" style="max-height: 150px; max-width: 100%;">` : `<span style="font-size: 5rem;">🎁</span>`}
+                    <!-- 商品卡片 -->
+                    <template x-for="item in items" :key="item.id">
+                        <div class="redeem-card game-card" :class="{ 'sold-out': !item.hasStock }">
+                            <span class="game-card__badge" x-show="item.itemType !== 'PRIZE'"
+                                x-text="item.itemTypeDisplay"></span>
+                            <div class="game-card__image game-card__placeholder"
+                                :class="getGradientClass(item.itemType)">
+                                <template x-if="item.imageUrl">
+                                    <img :src="item.imageUrl" :alt="item.name">
+                                </template>
+                                <template x-if="!item.imageUrl">
+                                    <span style="font-size: 4rem;">🎁</span>
+                                </template>
                             </div>
-                            <div style="padding: 20px;">
-                                <h4 style="margin: 0 0 10px 0;">${item.name}</h4>
-                                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 15px; min-height: 40px;">
-                                    ${item.description || ''}
-                                </p>
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                    <span style="color: var(--gacha-purple); font-weight: bold; font-size: 1.2rem;">
-                                        💎 ${item.shardCost.toLocaleString()}
-                                    </span>
-                                    <span style="color: #666; font-size: 0.9rem;">
-                                        庫存: ${item.stock}/${item.totalStock}
-                                    </span>
+                            <div class="game-card__info">
+                                <h4 class="game-card__title" x-text="item.name"></h4>
+                                <p class="game-card__desc" x-text="item.description || ''"></p>
+                                <div class="game-card__price-block">
+                                    <div class="game-card__price-row">
+                                        <span class="game-card__price">💎 <span
+                                                x-text="formatNumber(item.shardCost)"></span></span>
+                                        <span class="game-card__stock"
+                                            :class="{ 'game-card__stock--low': item.stock < 3 }">
+                                            庫存: <span x-text="item.stock"></span>/<span x-text="item.totalStock"></span>
+                                        </span>
+                                    </div>
+                                    <div class="stock-bar"
+                                        style="background: #eee; border-radius: 10px; height: 6px; margin-top: 10px; overflow: hidden;">
+                                        <div :style="{ width: item.stockPercentage + '%' }"
+                                            style="height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71);">
+                                        </div>
+                                    </div>
                                 </div>
-                                <div style="background: #eee; border-radius: 10px; height: 8px; overflow: hidden; margin-bottom: 15px;">
-                                    <div style="width: ${item.stockPercentage}%; height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71);"></div>
-                                </div>
-                                ${soldOut ? `
-                                    <button class="btn" style="width: 100%; background: #ccc; cursor: not-allowed;" disabled>已售罄</button>
-                                ` : `
-                                    <button class="btn-gacha" style="width: 100%; ${!canAfford ? 'opacity: 0.6;' : ''}" 
-                                        onclick="openRedeemModal(${item.id}, '${item.name}', ${item.shardCost}, ${canAfford})">
-                                        ${canAfford ? '立即兌換' : '碎片不足'}
+                                <template x-if="!item.hasStock">
+                                    <button class="game-modal__btn game-modal__btn--cancel"
+                                        style="width: 100%; margin-top: 12px;" disabled>已售罄</button>
+                                </template>
+                                <template x-if="item.hasStock">
+                                    <button class="game-modal__btn game-modal__btn--confirm"
+                                        style="width: 100%; margin-top: 12px;"
+                                        :style="{ opacity: shardBalance >= item.shardCost ? '1' : '0.6' }"
+                                        @click="openRedeemModal(item)">
+                                        <span x-text="shardBalance >= item.shardCost ? '立即兌換' : '碎片不足'"></span>
                                     </button>
-                                `}
+                                </template>
                             </div>
                         </div>
-                    `;
-                }).join('');
-                document.getElementById('shopItems').innerHTML = html;
+                    </template>
+                </div>
+
+                <!-- 交易紀錄 -->
+                <div class="transaction-section">
+                    <h3 class="transaction-section__title">📜 碎片紀錄</h3>
+                    <div class="transaction-table-wrapper">
+                        <table class="transaction-table">
+                            <thead>
+                                <tr>
+                                    <th>類型</th>
+                                    <th>說明</th>
+                                    <th class="text-right">數量</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="transactions.length === 0">
+                                    <tr>
+                                        <td colspan="3" style="padding: 20px; text-align: center; color: #999;">暫無交易紀錄
+                                        </td>
+                                    </tr>
+                                </template>
+                                <template x-for="tx in transactions" :key="tx.id">
+                                    <tr>
+                                        <td style="padding: 12px 15px;">
+                                            <span class="tx-badge"
+                                                :class="tx.amount > 0 ? 'tx-badge--positive' : 'tx-badge--negative'"
+                                                x-text="tx.typeDisplay"></span>
+                                        </td>
+                                        <td style="padding: 12px 15px; color: #666;" x-text="tx.description"></td>
+                                        <td style="padding: 12px 15px; text-align: right; font-weight: bold;"
+                                            :style="{ color: tx.amount > 0 ? '#27ae60' : '#e74c3c' }">
+                                            <span x-text="(tx.amount > 0 ? '+' : '') + tx.amount"></span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 兌換確認彈窗 -->
+            <div class="game-modal" x-show="showRedeemModal" x-cloak @click.self="closeRedeemModal()">
+                <div class="game-modal__card">
+                    <div class="game-modal__icon">🎁</div>
+                    <h3 class="game-modal__title">確認兌換</h3>
+                    <div class="game-modal__details">
+                        <div class="redeem-preview">
+                            <div class="redeem-preview__icon">🎁</div>
+                            <h4 class="redeem-preview__name" x-text="selectedItem?.name || '商品名稱'"></h4>
+                        </div>
+                    </div>
+                    <p class="game-modal__desc">
+                        需要 <span class="redeem-cost" x-text="formatNumber(selectedItem?.shardCost || 0)"></span> 碎片
+                    </p>
+                    <p class="game-modal__error" x-show="!canAfford">碎片不足</p>
+                    <div class="game-modal__actions">
+                        <button class="game-modal__btn game-modal__btn--cancel" @click="closeRedeemModal()">取消</button>
+                        <button class="game-modal__btn game-modal__btn--confirm" @click="confirmRedeem()"
+                            :disabled="!canAfford || isProcessing" :style="{ opacity: canAfford ? '1' : '0.5' }">
+                            <span x-text="isProcessing ? '處理中...' : '確認兌換'"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 兌換成功彈窗 -->
+            <div class="game-modal game-result-modal" x-show="showSuccessModal" x-cloak
+                @click.self="closeSuccessModal()">
+                <div class="game-modal__card">
+                    <div class="game-modal__icon">🎉</div>
+                    <h2 class="game-result__title">兌換成功！</h2>
+                    <p class="game-result__prize-name" x-text="redeemResult?.item?.name || ''"></p>
+                    <p class="game-result__shards">
+                        剩餘碎片: <span x-text="formatNumber(redeemResult?.remainingBalance || 0)"></span>
+                    </p>
+                    <button class="game-result__btn" @click="closeSuccessModal()">太棒了！</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alpine.js 元件 -->
+        <script th:src="@{/js/game-utils.js}"></script>
+        <script th:src="@{/js/alpine/redeem-component.js}"></script>
+
+        <!-- 頁面專屬樣式 -->
+        <style>
+            .shard-balance-section {
+                text-align: center;
+                margin-bottom: 40px;
             }
 
-            function getItemColor(type) {
-                switch (type) {
-                    case 'S_RANK': return '#FFD700, #FFA500';
-                    case 'HIDDEN': return '#8E44AD, #9B59B6';
-                    case 'SPECIAL': return '#E74C3C, #C0392B';
-                    default: return '#6c5ce7, #a29bfe';
-                }
+            .shard-balance {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                background: linear-gradient(145deg, #667eea, #764ba2);
+                color: #fff;
+                padding: 15px 30px;
+                border-radius: 50px;
+                font-size: 1.5rem;
+                font-weight: 700;
+                box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
             }
 
-            function loadTransactions() {
-                fetch('/api/shards/transactions')
-                    .then(r => r.json())
-                    .then(response => {
-                        if (response.success && response.data.length > 0) {
-                            renderTransactions(response.data);
-                        } else {
-                            document.getElementById('transactionList').innerHTML = `
-                                <tr><td colspan="3" style="padding: 20px; text-align: center; color: #999;">暫無交易紀錄</td></tr>
-                            `;
-                        }
-                    });
+            .shard-icon {
+                font-size: 1.8rem;
             }
 
-            function renderTransactions(transactions) {
-                const html = transactions.map(tx => {
-                    const isPositive = tx.amount > 0;
-                    return `
-                        <tr>
-                            <td style="padding: 12px 15px;">
-                                <span style="background: ${isPositive ? '#e8f5e9' : '#fdecea'}; color: ${isPositive ? '#27ae60' : '#e74c3c'}; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem;">
-                                    ${tx.typeDisplay}
-                                </span>
-                            </td>
-                            <td style="padding: 12px 15px; color: #666;">${tx.description}</td>
-                            <td style="padding: 12px 15px; text-align: right; font-weight: bold; color: ${isPositive ? '#27ae60' : '#e74c3c'};">
-                                ${isPositive ? '+' : ''}${tx.amount}
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-                document.getElementById('transactionList').innerHTML = html;
+            .shard-unit {
+                font-size: 1rem;
+                font-weight: 400;
+                opacity: 0.8;
             }
 
-            function openRedeemModal(itemId, itemName, cost, canAfford) {
-                selectedItemId = itemId;
-                selectedItemCost = cost;
-                document.getElementById('redeemItemName').textContent = itemName;
-                document.getElementById('redeemCost').textContent = cost.toLocaleString();
-                document.getElementById('redeemError').style.display = canAfford ? 'none' : 'block';
-                document.getElementById('confirmRedeemBtn').disabled = !canAfford;
-                document.getElementById('confirmRedeemBtn').style.opacity = canAfford ? '1' : '0.5';
-                document.getElementById('redeemModal').style.display = 'flex';
+            .transaction-section {
+                margin-top: 50px;
             }
 
-            function closeRedeemModal() {
-                document.getElementById('redeemModal').style.display = 'none';
-                selectedItemId = null;
+            .transaction-section__title {
+                margin-bottom: 20px;
             }
 
-            function confirmRedeem() {
-                if (!selectedItemId) return;
-
-                fetch(`/api/redeem-shop/${selectedItemId}/redeem`, { method: 'POST' })
-                    .then(r => r.json())
-                    .then(response => {
-                        closeRedeemModal();
-                        if (response.success) {
-                            document.getElementById('successItemName').textContent = response.data.item.name;
-                            document.getElementById('remainingBalance').textContent = `剩餘碎片: ${response.data.remainingBalance.toLocaleString()}`;
-                            document.getElementById('successModal').style.display = 'flex';
-                            loadShardBalance();
-                            loadShopItems();
-                            loadTransactions();
-                        } else {
-                            alert(response.message || '兌換失敗');
-                        }
-                    })
-                    .catch(err => {
-                        console.error('Error:', err);
-                        alert('操作失敗');
-                        closeRedeemModal();
-                    });
+            .transaction-table-wrapper {
+                overflow-x: auto;
             }
 
-            function closeSuccessModal() {
-                document.getElementById('successModal').style.display = 'none';
+            .transaction-table {
+                width: 100%;
+                border-collapse: collapse;
+                background: #fff;
+                border-radius: 10px;
+                overflow: hidden;
             }
-        </script>
+
+            .transaction-table th {
+                background: #f8f9fa;
+                padding: 12px 15px;
+                text-align: left;
+                font-weight: 600;
+            }
+
+            .tx-badge {
+                padding: 3px 10px;
+                border-radius: 10px;
+                font-size: 0.8rem;
+            }
+
+            .tx-badge--positive {
+                background: #d4edda;
+                color: #155724;
+            }
+
+            .tx-badge--negative {
+                background: #f8d7da;
+                color: #721c24;
+            }
+
+            .redeem-preview {
+                text-align: center;
+                margin-bottom: 15px;
+            }
+
+            .redeem-preview__icon {
+                font-size: 3rem;
+                margin-bottom: 10px;
+            }
+
+            .redeem-preview__name {
+                margin: 0;
+                font-size: 1.2rem;
+            }
+
+            .redeem-cost {
+                color: #6c5ce7;
+                font-weight: 700;
+                font-size: 1.2rem;
+            }
+
+            [x-cloak] {
+                display: none !important;
+            }
+        </style>
     </div>
 </body>
 

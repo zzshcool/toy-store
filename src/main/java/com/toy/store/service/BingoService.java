@@ -50,7 +50,11 @@ public class BingoService extends BaseGachaService {
     public BingoGame getGameWithCells(Long gameId) {
         if (gameId == null)
             return null;
-        return gameMapper.findById(gameId).orElse(null);
+        BingoGame game = gameMapper.findById(gameId).orElse(null);
+        if (game != null) {
+            game.setCells(cellMapper.findByGameIdOrderByPositionAsc(gameId));
+        }
+        return game;
     }
 
     /**

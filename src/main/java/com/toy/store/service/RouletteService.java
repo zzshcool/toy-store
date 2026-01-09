@@ -52,7 +52,11 @@ public class RouletteService extends BaseGachaService {
     public RouletteGame getGameWithSlots(Long gameId) {
         if (gameId == null)
             return null;
-        return gameMapper.findById(gameId).orElse(null);
+        RouletteGame game = gameMapper.findById(gameId).orElse(null);
+        if (game != null) {
+            game.setSlots(slotMapper.findByGameIdOrderBySlotOrderAsc(gameId));
+        }
+        return game;
     }
 
     /**

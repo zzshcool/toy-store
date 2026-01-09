@@ -1,724 +1,253 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='動漫周邊', content=~{::content})}">
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: html(title='盲盒', content=~{::content})}">
 
 <body>
     <div th:fragment="content">
-        <link rel="stylesheet" th:href="@{/css/gacha-animations.css}">
-        <link rel="stylesheet" th:href="@{/css/game-components.css}">
-        <script th:src="@{/js/game-utils.js}"></script>
+        <link rel="stylesheet" th:href="@{/css/game-listing.css}">
+        <link rel="stylesheet" th:href="@{/css/game-modals.css}">
+        <link rel="stylesheet" th:href="@{/css/home-feed.css}">
 
-        <div class="container section">
-            <h2 class="section-title">🎲 動漫周邊 (盲盒)</h2>
-            <p class="text-center" style="color: var(--text-secondary); margin-bottom: 30px;">
-                挑選您心儀的盲盒，體驗拆盒的驚喜！支援單抽、全包、天選抽與道具卡！
-            </p>
+        <div class="game-page" x-data="blindboxComponent">
+            <div class="container section">
+                <h2 class="section-title">📦 盲盒樂園</h2>
+                <p class="section-subtitle">選擇你的命運之盒！</p>
 
-            <!-- 盲盒列表 -->
-            <div id="boxList" class="grid" style="margin-bottom: 40px;">
-                <div class="text-center" style="grid-column: 1/-1; padding: 40px;">
-                    <div class="loading-spinner"></div>
-                    <p>載入中...</p>
+                <!-- 盲盒列表 - 卡片式 Feed -->
+                <div class="game-feed-grid" x-show="!currentBox">
+                    <div x-show="boxes.length === 0" class="feed-loader">
+                        <div class="spinner"></div>
+                    </div>
+                    <template x-for="box in boxes" :key="box.id">
+                        <div class="feed-card" :class="{ 'sold-out': box.remainingCount === 0 }"
+                            @click="selectBox(box)">
+                            <div class="feed-card__image-wrapper">
+                                <img :src="box.imageUrl || '/images/placeholder.jpg'" class="feed-card__image"
+                                    loading="lazy">
+                                <!-- Stock Overlay -->
+                                <div class="feed-stock-badge">
+                                    <span x-text="box.remainingCount + '/' + box.totalBoxes"></span>
+                                </div>
+                            </div>
+
+                            <div class="feed-card__content">
+                                <div class="feed-card__header">
+                                    <span class="feed-tag badge-blindbox">盒玩</span>
+                                    <h3 class="feed-card__title" x-text="box.name"></h3>
+                                </div>
+
+                                <div class="feed-card__footer">
+                                    <div class="feed-card__price">
+                                        <span class="currency">$</span>
+                                        <span class="amount" x-text="box.pricePerBox"></span>
+                                    </div>
+                                    <span class="feed-action-icon">➔</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- 盲盒詳情 -->
+                <div class="blindbox-detail-section" x-show="currentBox" x-cloak>
+                    <div class="game-detail-header">
+                        <div class="game-detail-header__top">
+                            <div>
+                                <h3 class="game-detail-header__name" x-text="currentBox?.name"></h3>
+                                <p class="game-detail-header__desc" x-text="currentBox?.description || ''"></p>
+                            </div>
+                            <div>
+                                <div class="game-detail-header__price">$<span x-text="pricePerBox"></span> / 盒</div>
+                                <div style="font-size: 0.9rem; color: #aaa;">全包 $<span x-text="fullBoxPrice"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 操作按鈕 -->
+                    <div class="blindbox-actions">
+                        <button class="game-modal__btn game-modal__btn--trial" @click="trialDraw()"
+                            :disabled="isProcessing">🧪 試抽</button>
+                        <button class="game-modal__btn game-modal__btn--confirm" @click="randomPurchase()"
+                            :disabled="isProcessing">🎲 天選抽</button>
+                    </div>
+
+                    <!-- 格子選擇 -->
+                    <div class="blindbox-grid">
+                        <template x-for="item in items" :key="item.boxNumber">
+                            <div class="blindbox-item" :class="item.status.toLowerCase()"
+                                :style="{ cursor: isItemClickable(item) ? 'pointer' : 'not-allowed' }"
+                                @click="selectItem(item)">
+                                <div class="box-icon">📦</div>
+                                <div class="box-number" x-text="'#' + String(item.boxNumber).padStart(2, '0')"></div>
+                                <div class="box-status" x-text="getItemStatus(item)"></div>
+                                <div class="prize-name" x-show="item.status === 'SOLD' && item.prizeName"
+                                    x-text="item.prizeName"></div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button class="game-back-btn" @click="backToList()">← 返回列表</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- 盲盒詳情區（選擇後顯示） -->
-            <div id="detailSection" style="display: none;">
-                <!-- 倒數計時提示 -->
-                <div id="countdownBanner"
-                    style="display: none; background: linear-gradient(to right, #f12711, #f5af19); color: white; padding: 15px; text-align: center; border-radius: 10px; margin-bottom: 20px; font-weight: bold;">
-                    ⏱️ 鎖定倒數: <span id="countdownTimer">180</span> 秒 - 請在時間內決定是否購買
+            <!-- 購買確認彈窗 -->
+            <div class="game-modal" x-show="showPurchaseModal" x-cloak @click.self="closePurchaseModal()">
+                <div class="game-modal__card">
+                    <!-- 倒數計時 -->
+                    <div class="countdown-circle">
+                        <span x-text="remainingSeconds"></span>s
+                    </div>
+                    <h3 class="game-modal__title">確認購買</h3>
+                    <p class="game-modal__desc">您選擇了 #<span x-text="selectedItem?.boxNumber"></span></p>
+                    <div class="game-modal__details">
+                        <p>消費：$<span x-text="pricePerBox"></span></p>
+                    </div>
+                    <div class="game-modal__actions">
+                        <button class="game-modal__btn game-modal__btn--cancel"
+                            @click="closePurchaseModal()">取消</button>
+                        <button class="game-modal__btn game-modal__btn--confirm" @click="confirmPurchase()"
+                            :disabled="isProcessing">
+                            <span x-text="isProcessing ? '處理中...' : '確認購買'"></span>
+                        </button>
+                    </div>
                 </div>
+            </div>
 
-                <div
-                    style="background: linear-gradient(145deg, #1a1a2e, #16213e); border-radius: 20px; padding: 30px; margin-bottom: 30px;">
-
-                    <!-- 盲盒資訊 -->
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; margin-bottom: 25px;">
+            <!-- 結果彈窗 -->
+            <div class="game-modal game-result-modal" x-show="showResultModal" x-cloak @click.self="closeResultModal()">
+                <div class="game-modal__card">
+                    <div class="game-modal__icon">🎁</div>
+                    <h2 class="game-result__title" x-text="isTrial ? '✨ 試抽結果' : '🎉 恭喜獲得！'"></h2>
+                    <p class="game-result__trial-badge" x-show="isTrial">試抽體驗</p>
+                    <template x-if="result?.item">
                         <div>
-                            <h3 id="selectedBoxName" style="color: white; margin: 0;">盲盒名稱</h3>
-                            <p id="selectedBoxDesc" style="color: #aaa; margin: 5px 0 0 0;">描述</p>
+                            <p class="game-result__prize-name" x-text="result.item.prizeName"></p>
+                            <p class="game-result__prize-rarity" x-text="result.item.rarityDisplay"></p>
                         </div>
-                        <div style="text-align: right;">
-                            <div style="color: var(--gacha-gold); font-size: 1.5rem; font-weight: bold;">
-                                單抽 $<span id="pricePerBox">0</span>
-                            </div>
-                            <div style="color: #ff6b6b; font-size: 1.1rem;">
-                                全包優惠 $<span id="fullBoxPrice">0</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 道具卡區 -->
-                    <div id="propCardBar"
-                        style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 15px; margin-bottom: 20px;">
-                        <div style="color: white; font-weight: bold; margin-bottom: 10px;">🃏 道具卡</div>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button class="btn btn-outline" onclick="useHintCard()"
-                                style="color: #ffd700; border-color: #ffd700;">
-                                💡 提示卡
-                            </button>
-                            <button class="btn btn-outline" onclick="usePeekCard()"
-                                style="color: #00e5ff; border-color: #00e5ff;">
-                                👁️ 透視卡
-                            </button>
-                            <button class="btn btn-outline" onclick="useSwapCard()"
-                                style="color: #ff6b6b; border-color: #ff6b6b;">
-                                🔄 換一盒
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- 盲盒網格 -->
-                    <div id="itemGrid" class="blindbox-grid">
-                        <!-- 盲盒格子將由 JS 動態生成 -->
-                    </div>
-
-                    <!-- 操作按鈕區 -->
-                    <div style="display: flex; gap: 15px; margin-top: 25px; flex-wrap: wrap; justify-content: center;">
-                        <button class="btn btn-outline" onclick="backToList()"
-                            style="color: white; border-color: white;">
-                            ← 返回列表
-                        </button>
-                        <button class="btn-gacha" onclick="randomPurchase()"
-                            style="background: linear-gradient(to right, #667eea, #764ba2);">
-                            🎲 天選抽
-                        </button>
-                        <button class="btn-gacha" onclick="fullPurchase()"
-                            style="background: linear-gradient(to right, #f12711, #f5af19);">
-                            📦 全包購買
-                        </button>
-                        <button class="btn-gacha" onclick="trialDraw()" style="background: #6c5ce7;">
-                            ✨ 免費試抽
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 購買確認彈窗 -->
-        <div id="purchaseModal"
-            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
-            <div
-                style="background: white; border-radius: 20px; padding: 30px; max-width: 400px; width: 100%; text-align: center;">
-                <h3 style="margin-bottom: 20px;">確認購買</h3>
-                <!-- 環形倒數計時 -->
-                <div id="circleCountdown" style="width: 100px; height: 100px; margin: 0 auto 20px; position: relative;">
-                    <svg width="100" height="100" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="45" fill="none" stroke="#eee" stroke-width="8" />
-                        <circle id="countdownCircle" cx="50" cy="50" r="45" fill="none" stroke="#6c5ce7"
-                            stroke-width="8" stroke-linecap="round" stroke-dasharray="283" stroke-dashoffset="0"
-                            style="transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset 1s linear;" />
-                    </svg>
-                    <span id="countdownNumber"
-                        style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; font-weight: bold; color: #6c5ce7;">180</span>
-                </div>
-                <div
-                    style="margin-bottom: 25px; text-align: left; background: #f8f9fa; padding: 15px; border-radius: 10px;">
-                    <p>盒號：#<span id="confirmBoxNumber">0</span></p>
-                    <p>價格：<strong id="confirmPrice" style="color: var(--gacha-red);">$0</strong></p>
-                    <p id="countdownInfo" style="color: #666; font-size: 0.9rem;"></p>
-                </div>
-                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <button class="btn btn-outline" onclick="cancelLockAndClose()"
-                        style="color: #dc3545; border-color: #dc3545;">取消鎖定</button>
-                    <button id="purchaseBtn" class="btn-gacha" onclick="executePurchase()">確認購買</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 結果彈窗 -->
-        <div id="resultModal"
-            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10001; overflow-y: auto;">
-            <div
-                style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px;">
-                <div
-                    style="background: white; border-radius: 20px; padding: 40px; max-width: 500px; width: 100%; text-align: center;">
-                    <h2 id="resultTitle" style="margin-bottom: 20px;">🎉 恭喜獲得！</h2>
-                    <div id="resultContent" style="margin-bottom: 30px;">
-                        <!-- 結果將由 JS 動態生成 -->
-                    </div>
-                    <button class="btn-gacha" onclick="closeResultModal()">太棒了！</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 玩法說明彈窗 -->
-        <div id="blindboxRulesModal"
-            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 10002; overflow-y: auto;">
-            <div
-                style="max-width: 500px; margin: 50px auto; background: white; border-radius: 20px; padding: 30px; position: relative;">
-                <button onclick="closeBlindboxRulesModal()"
-                    style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
-
-                <h3 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                    📖 <span id="blindboxRulesGameName">遊戲名稱</span> - 玩法說明
-                </h3>
-
-                <!-- 價格資訊 -->
-                <div
-                    style="background: linear-gradient(145deg, #ff6b6b, #feca57); border-radius: 15px; padding: 20px; color: white; margin-bottom: 20px;">
-                    <div style="font-size: 0.9rem; opacity: 0.9;">單盒價格</div>
-                    <div style="font-size: 2rem; font-weight: bold;">💰 $<span id="blindboxRulesPrice">0</span></div>
-                </div>
-
-                <!-- 玩法規則 -->
-                <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 15px;">
-                    <h4 style="margin-bottom: 10px; color: #ff6b6b;">🎲 盲盒玩法</h4>
-                    <ul style="margin: 0; padding-left: 20px; line-height: 1.8; color: #555;">
-                        <li>選擇喜歡的盲盒格子</li>
-                        <li>每個格子內含隱藏商品</li>
-                        <li>鎖定後需在倒數時間內決定</li>
-                        <li>購買後立即揭曉獎品</li>
-                        <li>支援全包購買（優惠價）</li>
-                    </ul>
-                </div>
-
-                <!-- 道具卡說明 -->
-                <div style="background: #e8f5e9; border-radius: 10px; padding: 15px; margin-bottom: 15px;">
-                    <h4 style="margin-bottom: 10px; color: #4caf50;">✨ 道具卡</h4>
-                    <div style="font-size: 0.9rem; color: #555; line-height: 1.6;">
-                        <div>🔮 <strong>透視卡</strong> - 查看盲盒內容</div>
-                        <div>🎯 <strong>必中卡</strong> - 必定獲得稀有獎品</div>
-                    </div>
-                </div>
-
-                <!-- 消費者須知 -->
-                <div style="background: #ffe4e1; border-radius: 10px; padding: 15px;">
-                    <h4 style="margin-bottom: 10px; color: #c0392b;">⚠️ 消費者須知</h4>
-                    <ul style="margin: 0; padding-left: 20px; line-height: 1.6; color: #666; font-size: 0.85rem;">
-                        <li>虛擬商品購買後不可退款</li>
-                        <li>實體獎品依現貨狀況配送</li>
-                        <li>獎品圖片僅供參考，以實物為準</li>
-                    </ul>
-                </div>
-
-                <button class="btn-gacha" onclick="closeBlindboxRulesModal()"
-                    style="width: 100%; margin-top: 20px; background: linear-gradient(145deg, #ff6b6b, #feca57);">我知道了</button>
-            </div>
-        </div>
-
-        <script th:inline="javascript">
-            let currentBoxId = null;
-            let selectedItemNumber = null;
-            let countdownInterval = null;
-
-            document.addEventListener('DOMContentLoaded', function () {
-                loadBoxList();
-            });
-
-            // 顯示玩法說明彈窗
-            function showBlindboxRules(boxId, name, price) {
-                document.getElementById('blindboxRulesGameName').textContent = name;
-                document.getElementById('blindboxRulesPrice').textContent = price;
-                document.getElementById('blindboxRulesModal').style.display = 'block';
-                document.body.style.overflow = 'hidden';
-            }
-
-            // 關閉玩法說明彈窗
-            function closeBlindboxRulesModal() {
-                document.getElementById('blindboxRulesModal').style.display = 'none';
-                document.body.style.overflow = '';
-            }
-
-            function loadBoxList() {
-                // 顯示骨架屏
-                Skeleton.show('#boxList', 4);
-
-                fetch('/api/blindbox')
-                    .then(res => res.json())
-                    .then(response => {
-                        if (response.success && response.data.length > 0) {
-                            renderBoxList(response.data);
-                        } else {
-                            document.getElementById('boxList').innerHTML = `
-                                <div class="text-center" style="grid-column: 1/-1; padding: 40px;">
-                                    <p>目前沒有進行中的盲盒</p>
+                    </template>
+                    <template x-if="result?.results">
+                        <div class="trial-results">
+                            <template x-for="r in result.results" :key="r.prizeName">
+                                <div class="trial-result-item">
+                                    <span x-text="r.prizeName"></span>
+                                    <span class="rarity-badge" x-text="r.rarityDisplay"></span>
                                 </div>
-                            `;
-                        }
-                    })
-                    .catch(err => {
-                        console.error('Error:', err);
-                        document.getElementById('boxList').innerHTML = `
-                            <div class="text-center" style="grid-column: 1/-1; padding: 40px;">
-                                <p style="color: var(--error-color);">載入失敗，請重新整理</p>
-                            </div>
-                        `;
-                    });
-            }
-
-            function renderBoxList(boxes) {
-                const html = boxes.map(box => {
-                    const isSoldOut = box.status === 'SOLD_OUT' || box.remainingCount === 0;
-                    return `
-                    <div class="card game-box-card ${isSoldOut ? 'sold-out' : ''}" style="cursor: pointer; position: relative;" onclick="selectBox(${box.id})">
-                        ${isSoldOut ? `<div class="sold-out-badge">售完</div>` : ''}
-                        <!-- IP 圖示標識 -->
-                        <div class="ip-badge-container" style="position: absolute; top: 10px; left: 10px; z-index: 2;">
-                            ${box.ipImageUrl ? `<img src="${box.ipImageUrl}" alt="${box.ipName}" class="ip-icon" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">` :
-                            `<span class="ip-icon-placeholder" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(145deg, #ff6b6b, #feca57); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.8rem;">${(box.ipName || '?').charAt(0)}</span>`}
+                            </template>
                         </div>
-                        <!-- 規則說明按鈕 -->
-                        <button class="rules-btn" onclick="event.stopPropagation(); showBlindboxRules(${box.id}, '${box.name}', ${box.pricePerBox})" 
-                                style="position: absolute; top: 10px; right: 10px; z-index: 2; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 0.9rem;" title="玩法說明">
-                            ℹ️
-                        </button>
-                        <div class="img-placeholder" style="background: linear-gradient(145deg, #ff6b6b, #feca57); ${isSoldOut ? 'filter: grayscale(0.5);' : ''}">
-                            ${box.imageUrl ? `<img src="${box.imageUrl}" style="width: 100%; height: 100%; object-fit: cover;">` :
-                            `<span style="color: white; font-size: 3rem;">📦</span>`}
-                        </div>
-                        <div style="padding: 20px;">
-                            <span style="background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem;">
-                                ${box.ipName}
-                            </span>
-                            <h3 style="margin: 10px 0;">${box.name}</h3>
-                            <p style="color: var(--text-secondary); font-size: 0.9rem;">${box.description || ''}</p>
-                            <!-- 價格資訊區塊 -->
-                            <div class="price-info-block" style="background: #f8f9fa; border-radius: 10px; padding: 10px; margin-top: 12px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="color: var(--accent-color); font-weight: bold; font-size: 1.3rem;">💰 $${box.pricePerBox}/盒</span>
-                                    <span style="color: ${isSoldOut ? '#ff6b6b' : '#666'}; font-size: 0.85rem;">
-                                        ${isSoldOut ? '已售完' : `剩餘 ${box.remainingCount}/${box.totalBoxes}`}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `}).join('');
-                document.getElementById('boxList').innerHTML = html;
-            }
+                    </template>
+                    <p class="game-result__shards" x-show="result?.shardsEarned > 0"
+                        x-text="'+' + result?.shardsEarned + ' 積分'"></p>
+                    <button class="game-result__btn" @click="closeResultModal()">
+                        <span x-text="isTrial ? '再試一次' : '太棒了！'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
 
-            function selectBox(boxId) {
-                currentBoxId = boxId;
-                document.getElementById('boxList').style.display = 'none';
-                document.getElementById('detailSection').style.display = 'block';
-                loadBoxDetails(boxId);
-            }
-
-            function backToList() {
-                currentBoxId = null;
-                selectedItemNumber = null;
-                clearCountdown();
-                document.getElementById('boxList').style.display = 'grid';
-                document.getElementById('detailSection').style.display = 'none';
-            }
-
-            function loadBoxDetails(boxId) {
-                fetch(`/api/blindbox/${boxId}`)
-                    .then(res => res.json())
-                    .then(response => {
-                        if (response.success) {
-                            const box = response.data;
-                            document.getElementById('selectedBoxName').textContent = box.name;
-                            document.getElementById('selectedBoxDesc').textContent = box.description || '';
-                            document.getElementById('pricePerBox').textContent = box.pricePerBox;
-                            document.getElementById('fullBoxPrice').textContent = box.fullBoxPrice;
-                            renderItems(box.items);
-                        }
-                    });
-            }
-
-            function renderItems(items) {
-                const html = items.map(item => {
-                    let statusClass = item.status.toLowerCase();
-                    let statusText = '';
-                    let clickable = false;
-
-                    if (item.status === 'SOLD') {
-                        statusText = '已售';
-                    } else if (item.status === 'LOCKED' && !item.isLockExpired) {
-                        statusText = '鎖定中';
-                    } else {
-                        statusText = '可選';
-                        clickable = true;
-                        statusClass = 'available';
-                    }
-
-                    return `
-                        <div class="blindbox-item ${statusClass}" 
-                             ${clickable ? `onclick="selectItem(${item.boxNumber})"` : ''}
-                             style="cursor: ${clickable ? 'pointer' : 'not-allowed'};">
-                            <div class="box-icon">📦</div>
-                            <div class="box-number">#${String(item.boxNumber).padStart(2, '0')}</div>
-                            <div class="box-status">${statusText}</div>
-                            ${item.status === 'SOLD' && item.prizeName ? `<div class="prize-name">${item.prizeName}</div>` : ''}
-                        </div>
-                    `;
-                }).join('');
-                document.getElementById('itemGrid').innerHTML = html;
-            }
-
-            function selectItem(boxNumber) {
-                selectedItemNumber = boxNumber;
-
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-
-                if (!isLoggedIn) {
-                    // 未登入直接試抽
-                    trialDraw();
-                    return;
-                }
-
-                // 鎖定盒子
-                fetch(`/api/blindbox/${currentBoxId}/items/${boxNumber}/lock`, {
-                    method: 'POST'
-                })
-                    .then(res => res.json())
-                    .then(response => {
-                        if (response.success) {
-                            startCountdown(response.data.remainingSeconds || 180);
-                            showPurchaseModal(boxNumber);
-                            loadBoxDetails(currentBoxId);
-                        } else {
-                            Toast.error(response.message);
-                        }
-                    });
-            }
-
-            function startCountdown(seconds) {
-                clearCountdown();
-                let remaining = seconds;
-                const totalSeconds = seconds;
-                const circumference = 2 * Math.PI * 45; // r=45
-
-                document.getElementById('countdownBanner').style.display = 'block';
-                document.getElementById('countdownTimer').textContent = remaining;
-                document.getElementById('countdownInfo').textContent = `剩餘 ${remaining} 秒`;
-
-                // 環形進度條初始化
-                const circle = document.getElementById('countdownCircle');
-                const countdownNum = document.getElementById('countdownNumber');
-                if (circle) circle.style.strokeDashoffset = '0';
-                if (countdownNum) countdownNum.textContent = remaining;
-
-                countdownInterval = setInterval(() => {
-                    remaining--;
-                    document.getElementById('countdownTimer').textContent = remaining;
-                    document.getElementById('countdownInfo').textContent = `剩餘 ${remaining} 秒`;
-
-                    // 更新環形進度條
-                    if (circle) {
-                        const offset = circumference * (1 - remaining / totalSeconds);
-                        circle.style.strokeDashoffset = offset;
-                    }
-                    if (countdownNum) countdownNum.textContent = remaining;
-
-                    if (remaining <= 0) {
-                        clearCountdown();
-                        closePurchaseModal();
-                        Toast.warning('鎖定已過期，請重新選擇');
-                        loadBoxDetails(currentBoxId);
-                    }
-                }, 1000);
-            }
-
-            function clearCountdown() {
-                if (countdownInterval) {
-                    clearInterval(countdownInterval);
-                    countdownInterval = null;
-                }
-                document.getElementById('countdownBanner').style.display = 'none';
-            }
-
-            // 手動取消鎖定並關閉彈窗
-            function cancelLockAndClose() {
-                closePurchaseModal();
-                clearCountdown();
-                // 無需調用後端 API，伺服器會在 180 秒後自動釋放
-                // 但可選擇性調用後端釋放 API（如果有）
-                loadBoxDetails(currentBoxId);
-            }
-
-            function showPurchaseModal(boxNumber) {
-                document.getElementById('confirmBoxNumber').textContent = boxNumber;
-                document.getElementById('confirmPrice').textContent = '$' + document.getElementById('pricePerBox').textContent;
-                document.getElementById('purchaseModal').style.display = 'flex';
-            }
-
-            function closePurchaseModal() {
-                document.getElementById('purchaseModal').style.display = 'none';
-            }
-
-            function executePurchase() {
-                const btn = document.getElementById('purchaseBtn');
-                btn.disabled = true;
-                btn.textContent = '處理中...';
-
-                fetch(`/api/blindbox/${currentBoxId}/items/${selectedItemNumber}/purchase`, {
-                    method: 'POST'
-                })
-                    .then(res => res.json())
-                    .then(response => {
-                        closePurchaseModal();
-                        clearCountdown();
-                        btn.disabled = false;
-                        btn.textContent = '確認購買';
-
-                        if (response.success) {
-                            showResult([response.data.item], response.data.shardsEarned);
-                            loadBoxDetails(currentBoxId);
-                            if (typeof refreshUserBalance === 'function') refreshUserBalance();
-                        } else {
-                            Toast.error(response.message);
-                        }
-                    });
-            }
-
-            function randomPurchase() {
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                if (!isLoggedIn) {
-                    trialDraw();
-                    return;
-                }
-
-                fetch(`/api/blindbox/${currentBoxId}/random-purchase`, { method: 'POST' })
-                    .then(res => res.json())
-                    .then(response => {
-                        if (response.success) {
-                            showResult([response.data.item], response.data.shardsEarned);
-                            loadBoxDetails(currentBoxId);
-                            if (typeof refreshUserBalance === 'function') refreshUserBalance();
-                        } else {
-                            alert(response.message);
-                        }
-                    });
-            }
-
-            function fullPurchase() {
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                if (!isLoggedIn) {
-                    Toast.warning('請先登入以使用全包功能');
-                    return;
-                }
-
-                if (!confirm('確定要全包購買嗎？')) return;
-
-                fetch(`/api/blindbox/${currentBoxId}/full-purchase`, { method: 'POST' })
-                    .then(res => res.json())
-                    .then(response => {
-                        if (response.success) {
-                            showResult(response.data.items, response.data.totalShards, true);
-                            loadBoxDetails(currentBoxId);
-                            if (typeof refreshUserBalance === 'function') refreshUserBalance();
-                        } else {
-                            alert(response.message);
-                        }
-                    });
-            }
-
-            function trialDraw() {
-                fetch(`/api/blindbox/${currentBoxId}/trial`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ count: 1 })
-                })
-                    .then(res => res.json())
-                    .then(response => {
-                        if (response.success) {
-                            showTrialResult(response.data);
-                        } else {
-                            alert(response.message);
-                        }
-                    });
-            }
-
-            function showResult(items, shards, isFullBox = false) {
-                const title = isFullBox ? '🎉 全包成功！' : '🎁 恭喜獲得！';
-                document.getElementById('resultTitle').textContent = title;
-
-                const html = items.map(item => `
-                    <div style="background: linear-gradient(145deg, #f8f9fa, #e9ecef); border-radius: 15px; padding: 20px; margin: 10px 0;">
-                        <div style="font-size: 2rem; margin-bottom: 10px;">🎁</div>
-                        <div style="font-weight: bold; color: #333;">${item.prizeName || '神秘獎品'}</div>
-                        ${item.rarityDisplay ? `<div style="color: #6c5ce7; font-size: 0.9rem;">${item.rarityDisplay}</div>` : ''}
-                    </div>
-                `).join('') + `<p style="color: #6c5ce7; font-weight: bold; margin-top: 15px;">+${shards} 積分</p>`;
-
-                document.getElementById('resultContent').innerHTML = html;
-                document.getElementById('resultModal').style.display = 'flex';
-            }
-
-            function showTrialResult(data) {
-                document.getElementById('resultTitle').textContent = '✨ 試抽結果';
-
-                const html = `
-                    <div style="background: #6c5ce7; color: white; padding: 10px; border-radius: 10px; margin-bottom: 15px;">
-                        這是試抽模式，結果不列入紀錄
-                    </div>
-                ` + data.results.map(item => `
-                    <div style="background: linear-gradient(145deg, #f8f9fa, #e9ecef); border-radius: 15px; padding: 20px; margin: 10px 0;">
-                        <div style="font-size: 2rem; margin-bottom: 10px;">📦</div>
-                        <div style="font-weight: bold; color: #333;">${item.prizeName}</div>
-                        <div style="color: #6c5ce7; font-size: 0.9rem;">${item.rarityDisplay}</div>
-                    </div>
-                `).join('');
-
-                document.getElementById('resultContent').innerHTML = html;
-                document.getElementById('resultModal').style.display = 'flex';
-            }
-
-            function closeResultModal() {
-                document.getElementById('resultModal').style.display = 'none';
-            }
-
-            // 道具卡功能
-            function useHintCard() {
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                if (!isLoggedIn) {
-                    Toast.warning('請先登入以使用道具卡');
-                    return;
-                }
-
-                fetch(`/api/blindbox/${currentBoxId}/use-hint`, { method: 'POST' })
-                    .then(res => res.json())
-                    .then(response => {
-                        if (response.success) {
-                            alert(response.message);
-                            renderItems(response.data);
-                        } else {
-                            alert(response.message);
-                        }
-                    });
-            }
-
-            function usePeekCard() {
-                if (!selectedItemNumber) {
-                    alert('請先選擇一個盒子');
-                    return;
-                }
-
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                if (!isLoggedIn) {
-                    alert('請先登入以使用道具卡');
-                    return;
-                }
-
-                fetch(`/api/blindbox/${currentBoxId}/items/${selectedItemNumber}/use-peek`, { method: 'POST' })
-                    .then(res => res.json())
-                    .then(response => {
-                        if (response.success) {
-                            const item = response.data;
-                            alert(`👁️ 透視結果：${item.prizeName} (${item.rarityDisplay})`);
-                        } else {
-                            alert(response.message);
-                        }
-                    });
-            }
-
-            function useSwapCard() {
-                if (!selectedItemNumber) {
-                    alert('請先選擇一個盒子');
-                    return;
-                }
-
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                if (!isLoggedIn) {
-                    alert('請先登入以使用道具卡');
-                    return;
-                }
-
-                fetch(`/api/blindbox/${currentBoxId}/items/${selectedItemNumber}/use-swap`, { method: 'POST' })
-                    .then(res => res.json())
-                    .then(response => {
-                        if (response.success) {
-                            selectedItemNumber = response.data.boxNumber;
-                            alert(response.message);
-                            loadBoxDetails(currentBoxId);
-                            startCountdown(response.data.remainingSeconds || 180);
-                        } else {
-                            alert(response.message);
-                        }
-                    });
-            }
-        </script>
+        <script th:src="@{/js/game-utils.js}"></script>
+        <script th:src="@{/js/alpine/blindbox-component.js}"></script>
 
         <style>
+            .blindbox-actions {
+                display: flex;
+                gap: 15px;
+                justify-content: center;
+                margin: 20px 0;
+            }
+
             .blindbox-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
                 gap: 15px;
+                max-width: 600px;
+                margin: 0 auto;
             }
 
             .blindbox-item {
-                background: linear-gradient(145deg, #2d3436, #636e72);
-                border-radius: 15px;
-                padding: 20px;
+                background: #fff;
+                border-radius: 12px;
+                padding: 15px;
                 text-align: center;
-                color: white;
-                transition: all 0.3s ease;
+                box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+                transition: all 0.2s;
             }
 
-            .blindbox-item.available:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 10px 30px rgba(108, 92, 231, 0.3);
+            .blindbox-item:hover {
+                transform: translateY(-3px);
             }
 
             .blindbox-item.sold {
                 opacity: 0.5;
-                background: #555;
+                background: #eee;
             }
 
             .blindbox-item.locked {
-                border: 2px solid #ffd700;
-                animation: pulse 1s infinite;
+                border: 2px solid #e74c3c;
+            }
+
+            .blindbox-item.available {
+                border: 2px solid var(--accent-color);
             }
 
             .box-icon {
                 font-size: 2rem;
-                margin-bottom: 10px;
+                margin-bottom: 5px;
             }
 
             .box-number {
-                font-weight: bold;
-                font-size: 1.1rem;
+                font-weight: 700;
+                color: #333;
             }
 
             .box-status {
                 font-size: 0.8rem;
-                opacity: 0.8;
+                color: #666;
                 margin-top: 5px;
             }
 
             .prize-name {
                 font-size: 0.75rem;
-                margin-top: 8px;
-                color: #ffd700;
+                color: #999;
+                margin-top: 5px;
             }
 
-            @keyframes pulse {
-
-                0%,
-                100% {
-                    opacity: 1;
-                }
-
-                50% {
-                    opacity: 0.7;
-                }
+            .countdown-circle {
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                background: linear-gradient(145deg, #667eea, #764ba2);
+                color: #fff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 700;
+                font-size: 1.2rem;
+                margin: 0 auto 15px;
             }
 
-            /* 售完標籤 */
-            .sold-out-badge {
-                position: absolute;
-                top: 15px;
-                right: 15px;
-                background: linear-gradient(135deg, #ff4757, #c0392b);
-                color: white;
-                padding: 5px 15px;
-                border-radius: 20px;
-                font-size: 0.85rem;
-                font-weight: bold;
-                z-index: 10;
-                box-shadow: 0 2px 10px rgba(255, 71, 87, 0.4);
+            .trial-results {
+                margin: 15px 0;
             }
 
-            .card.sold-out {
-                opacity: 0.85;
+            .trial-result-item {
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+                padding: 8px;
             }
 
-            .card.sold-out:hover {
-                transform: translateY(-3px);
+            .rarity-badge {
+                background: #6c5ce7;
+                color: #fff;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 0.75rem;
+            }
+
+            [x-cloak] {
+                display: none !important;
             }
         </style>
     </div>

@@ -30,7 +30,13 @@ public class IchibanApiController {
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> getActiveBoxes() {
         List<IchibanBox> boxes = ichibanService.getActiveBoxes();
-        List<Map<String, Object>> result = boxes.stream().map(this::boxToMap).collect(Collectors.toList());
+        // 載入每個箱體的格子資訊以計算剩餘數量
+        List<Map<String, Object>> result = boxes.stream()
+                .map(box -> {
+                    IchibanBox boxWithSlots = ichibanService.getBoxWithSlots(box.getId());
+                    return boxToMap(boxWithSlots != null ? boxWithSlots : box);
+                })
+                .collect(Collectors.toList());
         return ApiResponse.ok(result);
     }
 
@@ -156,10 +162,15 @@ public class IchibanApiController {
             map.put("prizes", box.getPrizes().stream().map(this::prizeToMap).collect(Collectors.toList()));
         }
 
-        int remainingSlots = (int) box.getSlots().stream()
-                .filter(s -> s.getStatus() == IchibanSlot.Status.AVAILABLE)
-                .count();
-        map.put("remainingSlots", remainingSlots);
+        List<IchibanSlot> slots = box.getSlots();
+        if (slots != null) {
+            int remainingSlots = (int) slots.stream()
+                    .filter(s -> s.getStatus() == IchibanSlot.Status.AVAILABLE)
+                    .count();
+            map.put("remainingSlots", remainingSlots);
+        } else {
+            map.put("remainingSlots", 0);
+        }
 
         return map;
     }

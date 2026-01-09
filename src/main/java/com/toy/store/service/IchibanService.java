@@ -48,10 +48,15 @@ public class IchibanService extends BaseGachaService {
     }
 
     /**
-     * 取得箱體詳情（含格子狀態）
+     * 取得箱體詳情（含格子狀態與獎品）
      */
     public IchibanBox getBoxWithSlots(Long boxId) {
-        return boxMapper.findById(boxId).orElse(null);
+        IchibanBox box = boxMapper.findById(boxId).orElse(null);
+        if (box != null) {
+            box.setSlots(slotMapper.findByBoxIdOrderBySlotNumberAsc(boxId));
+            box.setPrizes(prizeMapper.findByBoxId(boxId));
+        }
+        return box;
     }
 
     /**

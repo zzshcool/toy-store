@@ -31,7 +31,14 @@ public class BlindBoxApiController {
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> getActiveBoxes() {
         List<BlindBox> boxes = blindBoxService.getAllBoxes();
-        List<Map<String, Object>> result = boxes.stream().map(this::boxToMap).collect(Collectors.toList());
+        // 載入每個盲盒的格子資訊以計算剩餘數量
+        List<Map<String, Object>> result = boxes.stream()
+                .map(box -> {
+                    List<BlindBoxItem> items = blindBoxService.getItems(box.getId());
+                    box.setItems(items);
+                    return boxToMap(box);
+                })
+                .collect(Collectors.toList());
         return ApiResponse.ok(result);
     }
 

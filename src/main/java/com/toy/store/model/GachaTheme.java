@@ -21,6 +21,7 @@ public class GachaTheme {
     private java.math.BigDecimal pricePerGacha;
     private String status = "ACTIVE";
     private LocalDateTime createdAt = LocalDateTime.now();
+    private String stock;
 
     public java.math.BigDecimal getPrice() {
         return pricePerGacha;

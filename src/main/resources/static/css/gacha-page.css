@@ -1,0 +1,620 @@
+/**
+ * gacha-page.css
+ * 扭蛋頁面專屬樣式
+ * 設計參考：slimetoy.com.tw
+ * 
+ * 注意：本檔案重用 style.css 定義的 CSS 變數
+ * --bg-primary, --bg-secondary, --text-primary, --text-secondary
+ * --accent-color, --error-color, --card-bg, --shadow-soft, --shadow-medium
+ */
+
+/* ==================== 頁面容器 ==================== */
+.gacha-page {
+    background-color: var(--bg-secondary);
+    min-height: 100vh;
+    padding-bottom: 60px;
+}
+
+.gacha-page .section-title {
+    font-size: 1.75rem;
+    letter-spacing: 1px;
+    margin-bottom: 0.5rem;
+}
+
+.gacha-page .section-subtitle {
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+}
+
+/* ==================== 主題選擇網格 ==================== */
+.gacha-theme-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 1200px) {
+    .gacha-theme-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .gacha-theme-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .gacha-theme-grid {
+        gap: 0.75rem;
+    }
+}
+
+/* ==================== 主題卡片 ==================== */
+.gacha-theme-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gacha-theme-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-medium);
+}
+
+.gacha-theme-card:active {
+    transform: translateY(-2px);
+}
+
+/* 卡片圖片區域 */
+.gacha-card__image {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    background-color: var(--bg-secondary);
+    overflow: hidden;
+}
+
+.gacha-card__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.gacha-theme-card:hover .gacha-card__image img {
+    transform: scale(1.05);
+}
+
+/* 圖片佔位圖示 */
+.gacha-card__placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--text-secondary);
+    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+}
+
+/* 狀態徽章 (右上角) */
+.gacha-card__badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    backdrop-filter: blur(4px);
+}
+
+/* 卡片資訊區域 */
+.gacha-card__info {
+    padding: 1rem;
+}
+
+/* IP/分類標籤 */
+.gacha-card__tag {
+    display: inline-block;
+    background: var(--accent-color);
+    color: #000;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+/* 主題標題 */
+.gacha-card__title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+    line-height: 1.4;
+    /* 兩行截斷 */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* 價格 */
+.gacha-card__price {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--error-color);
+    margin: 0;
+}
+
+.gacha-card__price-unit {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-left: 2px;
+}
+
+/* ==================== 扭蛋機操作區 ==================== */
+.gacha-machine-section {
+    display: none;
+    padding: 60px 0;
+    background: linear-gradient(180deg, var(--bg-secondary) 0%, #e9ecef 100%);
+    text-align: center;
+}
+
+.gacha-machine-section.active {
+    display: block;
+}
+
+.gacha-machine-section__title {
+    color: var(--text-primary);
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+/* ==================== 簡化扭蛋機 ==================== */
+.gacha-machine {
+    position: relative;
+    width: 280px;
+    height: 400px;
+    margin: 0 auto 2rem;
+    background: #fff;
+    border-radius: 30px 30px 20px 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    border: 3px solid #e0e0e0;
+    overflow: hidden;
+}
+
+/* 球艙 */
+.gacha-machine__dome {
+    height: 55%;
+    background: linear-gradient(180deg, #fafafa 0%, #f0f0f0 100%);
+    border-bottom: 3px solid #e0e0e0;
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: flex-end;
+    padding: 20px;
+    gap: 8px;
+}
+
+/* 裝飾球 */
+.gacha-ball {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    box-shadow: inset -2px -2px 4px rgba(0, 0, 0, 0.1), inset 2px 2px 4px rgba(255, 255, 255, 0.5);
+}
+
+.gacha-ball--red {
+    background: #ff6b6b;
+}
+
+.gacha-ball--blue {
+    background: #4ecdc4;
+}
+
+.gacha-ball--yellow {
+    background: #ffd93d;
+}
+
+.gacha-ball--purple {
+    background: #6c5ce7;
+}
+
+.gacha-ball--green {
+    background: #27ae60;
+}
+
+/* 控制區 */
+.gacha-machine__control {
+    height: 45%;
+    background: var(--accent-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* 轉動手把 */
+.gacha-handle-wrapper {
+    width: 80px;
+    height: 80px;
+    background: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.gacha-handle-wrapper:hover {
+    transform: scale(1.05);
+}
+
+.gacha-handle {
+    width: 50px;
+    height: 50px;
+    background: var(--text-primary);
+    border-radius: 50%;
+    position: relative;
+}
+
+.gacha-handle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border-radius: 50%;
+}
+
+.gacha-handle-label {
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-top: 12px;
+}
+
+/* 出口 */
+.gacha-machine__exit {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 50px;
+    background: #333;
+    border-radius: 0 0 40px 40px;
+}
+
+/* ==================== 扭蛋膠囊 ==================== */
+.gacha-capsule-container {
+    display: none;
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.gacha-capsule {
+    width: 70px;
+    height: 80px;
+    position: relative;
+}
+
+.gacha-capsule__top {
+    width: 100%;
+    height: 50%;
+    background: linear-gradient(180deg, #ff6b6b 0%, #ee5a5a 100%);
+    border-radius: 35px 35px 0 0;
+    position: relative;
+}
+
+.gacha-capsule__shine {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    width: 18px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    transform: rotate(-20deg);
+}
+
+.gacha-capsule__bottom {
+    width: 100%;
+    height: 50%;
+    background: linear-gradient(180deg, #f5f5f5 0%, #ddd 100%);
+    border-radius: 0 0 35px 35px;
+}
+
+/* ==================== 操作按鈕 ==================== */
+.gacha-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 1.5rem;
+}
+
+.gacha-btn-draw {
+    padding: 16px 48px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    background: var(--accent-color);
+    color: #000;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+}
+
+.gacha-btn-draw:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+}
+
+.gacha-btn-draw:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.gacha-btn-trial {
+    padding: 10px 24px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 2px solid var(--text-secondary);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.gacha-btn-trial:hover {
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+}
+
+.gacha-btn-back {
+    padding: 8px 20px;
+    font-size: 0.85rem;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    cursor: pointer;
+    margin-top: 1rem;
+    transition: all 0.2s;
+}
+
+.gacha-btn-back:hover {
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+}
+
+.gacha-price-display {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+/* ==================== 結果彈窗 ==================== */
+.gacha-result-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.gacha-result-modal.active {
+    display: flex;
+}
+
+.gacha-result-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.gacha-result-card__trial-badge {
+    display: none;
+    background: #666;
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.gacha-result-card__title {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+.gacha-result-card__prize-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    margin-bottom: 0.5rem;
+}
+
+.gacha-result-card__meta {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.gacha-result-card__action-hint {
+    display: none;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.gacha-result-card__btn {
+    margin-top: 1.5rem;
+    padding: 14px 32px;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--accent-color);
+    color: #000;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.gacha-result-card__btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+}
+
+/* ==================== 確認彈窗 ==================== */
+.gacha-confirm-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+.gacha-confirm-modal.active {
+    display: flex;
+}
+
+.gacha-confirm-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 35px;
+    max-width: 380px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.gacha-confirm-card__icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.gacha-confirm-card__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.gacha-confirm-card__desc {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.gacha-confirm-card__price-box {
+    background: var(--bg-secondary);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.gacha-confirm-card__price {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--accent-color);
+}
+
+.gacha-confirm-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.gacha-confirm-card__btn {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.gacha-confirm-card__btn--cancel {
+    background: transparent;
+    border: 2px solid #ddd;
+    color: var(--text-secondary);
+}
+
+.gacha-confirm-card__btn--cancel:hover {
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+}
+
+.gacha-confirm-card__btn--trial {
+    background: transparent;
+    border: 2px solid var(--accent-color);
+    color: var(--accent-color);
+}
+
+.gacha-confirm-card__btn--trial:hover {
+    background: var(--accent-color);
+    color: #000;
+}
+
+.gacha-confirm-card__btn--confirm {
+    background: var(--accent-color);
+    border: none;
+    color: #000;
+}
+
+.gacha-confirm-card__btn--confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+}

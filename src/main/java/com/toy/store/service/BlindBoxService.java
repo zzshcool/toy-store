@@ -52,10 +52,14 @@ public class BlindBoxService {
     }
 
     /**
-     * 取得盲盒詳情
+     * 取得盲盒詳情（含單品）
      */
     public BlindBox getBoxWithItems(Long boxId) {
-        return boxMapper.findById(boxId).orElse(null);
+        BlindBox box = boxMapper.findById(boxId).orElse(null);
+        if (box != null) {
+            box.setItems(itemMapper.findByBlindBoxIdOrderByBoxNumberAsc(boxId));
+        }
+        return box;
     }
 
     /**

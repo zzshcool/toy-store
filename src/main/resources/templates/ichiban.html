@@ -3,1021 +3,386 @@
 
 <body>
     <div th:fragment="content">
-        <link rel="stylesheet" th:href="@{/css/gacha-animations.css}">
-        <link rel="stylesheet" th:href="@{/css/game-components.css}">
-        <script th:src="@{/js/game-utils.js}"></script>
+        <link rel="stylesheet" th:href="@{/css/game-listing.css}">
+        <link rel="stylesheet" th:href="@{/css/game-modals.css}">
+        <link rel="stylesheet" th:href="@{/css/home-feed.css}">
 
-        <div class="container section">
-            <h2 class="section-title">🎯 一番賞</h2>
-            <p class="text-center" style="color: var(--text-secondary); margin-bottom: 30px;">
-                選擇你的幸運號碼，揭曉隱藏獎品！可一次選擇多個格子！
-            </p>
+        <div class="game-page" x-data="ichibanComponent">
+            <div class="container section">
+                <h2 class="section-title">🎯 一番賞</h2>
+                <p class="section-subtitle">抽中命運，贏取大獎！</p>
 
-            <!-- 箱體列表 -->
-            <div id="boxList" class="grid" style="margin-bottom: 40px;">
-                <div class="text-center" style="grid-column: 1/-1; padding: 40px;">
-                    <div class="loading-spinner"></div>
-                    <p>載入中...</p>
-                </div>
-            </div>
-
-            <!-- 選號區域（選擇箱體後顯示） -->
-            <div id="slotSection" style="display: none;">
-                <!-- 試抽提示橫幅 -->
-                <div id="trialModeBanner"
-                    style="display: none; background: #6c5ce7; color: white; padding: 10px; text-align: center; border-radius: 10px; margin-bottom: 20px; font-weight: bold; animation: pulse 2s infinite;">
-                    ✨ 目前為試抽模式，結果不列入紀錄。立即登入參與正式抽獎！
-                </div>
-
-                <div
-                    style="background: linear-gradient(145deg, #1a1a2e, #16213e); border-radius: 20px; padding: 30px; margin-bottom: 30px;">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
-                        <div>
-                            <h3 id="selectedBoxName" style="color: white; margin: 0;">箱體名稱</h3>
-                            <p id="selectedBoxDesc" style="color: #aaa; margin: 5px 0 0 0;">描述</p>
-                        </div>
-                        <div style="text-align: right;">
-                            <span style="color: var(--gacha-gold); font-size: 1.5rem; font-weight: bold;">
-                                $<span id="pricePerDraw">0</span> / 抽
-                            </span>
-                        </div>
+                <!-- 遊戲列表 - 卡片式 Feed -->
+                <div class="game-feed-grid" x-show="!currentBox">
+                    <div x-show="boxes.length === 0" class="feed-loader">
+                        <div class="spinner"></div>
                     </div>
+                    <template x-for="box in boxes" :key="box.id">
+                        <div class="feed-card" @click="selectBox(box)">
+                            <div class="feed-card__image-wrapper">
+                                <img :src="box.imageUrl || '/images/placeholder.jpg'" class="feed-card__image"
+                                    loading="lazy">
+                                <!-- Stock Overlay -->
+                                <div class="feed-stock-badge" x-show="box.totalSlots > 0">
+                                    <span x-text="box.remainingSlots + '/' + box.totalSlots"></span>
+                                </div>
+                            </div>
 
-                    <!-- 保底機制進度條 -->
-                    <div id="pityCounter"
-                        style="display: none; background: rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; margin-bottom: 20px;">
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <span style="color: #aaa; font-size: 0.9rem;">🎯 距離保底</span>
-                            <span style="color: #ffd700; font-weight: bold;">
-                                <span id="pityRemaining">0</span> / <span id="pityTotal">50</span> 抽
-                            </span>
-                        </div>
-                        <div
-                            style="background: rgba(255,255,255,0.2); border-radius: 10px; height: 10px; overflow: hidden;">
-                            <div id="pityProgressBar"
-                                style="background: linear-gradient(to right, #667eea, #ffd700); height: 100%; width: 0%; transition: width 0.5s ease; border-radius: 10px;">
+                            <div class="feed-card__content">
+                                <div class="feed-card__header">
+                                    <span class="feed-tag badge-ichiban">一番賞</span>
+                                    <h3 class="feed-card__title" x-text="box.name"></h3>
+                                </div>
+
+                                <div class="feed-card__footer">
+                                    <div class="feed-card__price">
+                                        <span class="currency">$</span>
+                                        <span class="amount" x-text="box.pricePerDraw"></span>
+                                    </div>
+                                    <span class="feed-action-icon">➔</span>
+                                </div>
                             </div>
                         </div>
-                        <div style="text-align: center; margin-top: 8px;">
-                            <span id="pityMessage" style="color: #4ecdc4; font-size: 0.85rem;"></span>
+                    </template>
+                </div>
+
+                <!-- 遊戲詳情 -->
+                <div class="ichiban-game-section" x-show="currentBox" x-cloak>
+                    <div class="game-detail-header">
+                        <div class="game-detail-header__top">
+                            <div>
+                                <h3 class="game-detail-header__name" x-text="currentBox?.name"></h3>
+                                <p class="game-detail-header__desc" x-text="currentBox?.description || ''"></p>
+                            </div>
+                            <div class="game-detail-header__price">$<span x-text="pricePerDraw"></span> / 抽</div>
                         </div>
                     </div>
 
-                    <!-- 格子網格 -->
-                    <div class="ichiban-grid" id="slotGrid">
-                        <!-- 格子將由 JS 動態生成 -->
+                    <!-- 保底進度 -->
+                    <div class="pity-section" x-show="$store.user.isLoggedIn">
+                        <div class="pity-bar-wrapper">
+                            <div class="pity-bar">
+                                <div class="pity-bar__fill" :style="{ width: pityProgress + '%' }"></div>
+                            </div>
+                            <span class="pity-text" x-text="pityValue + '/' + pityLimit"></span>
+                        </div>
+                        <p class="pity-hint">
+                            <span x-text="pityRemaining <= 10 ? '🔥 即將觸發保底！' : '🎯 累積 ' + pityLimit + ' 抽觸發保底'"></span>
+                        </p>
                     </div>
 
-                    <!-- 購物車浮動欄 -->
-                    <div id="cartBar"
-                        style="display: none; position: sticky; bottom: 0; background: linear-gradient(to right, #667eea, #764ba2); 
-                         border-radius: 15px; padding: 15px 25px; margin-top: 20px; display: none; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
-                        <div style="color: white;">
-                            <span>已選擇 <strong id="selectedCount" style="font-size: 1.3rem;">0</strong> 格</span>
-                            <span style="margin-left: 20px;">總價：<strong id="totalPrice"
-                                    style="color: #ffd700; font-size: 1.3rem;">$0</strong></span>
-                        </div>
-                        <div style="display: flex; gap: 10px;">
-                            <button class="btn btn-outline" onclick="clearSelection()"
-                                style="color: white; border-color: white;">清除選擇</button>
-                            <button id="purchaseBtnTrigger" class="btn-gacha" onclick="confirmPurchase()"
-                                style="background: #ffd700; color: #333;">確認購買</button>
-                        </div>
+                    <!-- 快捷操作 -->
+                    <div class="ichiban-actions">
+                        <button class="action-btn" @click="randomSelect(1)">🎲 隨機1格</button>
+                        <button class="action-btn" @click="randomSelect(5)">🎲 隨機5格</button>
+                        <button class="action-btn action-btn--danger" @click="clearSelection()">🗑️ 清除</button>
                     </div>
 
-                    <!-- 快速選擇工具列 -->
-                    <div class="quick-select-bar"
-                        style="display: flex; gap: 10px; justify-content: center; margin-top: 15px; flex-wrap: wrap;">
-                        <button class="btn btn-outline" onclick="randomSelect(1)"
-                            style="color: white; border-color: rgba(255,255,255,0.5);">
-                            🎲 隨機 1 抽
-                        </button>
-                        <button class="btn btn-outline" onclick="randomSelect(5)"
-                            style="color: white; border-color: rgba(255,255,255,0.5);">
-                            🎲 隨機 5 抽
-                        </button>
-                        <button class="btn-gacha" onclick="randomSelect(10)"
-                            style="background: linear-gradient(145deg, #ff6b6b, #feca57);">
-                            🔥 10 連抽
-                        </button>
+                    <!-- 格子選擇 -->
+                    <div class="ichiban-slot-grid">
+                        <template x-for="slot in slots" :key="slot.slotNumber">
+                            <div class="ichiban-slot" :class="{ 
+                                     'selected': isSlotSelected(slot), 
+                                     'sold': slot.status === 'SOLD' || slot.status === 'REVEALED',
+                                     'locked': slot.status === 'LOCKED' && !slot.isLockExpired
+                                 }" @click="toggleSlot(slot)">
+                                <span class="slot-number" x-text="slot.formattedNumber"></span>
+                                <span class="slot-status"
+                                    x-text="slot.status === 'SOLD' ? '已開' : (isSlotSelected(slot) ? '已選' : '')"></span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- 購物車 -->
+                    <div class="ichiban-cart" x-show="selectedSlots.length > 0" x-cloak>
+                        <div class="cart-info">
+                            已選擇 <span class="cart-count" x-text="selectedSlots.length"></span> 格
+                            <span class="cart-total" x-text="'$' + totalPrice"></span>
+                        </div>
+                        <button class="cart-btn" @click="openPurchaseModal()">確認購買</button>
                     </div>
 
                     <div style="text-align: center; margin-top: 20px;">
-                        <button class="btn btn-outline" onclick="backToBoxList()"
-                            style="color: white; border-color: white;">
-                            ← 返回列表
-                        </button>
+                        <button class="game-back-btn" @click="backToList()">← 返回列表</button>
                     </div>
-                </div>
 
-                <!-- 獎品列表 -->
-                <div style="background: white; border-radius: 20px; padding: 30px;">
-                    <h4 style="margin-bottom: 20px;">🎁 獎品一覽</h4>
-                    <div id="prizeList" class="grid"
-                        style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
-                        <!-- 獎品將由 JS 動態生成 -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 購買確認彈窗 -->
-        <div id="purchaseModal"
-            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
-            <div
-                style="background: white; border-radius: 20px; padding: 30px; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-                <h3 style="margin-bottom: 20px;">確認購買</h3>
-                <div
-                    style="margin-bottom: 25px; text-align: left; background: #f8f9fa; padding: 15px; border-radius: 10px;">
-                    <p>已選擇：<strong id="confirmSlotsCount" style="color: #6c5ce7;">0</strong> 格</p>
-                    <p>單價：$<span id="confirmPricePerDraw">0</span></p>
-                    <p style="border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px; font-size: 1.2rem;">
-                        總計：<strong id="confirmTotalCost" style="color: var(--gacha-red);">$0</strong>
-                    </p>
-                </div>
-                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                    <button class="btn btn-outline" onclick="closePurchaseModal()">取消</button>
-                    <button class="btn btn-outline" onclick="simulateTrialPurchase()"
-                        style="border-color: #6c5ce7; color: #6c5ce7;">免費試抽體驗</button>
-                    <button id="purchaseBtn" class="btn-gacha" onclick="executePurchase()"
-                        style="flex: 1; min-width: 150px;">確認正式購買</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 開獎結果彈窗 -->
-        <div id="resultModal"
-            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10001; overflow-y: auto;">
-            <div
-                style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px;">
-                <div
-                    style="background: white; border-radius: 20px; padding: 40px; max-width: 600px; width: 100%; text-align: center;">
-                    <h2 style="margin-bottom: 30px;">🎉 恭喜獲得！</h2>
-                    <div id="prizeResults"
-                        style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-bottom: 30px;">
-                        <!-- 獎品結果將由 JS 動態生成 -->
-                    </div>
-                    <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
-                        <p>共獲得 <strong id="totalShardsResult" style="color: #6c5ce7;">0</strong> 碎片</p>
-                        <p style="color: #666; font-size: 0.9rem;">消費金額：$<span id="totalCostResult">0</span></p>
-                    </div>
-                    <button class="btn-gacha" onclick="closeResultModal()" style="margin-top: 20px;">太棒了！</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 玩法說明彈窗 -->
-        <div id="rulesModal"
-            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 10002; overflow-y: auto;">
-            <div
-                style="max-width: 500px; margin: 50px auto; background: white; border-radius: 20px; padding: 30px; position: relative;">
-                <button onclick="closeRulesModal()"
-                    style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
-
-                <h3 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                    📖 <span id="rulesGameName">遊戲名稱</span> - 玩法說明
-                </h3>
-
-                <!-- 價格資訊 -->
-                <div
-                    style="background: linear-gradient(145deg, #667eea, #764ba2); border-radius: 15px; padding: 20px; color: white; margin-bottom: 20px;">
-                    <div style="font-size: 0.9rem; opacity: 0.9;">單抽價格</div>
-                    <div style="font-size: 2rem; font-weight: bold;">💰 $<span id="rulesPricePerDraw">0</span></div>
-                </div>
-
-                <!-- 玩法規則 -->
-                <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 15px;">
-                    <h4 style="margin-bottom: 10px; color: #667eea;">🎯 一番賞玩法</h4>
-                    <ul style="margin: 0; padding-left: 20px; line-height: 1.8; color: #555;">
-                        <li>選擇喜歡的號碼格子</li>
-                        <li>可一次選擇多個格子</li>
-                        <li>每個格子對應一個隱藏獎品</li>
-                        <li>確認購買後立即揭曉獎品</li>
-                        <li>已開過的格子無法再選</li>
-                    </ul>
-                </div>
-
-                <!-- 獎品機率 -->
-                <div style="background: #fff3cd; border-radius: 10px; padding: 15px; margin-bottom: 15px;">
-                    <h4 style="margin-bottom: 10px; color: #856404;">🎁 獎品分級</h4>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 0.9rem;">
-                        <div><span style="color: #FFD700; font-weight: bold;">A賞</span> - 大獎</div>
-                        <div><span style="color: #C0C0C0; font-weight: bold;">B賞</span> - 特獎</div>
-                        <div><span style="color: #CD7F32; font-weight: bold;">C賞</span> - 優選</div>
-                        <div><span style="color: #667eea; font-weight: bold;">D~F賞</span> - 普通</div>
-                    </div>
-                </div>
-
-                <!-- 消費者須知 -->
-                <div style="background: #ffe4e1; border-radius: 10px; padding: 15px;">
-                    <h4 style="margin-bottom: 10px; color: #c0392b;">⚠️ 消費者須知</h4>
-                    <ul style="margin: 0; padding-left: 20px; line-height: 1.6; color: #666; font-size: 0.85rem;">
-                        <li>虛擬商品購買後不可退款</li>
-                        <li>實體獎品依現貨狀況配送</li>
-                        <li>獎品圖片僅供參考，以實物為準</li>
-                    </ul>
-                </div>
-
-                <button class="btn-gacha" onclick="closeRulesModal()"
-                    style="width: 100%; margin-top: 20px;">我知道了</button>
-            </div>
-        </div>
-
-        <script th:inline="javascript">
-            let currentBoxId = null;
-            let selectedSlots = [];
-            let pricePerDraw = 0;
-
-            // 頁面載入時取得箱體列表
-            document.addEventListener('DOMContentLoaded', function () {
-                loadBoxList();
-            });
-
-            // 顯示玩法說明彈窗
-            function showGameRules(boxId, name, price) {
-                document.getElementById('rulesGameName').textContent = name;
-                document.getElementById('rulesPricePerDraw').textContent = price;
-                document.getElementById('rulesModal').style.display = 'block';
-                document.body.style.overflow = 'hidden';
-            }
-
-            // 關閉玩法說明彈窗
-            function closeRulesModal() {
-                document.getElementById('rulesModal').style.display = 'none';
-                document.body.style.overflow = '';
-            }
-
-            // 載入箱體列表
-            function loadBoxList() {
-                // 顯示骨架屏
-                Skeleton.show('#boxList', 4);
-
-                fetch('/api/ichiban')
-                    .then(res => res.json())
-                    .then(response => {
-                        if (response.success && response.data.length > 0) {
-                            renderBoxList(response.data);
-                        } else {
-                            document.getElementById('boxList').innerHTML = `
-                                <div class="text-center" style="grid-column: 1/-1; padding: 40px;">
-                                    <p>目前沒有進行中的一番賞</p>
-                                </div>
-                            `;
-                        }
-                    })
-                    .catch(err => {
-                        console.error('Error loading boxes:', err);
-                        document.getElementById('boxList').innerHTML = `
-                            <div class="text-center" style="grid-column: 1/-1; padding: 40px;">
-                                <p style="color: var(--error-color);">載入失敗，請重新整理頁面</p>
-                            </div>
-                        `;
-                    });
-            }
-
-            // 渲染箱體列表
-            function renderBoxList(boxes) {
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                const html = boxes.map(box => `
-                    <div class="card game-box-card" style="cursor: pointer; position: relative;" onclick="selectBox(${box.id}, ${box.pricePerDraw})">
-                        <!-- IP 圖示標識 -->
-                        <div class="ip-badge-container" style="position: absolute; top: 10px; left: 10px; z-index: 2;">
-                            ${box.ipImageUrl ? `<img src="${box.ipImageUrl}" alt="${box.ipName}" class="ip-icon" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">` :
-                        `<span class="ip-icon-placeholder" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(145deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.8rem;">${(box.ipName || '?').charAt(0)}</span>`}
-                        </div>
-                        <!-- 規則說明按鈕 -->
-                        <button class="rules-btn" onclick="event.stopPropagation(); showGameRules(${box.id}, '${box.name}', ${box.pricePerDraw})" 
-                                style="position: absolute; top: 10px; right: 10px; z-index: 2; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 0.9rem;" title="玩法說明">
-                            ℹ️
-                        </button>
-                        <div class="img-placeholder" style="background: linear-gradient(145deg, #667eea, #764ba2);">
-                            ${box.imageUrl ? `<img src="${box.imageUrl}" style="width: 100%; height: 100%; object-fit: cover;">` :
-                        `<span style="color: white; font-size: 3rem;">🎁</span>`}
-                        </div>
-                        <div style="padding: 20px;">
-                            <div style="display: flex; justify-content: space-between; align-items: start;">
-                                <span style="background: var(--gacha-gold); color: #333; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">
-                                    ${box.ipName}
-                                </span>
-                                ${!isLoggedIn ? '<span style="color: #6c5ce7; font-size: 0.75rem; font-weight: bold;">✨ 試抽模式</span>' : ''}
-                            </div>
-                            <h3 style="margin: 10px 0;">${box.name}</h3>
-                            <p style="color: var(--text-secondary); font-size: 0.9rem;">${box.description || ''}</p>
-                            <!-- 價格資訊區塊 -->
-                            <div class="price-info-block" style="background: #f8f9fa; border-radius: 10px; padding: 10px; margin-top: 12px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span style="color: var(--accent-color); font-weight: bold; font-size: 1.3rem;">💰 $${box.pricePerDraw}/抽</span>
-                                    <span style="color: #666; font-size: 0.85rem;">剩餘 ${box.remainingSlots}/${box.totalSlots}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-                document.getElementById('boxList').innerHTML = html;
-            }
-
-            function promptLogin() {
-                Toast.warning('請先登入會員以進行抽獎！');
-                LoginModal.show();
-            }
-
-            // 選擇箱體
-            function selectBox(boxId, price) {
-                currentBoxId = boxId;
-                pricePerDraw = price;
-                selectedSlots = [];
-                updateCartBar();
-
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                // 只有未登入時顯示試抽模式提示
-                if (!isLoggedIn) {
-                    document.getElementById('trialModeBanner').style.display = 'block';
-                    document.getElementById('trialModeBanner').innerHTML = '✨ 目前為試抽模式，結果不列入紀錄。立即登入贏取真品！';
-                } else {
-                    document.getElementById('trialModeBanner').style.display = 'none';
-                }
-
-                document.getElementById('boxList').style.display = 'none';
-                document.getElementById('slotSection').style.display = 'block';
-                loadBoxDetails(boxId);
-            }
-
-            // 返回箱體列表
-            function backToBoxList() {
-                currentBoxId = null;
-                selectedSlots = [];
-                updateCartBar();
-                document.getElementById('boxList').style.display = 'grid';
-                document.getElementById('slotSection').style.display = 'none';
-            }
-
-            // 載入箱體詳情與格子狀態
-            function loadBoxDetails(boxId) {
-                Promise.all([
-                    fetch(`/api/ichiban/${boxId}`).then(r => r.json()),
-                    fetch(`/api/ichiban/${boxId}/slots`).then(r => r.json())
-                ]).then(([boxRes, slotsRes]) => {
-                    if (boxRes.success) {
-                        const box = boxRes.data;
-                        currentBoxData = box; // 暫存以便試抽使用
-                        document.getElementById('selectedBoxName').textContent = box.name;
-                        document.getElementById('selectedBoxDesc').textContent = box.description || '';
-                        document.getElementById('pricePerDraw').textContent = box.pricePerDraw;
-                        pricePerDraw = parseFloat(box.pricePerDraw);
-
-                        // 渲染獎品一覽
-                        if (box.prizes) {
-                            const prizeHtml = box.prizes.map(p => {
-                                const isSoldOut = p.remainingQuantity === 0;
-                                return `
-                                    <div class="prize-item ${isSoldOut ? 'sold-out' : ''}" style="text-align: center; border: 1px solid #eee; padding: 10px; border-radius: 10px; position: relative; opacity: ${isSoldOut ? '0.5' : '1'}">
-                                        <div style="font-size: 1.5rem; background: #eee; border-radius: 5px; margin-bottom: 5px;">🎁</div>
-                                        <div style="font-weight: bold; font-size: 0.9rem;">${p.rankDisplay}賞</div>
-                                        <div style="font-size: 0.8rem; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name}</div>
-                                        <div style="font-size: 0.75rem; color: #999; margin-top: 5px;">
-                                            ${isSoldOut ? '<span style="color: #e74c3c;">已抽完</span>' : `剩餘 ${p.remainingQuantity} / ${p.totalQuantity}`}
-                                        </div>
+                    <!-- 獎品列表 -->
+                    <div class="game-prize-section">
+                        <h4 class="game-prize-section__title">🎁 獎品一覽</h4>
+                        <div class="game-prize-grid">
+                            <template x-for="prize in prizes" :key="prize.id">
+                                <div class="game-prize-item" :class="{ 'sold-out': prize.remainingQuantity === 0 }">
+                                    <div class="game-prize-item__icon">🎁</div>
+                                    <div class="game-prize-item__rank" x-text="prize.rankDisplay + '賞'"></div>
+                                    <div class="game-prize-item__name" x-text="prize.name"></div>
+                                    <div class="game-prize-item__stock"
+                                        :class="{ 'game-prize-item__stock--low': prize.remainingQuantity === 0 }">
+                                        <span
+                                            x-text="prize.remainingQuantity === 0 ? '已抽完' : '剩餘 ' + prize.remainingQuantity + '/' + prize.totalQuantity"></span>
                                     </div>
-                                `;
-                            }).join('');
-                            document.getElementById('prizeList').innerHTML = prizeHtml;
-                        }
-                    }
-                    if (slotsRes.success) {
-                        renderSlots(slotsRes.data);
-                    }
-                    // 更新保底進度 (模擬：50抽保底，根據已開格子數計算)
-                    updatePityCounter(slotsRes.data);
-                }).catch(err => console.error('Error:', err));
-            }
-
-            // 更新保底機制進度條
-            function updatePityCounter(slots) {
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                const pityCounter = document.getElementById('pityCounter');
-
-                if (!isLoggedIn) {
-                    pityCounter.style.display = 'none';
-                    return;
-                }
-
-                // 顯示保底進度
-                pityCounter.style.display = 'block';
-
-                // 模擬數據 (實際應從 API 取得用戶保底進度)
-                const pityLimit = 50; // 保底次數
-                const openedCount = slots.filter(s => s.status === 'SOLD').length;
-                const userDraws = openedCount; // 模擬：用戶已抽次數
-                const remaining = Math.max(0, pityLimit - (userDraws % pityLimit));
-                const progress = ((pityLimit - remaining) / pityLimit) * 100;
-
-                document.getElementById('pityTotal').textContent = pityLimit;
-                document.getElementById('pityRemaining').textContent = remaining;
-                document.getElementById('pityProgressBar').style.width = progress + '%';
-
-                // 提示訊息
-                const pityMessage = document.getElementById('pityMessage');
-                if (remaining <= 10) {
-                    pityMessage.textContent = '🔥 即將觸發保底！';
-                    pityMessage.style.color = '#ff6b6b';
-                } else if (remaining <= 25) {
-                    pityMessage.textContent = '💪 已過半！繼續加油！';
-                    pityMessage.style.color = '#ffd700';
-                } else {
-                    pityMessage.textContent = '🎯 累積抽獎進度以解鎖保底';
-                    pityMessage.style.color = '#4ecdc4';
-                }
-            }
-
-            // 渲染格子（支援多選）
-            function renderSlots(slots) {
-                const html = slots.map(slot => {
-                    const isSelected = selectedSlots.includes(slot.slotNumber);
-                    let statusClass = slot.status.toLowerCase();
-                    let statusText = '';
-                    let clickable = false;
-
-                    if (slot.status === 'REVEALED') {
-                        statusText = '已開';
-                    } else if (slot.status === 'LOCKED' && !slot.isLockExpired) {
-                        statusText = '鎖定中';
-                    } else {
-                        statusText = isSelected ? '已選' : '可選';
-                        clickable = true;
-                        if (isSelected) statusClass = 'selected';
-                        else statusClass = 'available';
-                    }
-
-                    return `
-                        <div class="ichiban-slot ${statusClass}" 
-                             ${clickable ? `onclick="toggleSlot(${slot.slotNumber})"` : ''}
-                             style="${isSelected ? 'border: 3px solid #ffd700; box-shadow: 0 0 15px rgba(255,215,0,0.5);' : ''}">
-                            <span class="slot-number">${slot.formattedNumber}</span>
-                            <span class="slot-status">${statusText}</span>
-                        </div>
-                    `;
-                }).join('');
-                document.getElementById('slotGrid').innerHTML = html;
-            }
-
-            // 切換格子選擇狀態
-            function toggleSlot(slotNumber) {
-                const index = selectedSlots.indexOf(slotNumber);
-                if (index > -1) {
-                    selectedSlots.splice(index, 1);
-                } else {
-                    if (selectedSlots.length >= 10) {
-                        Toast.warning('單次最多選擇 10 格');
-                        return;
-                    }
-                    selectedSlots.push(slotNumber);
-                }
-                updateCartBar();
-                // 重新渲染格子以更新選中狀態
-                fetch(`/api/ichiban/${currentBoxId}/slots`)
-                    .then(r => r.json())
-                    .then(response => {
-                        if (response.success) renderSlots(response.data);
-                    });
-            }
-
-            // 更新購物車列
-            function updateCartBar() {
-                const cartBar = document.getElementById('cartBar');
-                const purchaseBtn = document.getElementById('purchaseBtnTrigger');
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                const count = selectedSlots.length;
-                const total = count * pricePerDraw;
-
-                document.getElementById('selectedCount').textContent = count;
-                document.getElementById('totalPrice').textContent = '$' + total;
-
-                purchaseBtn.textContent = '確認購買 / 試抽';
-                purchaseBtn.style.background = '#ffd700';
-                purchaseBtn.style.color = '#333';
-
-                cartBar.style.display = count > 0 ? 'flex' : 'none';
-            }
-
-            // 清除選擇
-            function clearSelection() {
-                selectedSlots = [];
-                updateCartBar();
-                fetch(`/api/ichiban/${currentBoxId}/slots`)
-                    .then(r => r.json())
-                    .then(response => {
-                        if (response.success) renderSlots(response.data);
-                    });
-            }
-
-            // 隨機選擇 N 個格子 (1抽 / 5抽 / 10連抽)
-            function randomSelect(count) {
-                // 獲取所有可選格子
-                fetch(`/api/ichiban/${currentBoxId}/slots`)
-                    .then(r => r.json())
-                    .then(response => {
-                        if (!response.success) {
-                            Toast.error('載入格子失敗');
-                            return;
-                        }
-
-                        // 篩選可用格子 (未被購買且未被選中)
-                        const availableSlots = response.data
-                            .filter(s => s.status === 'AVAILABLE' && !selectedSlots.includes(s.slotNumber))
-                            .map(s => s.slotNumber);
-
-                        if (availableSlots.length === 0) {
-                            Toast.warning('已無可選格子');
-                            return;
-                        }
-
-                        // 計算實際可選數量
-                        const remaining = 10 - selectedSlots.length;
-                        const actualCount = Math.min(count, remaining, availableSlots.length);
-
-                        if (actualCount <= 0) {
-                            Toast.warning('已達單次選擇上限 (10格)');
-                            return;
-                        }
-
-                        // 隨機選擇
-                        const shuffled = availableSlots.sort(() => Math.random() - 0.5);
-                        const newSelections = shuffled.slice(0, actualCount);
-
-                        // 加入選擇
-                        selectedSlots.push(...newSelections);
-
-                        // 更新 UI
-                        updateCartBar();
-                        renderSlots(response.data);
-
-                        Toast.success(`已隨機選擇 ${actualCount} 格！`);
-                    });
-            }
-
-            // 確認購買
-            function confirmPurchase() {
-                if (selectedSlots.length === 0) {
-                    Toast.warning('請至少選擇一個格子');
-                    return;
-                }
-
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                const count = selectedSlots.length;
-                const total = count * pricePerDraw;
-                const sortedSlots = [...selectedSlots].sort((a, b) => a - b);
-
-                document.getElementById('confirmSlotsCount').textContent = count;
-                document.getElementById('confirmPricePerDraw').textContent = pricePerDraw;
-                document.getElementById('confirmTotalCost').textContent = '$' + total;
-
-                const modalTitle = document.querySelector('#purchaseModal h3');
-                const purchaseBtn = document.getElementById('purchaseBtn');
-
-                // 始終顯示兩個選項 (除非有特殊需求)
-                // 這裡我們修改 Modal HTML 來包含兩個按鈕
-                document.getElementById('purchaseModal').style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-                if (window.showMask) window.showMask();
-            }
-
-            // 關閉購買確認彈窗
-            function closePurchaseModal() {
-                document.getElementById('purchaseModal').style.display = 'none';
-                document.body.style.overflow = 'auto';
-                if (window.hideMask) window.hideMask();
-            }
-
-            // 模擬試抽邏輯（使用真正的試抽 API）
-            function simulateTrialPurchase() {
-                closePurchaseModal();
-                if (window.showMask) window.showMask();
-
-                // 調用試抽 API
-                fetch(`/api/ichiban/${currentBoxId}/trial`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ count: selectedSlots.length })
-                })
-                    .then(res => res.json())
-                    .then(response => {
-                        if (response.success) {
-                            const data = response.data;
-                            // 轉換格式以配合現有顯示邏輯
-                            const prizes = data.results.map(r => ({
-                                slotNumber: r.slotNumber,
-                                prize: r.prize,
-                                shards: r.shards
-                            }));
-
-                            const simulatedData = {
-                                prizes: prizes,
-                                totalShards: prizes.reduce((sum, p) => sum + p.shards, 0),
-                                totalCost: selectedSlots.length * pricePerDraw,
-                                isTrial: true
-                            };
-
-                            showResultModal(simulatedData);
-                            selectedSlots = [];
-                            updateCartBar();
-                        } else {
-                            Toast.error(response.message || '試抽失敗');
-                            if (window.hideMask) window.hideMask();
-                        }
-                    })
-                    .catch(err => {
-                        console.error('Trial error:', err);
-                        Toast.error('試抽失敗，請重試');
-                        if (window.hideMask) window.hideMask();
-                    });
-            }
-
-            // 執行購買 (含試抽模擬)
-            function executePurchase() {
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-
-                if (!isLoggedIn) {
-                    simulateTrialPurchase();
-                    return;
-                }
-
-                const btn = document.getElementById('purchaseBtn');
-                btn.disabled = true;
-                btn.textContent = '處理中...';
-
-                fetch(`/api/ichiban/${currentBoxId}/purchase`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ slotNumbers: selectedSlots })
-                })
-                    .then(res => res.json())
-                    .then(response => {
-                        closePurchaseModal();
-                        btn.disabled = false;
-                        btn.textContent = '確認購買';
-
-                        if (response.success) {
-                            showResultModal(response.data);
-                            selectedSlots = [];
-                            updateCartBar();
-                            loadBoxDetails(currentBoxId);
-                        } else {
-                            Toast.error(response.message || '購買失敗');
-                            if (window.hideMask) window.hideMask();
-                        }
-                    })
-                    .catch(err => {
-                        console.error('Error:', err);
-                        Toast.error('購買失敗，請重試');
-                        closePurchaseModal();
-                        btn.disabled = false;
-                        btn.textContent = '確認購買';
-                        if (window.hideMask) window.hideMask();
-                    });
-            }
-
-            // 顯示開獎結果（帶刮開動畫）
-            function showResultModal(data) {
-                const prizes = data.prizes || [];
-                if (prizes.length === 0) return;
-
-                // 使用 GSAP 揭曉動畫
-                showAdvancedReveal(prizes, data);
-            }
-
-            function showAdvancedReveal(prizes, data) {
-                if (prizes.length === 0) return;
-
-                let currentIndex = 0;
-
-                function revealNext() {
-                    if (currentIndex >= prizes.length) {
-                        showFinalSummary(data);
-                        return;
-                    }
-
-                    const item = prizes[currentIndex];
-                    const prize = item.prize || {};
-                    const rankDisplay = prize.rankDisplay || '?賞';
-                    const prizeName = prize.name || '神秘獎品';
-
-                    // 建立撕票容器
-                    const overlay = document.createElement('div');
-                    overlay.className = 'ichiban-ticket-overlay';
-                    overlay.innerHTML = `
-                        <div class="ticket-wrapper">
-                            <div class="ticket-content">
-                                <h1 class="ticket-rank-text">${rankDisplay}</h1>
-                                <p class="ticket-prize-name">${prizeName}</p>
-                                <div style="color: #6c5ce7; font-weight: bold; margin-top: 20px;">+${item.shards} 碎片</div>
-                            </div>
-                            <div class="ticket-part ticket-top">
-                                <span>#${String(item.slotNumber).padStart(2, '0')}</span>
-                            </div>
-                            <div class="ticket-part ticket-bottom">
-                                <span>OPEN</span>
-                                <div class="ticket-peek-corner"></div>
-                            </div>
-                        </div>
-                    `;
-                    document.body.appendChild(overlay);
-
-                    const top = overlay.querySelector('.ticket-top');
-                    const bottom = overlay.querySelector('.ticket-bottom');
-                    const content = overlay.querySelector('.ticket-content');
-
-                    // 1. 咪牌動畫 (Peek) - 僅針對 A 賞或大獎
-                    const tl = gsap.timeline();
-
-                    if (prize.rank === 'A' || rankDisplay.includes('A')) {
-                        tl.to(bottom, { rotationX: -15, duration: 0.5, ease: "power2.out" })
-                            .to(bottom, { rotationX: 0, duration: 0.3, ease: "bounce.out", delay: 0.5 });
-                    }
-
-                    // 2. 撕票動畫 (Tear) - 點擊後觸發
-                    overlay.onclick = () => {
-                        overlay.onclick = null; // 防止重複點擊
-
-                        const tearTl = gsap.timeline({
-                            onComplete: () => {
-                                setTimeout(() => {
-                                    gsap.to(overlay, {
-                                        opacity: 0, duration: 0.5, onComplete: () => {
-                                            overlay.remove();
-                                            currentIndex++;
-                                            revealNext();
-                                        }
-                                    });
-                                }, 1500);
-                            }
-                        });
-
-                        if (window.GameUtils && GameUtils.playRevealSound) {
-                            GameUtils.playRevealSound();
-                        }
-
-                        tearTl.to(top, {
-                            y: -200,
-                            rotation: -15,
-                            opacity: 0,
-                            duration: 0.8,
-                            ease: "power2.in"
-                        }, 0);
-
-                        tearTl.to(bottom, {
-                            y: 200,
-                            rotation: 15,
-                            opacity: 0,
-                            duration: 0.8,
-                            ease: "power2.in"
-                        }, 0);
-
-                        tearTl.from(content, {
-                            scale: 0.5,
-                            opacity: 0,
-                            duration: 0.6,
-                            ease: "back.out(1.7)"
-                        }, 0.2);
-
-                        // 煙火特效
-                        if (prize.rank === 'A' || rankDisplay.includes('A')) {
-                            if (window.GameUtils && GameUtils.spawnConfetti) {
-                                setTimeout(() => GameUtils.spawnConfetti(), 300);
-                            }
-                        }
-                    };
-                }
-
-                revealNext();
-            }
-
-
-            // 單張刮刮卡揭曉動畫
-            function showScratchReveal(item, data) {
-                const prize = item.prize || {};
-                const rankDisplay = prize.rankDisplay || '?賞';
-                const prizeName = prize.name || '神秘獎品';
-
-                // 建立刮開容器
-                const container = document.createElement('div');
-                container.className = 'scratch-reveal-container';
-                container.innerHTML = `
-                    <div class="scratch-card">
-                        <div class="scratch-card-back">
-                            <div class="scratch-card-prize">🎁</div>
-                            <div style="font-size: 1.5rem;">#${String(item.slotNumber).padStart(2, '0')}</div>
-                        </div>
-                        <div class="scratch-card-front">
-                            <div style="font-size: 1rem; opacity: 0.8;">點擊刮開</div>
-                            <div style="font-size: 4rem; margin: 15px 0;">✨</div>
-                            <div style="font-size: 0.9rem;">揭曉你的獎品！</div>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(container);
-
-                // 點擊刮開
-                const front = container.querySelector('.scratch-card-front');
-                const back = container.querySelector('.scratch-card-back');
-
-                container.onclick = function () {
-                    front.classList.add('revealing');
-
-                    // 更新背面內容
-                    setTimeout(() => {
-                        back.innerHTML = `
-                            <div class="scratch-card-rank">${rankDisplay}</div>
-                            <div class="scratch-card-prize">🏆</div>
-                            <div class="scratch-card-name">${prizeName}</div>
-                            <div style="margin-top: 15px; color: #ffd93d;">+${item.shards} 碎片</div>
-                        `;
-
-                        // 觸發粒子爆發
-                        GameUtils.spawnConfetti();
-
-                        // 3秒後關閉並顯示總結
-                        setTimeout(() => {
-                            container.remove();
-                            showFinalSummary(data);
-                        }, 2500);
-                    }, 800);
-                };
-            }
-
-            // 多張獎品依序揭曉
-            function showSequentialReveal(prizes, data) {
-                let currentIndex = 0;
-
-                function revealNext() {
-                    if (currentIndex >= prizes.length) {
-                        showFinalSummary(data);
-                        return;
-                    }
-
-                    const item = prizes[currentIndex];
-                    const prize = item.prize || {};
-
-                    // 快速閃現卡片
-                    const flash = document.createElement('div');
-                    flash.className = 'scratch-reveal-container';
-                    flash.innerHTML = `
-                        <div style="text-align: center; color: white;">
-                            <div style="font-size: 1.5rem; margin-bottom: 10px;">#${String(item.slotNumber).padStart(2, '0')}</div>
-                            <div style="font-size: 3rem; margin-bottom: 15px;">🎁</div>
-                            <div style="font-size: 2rem; color: var(--gacha-gold); font-weight: bold;">${prize.rankDisplay || '?賞'}</div>
-                            <div style="font-size: 1.2rem; margin-top: 10px;">${prize.name || '神秘獎品'}</div>
-                            <div style="color: #a29bfe; margin-top: 5px;">+${item.shards} 碎片</div>
-                        </div>
-                    `;
-                    document.body.appendChild(flash);
-
-                    // 播放快速音效
-                    GameUtils.playRevealSound();
-
-                    setTimeout(() => {
-                        flash.remove();
-                        currentIndex++;
-                        revealNext();
-                    }, 800);
-                }
-
-                revealNext();
-            }
-
-            // 顯示最終總結 (增加試抽導引)
-            function showFinalSummary(data) {
-                const prizes = data.prizes || [];
-                const isTrial = data.totalCost > 0 && !data.id; // 簡單判斷是否為試抽
-
-                let resultHtml = `
-                    <div id="trialWatermark" style="${isTrial ? 'display: block;' : 'display: none;'} background: #6c5ce7; color: white; padding: 5px; border-radius: 5px; margin-bottom: 15px; font-size: 0.9rem;">
-                        ⚡ 這是試抽模式，快登入贏取真品吧！
-                    </div>
-                `;
-
-                resultHtml += prizes.map(item => {
-                    const prize = item.prize;
-                    return `
-                        <div style="background: linear-gradient(145deg, #f8f9fa, #e9ecef); border-radius: 15px; padding: 20px; width: 150px; position: relative; overflow: hidden;">
-                            <div style="font-size: 1.2rem; font-weight: bold; color: #333; margin-bottom: 10px;">
-                                #${String(item.slotNumber).padStart(2, '0')}
-                            </div>
-                            ${prize ? `
-                                <div style="background: var(--gacha-gold); color: #333; padding: 3px 8px; border-radius: 10px; font-size: 0.8rem; display: inline-block; margin-bottom: 8px;">
-                                    ${prize.rankDisplay}賞
                                 </div>
-                                <div style="font-weight: bold; color: #333; height: 40px; overflow: hidden;">${prize.name}</div>
-                            ` : '<div style="color: #999;">未知獎品</div>'}
-                            <div style="color: #6c5ce7; font-size: 0.9rem; margin-top: 5px;">+${item.shards} 碎片</div>
+                            </template>
                         </div>
-                    `;
-                }).join('');
+                    </div>
+                </div>
+            </div>
 
-                document.getElementById('prizeResults').innerHTML = resultHtml;
-                document.getElementById('totalShardsResult').textContent = data.totalShards;
-                document.getElementById('totalCostResult').textContent = data.totalCost;
+            <!-- 購買確認彈窗 -->
+            <div class="game-modal" x-show="showPurchaseModal" x-cloak @click.self="closePurchaseModal()">
+                <div class="game-modal__card">
+                    <div class="game-modal__icon">🎫</div>
+                    <h3 class="game-modal__title">確認購買</h3>
+                    <div class="game-modal__details">
+                        <p>選擇數量：<span x-text="selectedSlots.length"></span> 格</p>
+                        <p>單價：$<span x-text="pricePerDraw"></span></p>
+                        <p class="game-modal__details-total">總計：$<span x-text="totalPrice"></span></p>
+                    </div>
+                    <div class="game-modal__actions">
+                        <button class="game-modal__btn game-modal__btn--cancel"
+                            @click="closePurchaseModal()">取消</button>
+                        <button class="game-modal__btn game-modal__btn--trial" @click="purchase(true)">🧪 試抽</button>
+                        <button class="game-modal__btn game-modal__btn--confirm" @click="purchase(false)"
+                            x-show="$store.user.isLoggedIn" :disabled="isProcessing">
+                            <span x-text="isProcessing ? '處理中...' : '確認購買'"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-                const summaryBtn = document.querySelector('#resultModal .btn-gacha');
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
+            <!-- 結果彈窗 -->
+            <div class="game-modal game-result-modal" x-show="showResultModal" x-cloak @click.self="closeResultModal()">
+                <div class="game-modal__card" style="max-width: 500px;">
+                    <p class="game-result__trial-badge" x-show="isTrial">⚡ 試抽模式</p>
+                    <h2 class="game-result__title">🎉 恭喜獲得！</h2>
+                    <div class="result-prizes">
+                        <template x-for="item in results" :key="item.slotNumber">
+                            <div class="result-prize-item">
+                                <span class="result-slot-num"
+                                    x-text="'#' + String(item.slotNumber).padStart(2, '0')"></span>
+                                <div class="result-prize-info">
+                                    <span class="result-rank" x-text="item.prize?.rankDisplay + '賞'"></span>
+                                    <span class="result-name" x-text="item.prize?.name || '神秘獎品'"></span>
+                                </div>
+                                <span class="result-shards" x-text="'+' + item.shards + ' 碎片'"></span>
+                            </div>
+                        </template>
+                    </div>
+                    <p class="game-result__shards" style="font-size: 1.2rem; margin-top: 15px;">
+                        總獲得：<span x-text="'+' + totalShards + ' 碎片'"></span>
+                    </p>
+                    <button class="game-result__btn" @click="closeResultModal()">
+                        <span x-text="isTrial ? '再試一次' : '📦 查看獎品紀錄'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
 
-                if (isTrial) {
-                    summaryBtn.innerHTML = isLoggedIn ? '✨ 返回選購' : '確定';
-                    summaryBtn.onclick = closeResult;
-                } else {
-                    summaryBtn.innerHTML = '📦 查看我的獎品紀錄';
-                    summaryBtn.onclick = () => GameUtils.redirectToHistory();
-                }
+        <script th:src="@{/js/game-utils.js}"></script>
+        <script th:src="@{/js/alpine/ichiban-component.js}"></script>
 
-                document.getElementById('resultModal').style.display = 'flex';
-                document.getElementById('resultModal').dataset.isTrial = isTrial;
-
-                if (!isTrial) {
-                    spawnConfetti();
-                }
+        <style>
+            .pity-section {
+                text-align: center;
+                margin-bottom: 25px;
             }
 
-            function closeResult() {
-                const isTrial = document.getElementById('resultModal').dataset.isTrial === 'true';
-                document.getElementById('resultModal').style.display = 'none';
-                if (window.hideMask) window.hideMask();
-
-                if (!isTrial) {
-                    GameUtils.redirectToHistory();
-                } else {
-                    location.reload();
-                }
+            .pity-bar-wrapper {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                justify-content: center;
             }
 
-            function closePurchaseModal() {
-                document.getElementById('purchaseModal').style.display = 'none';
-                document.body.style.overflow = 'auto';
-                if (window.hideMask) window.hideMask();
+            .pity-bar {
+                width: 250px;
+                height: 10px;
+                background: #eee;
+                border-radius: 10px;
+                overflow: hidden;
             }
 
-            function confirmPurchase() {
-                if (selectedSlots.length === 0) {
-                    Toast.warning('請先選擇要購買的格子');
-                    return;
-                }
-
-                document.getElementById('confirmSlotsCount').textContent = selectedSlots.length;
-                document.getElementById('confirmPricePerDraw').textContent = pricePerDraw;
-                document.getElementById('confirmTotalCost').textContent = '$' + (selectedSlots.length * pricePerDraw);
-
-                document.getElementById('purchaseModal').style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-                if (window.showMask) window.showMask();
+            .pity-bar__fill {
+                height: 100%;
+                background: linear-gradient(90deg, #4ecdc4, #44bd32);
+                transition: width 0.5s;
             }
 
-            // 關閉結果彈窗
-            function closeResultModal() {
-                document.getElementById('resultModal').style.display = 'none';
-                document.body.style.overflow = 'auto';
-                if (window.hideMask) window.hideMask();
+            .pity-text {
+                font-weight: 700;
+                color: #4ecdc4;
             }
 
-            // 每 10 秒自動刷新格子狀態（保持選中狀態）
-            setInterval(() => {
-                if (currentBoxId) {
-                    fetch(`/api/ichiban/${currentBoxId}/slots`)
-                        .then(r => r.json())
-                        .then(response => {
-                            if (response.success) {
-                                renderSlots(response.data);
-                            }
-                        });
-                }
-            }, 10000);
-        </script>
+            .pity-hint {
+                color: #999;
+                font-size: 0.85rem;
+                margin-top: 8px;
+            }
+
+            .ichiban-actions {
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+            }
+
+            .action-btn {
+                padding: 8px 16px;
+                border: none;
+                border-radius: 20px;
+                cursor: pointer;
+                font-weight: 600;
+                background: #eee;
+                transition: all 0.2s;
+            }
+
+            .action-btn:hover {
+                background: #ddd;
+            }
+
+            .action-btn--danger {
+                background: #ffe5e5;
+                color: #e74c3c;
+            }
+
+            .ichiban-slot-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+                gap: 8px;
+                max-width: 700px;
+                margin: 0 auto;
+            }
+
+            .ichiban-slot {
+                background: #f8f9fa;
+                border: 2px solid #eee;
+                border-radius: 8px;
+                padding: 10px 5px;
+                text-align: center;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+
+            .ichiban-slot:hover {
+                border-color: var(--accent-color);
+            }
+
+            .ichiban-slot.selected {
+                background: linear-gradient(145deg, #667eea, #764ba2);
+                border-color: #667eea;
+                color: #fff;
+            }
+
+            .ichiban-slot.sold {
+                background: #ddd;
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            .ichiban-slot.locked {
+                border-color: #e74c3c;
+                opacity: 0.7;
+                cursor: not-allowed;
+            }
+
+            .slot-number {
+                font-weight: 700;
+                font-size: 0.9rem;
+                display: block;
+            }
+
+            .slot-status {
+                font-size: 0.7rem;
+                opacity: 0.8;
+            }
+
+            .ichiban-cart {
+                position: fixed;
+                bottom: 40px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(145deg, #667eea, #764ba2);
+                color: #fff;
+                padding: 15px 30px;
+                border-radius: 30px;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+                z-index: 100;
+            }
+
+            .cart-count {
+                font-weight: 700;
+                font-size: 1.2rem;
+            }
+
+            .cart-total {
+                margin-left: 10px;
+                font-weight: 700;
+                color: #ffd700;
+            }
+
+            .cart-btn {
+                background: #fff;
+                color: #667eea;
+                border: none;
+                padding: 10px 25px;
+                border-radius: 20px;
+                font-weight: 700;
+                cursor: pointer;
+            }
+
+            .result-prizes {
+                max-height: 300px;
+                overflow-y: auto;
+            }
+
+            .result-prize-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 12px;
+                border-bottom: 1px solid #eee;
+            }
+
+            .result-slot-num {
+                background: #667eea;
+                color: #fff;
+                padding: 3px 10px;
+                border-radius: 10px;
+                font-size: 0.85rem;
+                font-weight: 700;
+            }
+
+            .result-prize-info {
+                flex: 1;
+            }
+
+            .result-rank {
+                background: #ffd700;
+                color: #333;
+                padding: 2px 8px;
+                border-radius: 8px;
+                font-size: 0.75rem;
+                font-weight: 700;
+                margin-right: 8px;
+            }
+
+            .result-name {
+                font-weight: 600;
+            }
+
+            .result-shards {
+                color: #27ae60;
+                font-weight: 600;
+            }
+
+            [x-cloak] {
+                display: none !important;
+            }
+        </style>
     </div>
-    <style>
-        .not-logged-in {
-            filter: grayscale(0.7);
-            opacity: 0.8;
-            position: relative;
-        }
-
-        .not-logged-in::after {
-            content: '🔒 登入後可抽獎';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            white-space: nowrap;
-            z-index: 10;
-        }
-
-        .sold-out {
-            background-color: #f8f9fa;
-        }
-    </style>
 </body>
 
 </html>

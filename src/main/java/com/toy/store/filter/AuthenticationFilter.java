@@ -99,9 +99,42 @@ public class AuthenticationFilter implements Filter {
             }
         }
 
-        boolean isProtected = path.startsWith("/cart") || path.startsWith("/profile") || path.startsWith("/orders")
+        // 需要會員登入的路徑
+        // 需要會員登入的路徑
+        boolean isProtected = false;
+        String method = httpRequest.getMethod();
+
+        // 1. 全域保護路徑 (不分 Method)
+        if (path.startsWith("/cart") || path.startsWith("/profile") || path.startsWith("/orders")
                 || path.equals("/mystery-box/draw")
-                || path.contains("/purchase") || path.contains("/spin") || path.contains("/dig");
+                || path.startsWith("/api/shard/redeem")
+                || path.startsWith("/api/cabinet")
+                || path.startsWith("/api/member/balance")) {
+            isProtected = true;
+        }
+        // 2. 關鍵字保護 (僅限 POST/PUT/DELETE 等非 GET 操作，或明確的敏感路徑)
+        else if (path.contains("/purchase") || path.contains("/spin") || path.contains("/dig")
+                || path.contains("/lock")) {
+            // 如果是這些關鍵字，通常是操作請求，需要保護
+            isProtected = true;
+        }
+        // 3. API 特定保護 (更精細的控制)
+        else if (path.startsWith("/api/blindbox/") && (path.endsWith("/draw") || path.contains("/use-"))) {
+            isProtected = true;
+        }
+
+        // 4. 明確豁免 (Whitelist) - 確保遊戲列表頁面 (GET) 絕對公開
+        if ("GET".equalsIgnoreCase(method)) {
+            if (path.equals("/api/blindbox") || path.equals("/api/bingo") || path.equals("/api/roulette")
+                    || path.equals("/api/redeem-shop")) {
+                isProtected = false;
+            }
+            // 允許查詢單個遊戲詳情
+            if (path.matches("/api/blindbox/\\d+") || path.matches("/api/bingo/\\d+")
+                    || path.matches("/api/roulette/\\d+")) {
+                isProtected = false;
+            }
+        }
 
         if (isProtected) {
             if (memberInfo == null) {

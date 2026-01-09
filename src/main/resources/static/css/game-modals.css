@@ -1,0 +1,456 @@
+/**
+ * game-modals.css
+ * 共用遊戲彈窗樣式
+ * 
+ * 適用頁面：ichiban, bingo, blindbox, roulette, redeem-shop, gacha
+ * 
+ * 依賴：style.css (CSS 變數)
+ */
+
+/* ==================== 彈窗容器 ==================== */
+.game-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.game-modal.active {
+    display: flex;
+}
+
+/* ==================== 彈窗卡片 ==================== */
+.game-modal__card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 35px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* 大尺寸變體 */
+.game-modal__card--lg {
+    max-width: 500px;
+}
+
+.game-modal__card--xl {
+    max-width: 600px;
+}
+
+/* ==================== 彈窗標題 ==================== */
+.game-modal__icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.game-modal__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.game-modal__desc {
+    color: var(--text-secondary);
+    margin: 0 0 1rem 0;
+    font-size: 0.95rem;
+}
+
+/* ==================== 價格資訊區 ==================== */
+.game-modal__price-box {
+    background: var(--bg-secondary);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+}
+
+.game-modal__price {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    margin: 0;
+}
+
+.game-modal__price-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+/* ==================== 詳細資訊區 ==================== */
+.game-modal__details {
+    text-align: left;
+    background: var(--bg-secondary);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+}
+
+.game-modal__details p {
+    margin: 0 0 8px 0;
+    font-size: 0.9rem;
+}
+
+.game-modal__details p:last-child {
+    margin-bottom: 0;
+}
+
+.game-modal__details-divider {
+    border-top: 1px solid #ddd;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+.game-modal__details-total {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--error-color);
+}
+
+/* ==================== 操作按鈕 ==================== */
+.game-modal__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.game-modal__btn {
+    padding: 12px 24px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.game-modal__btn--cancel {
+    background: transparent;
+    border: 2px solid #ddd;
+    color: var(--text-secondary);
+}
+
+.game-modal__btn--cancel:hover {
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+}
+
+.game-modal__btn--trial {
+    background: transparent;
+    border: 2px solid var(--accent-color);
+    color: var(--accent-color);
+}
+
+.game-modal__btn--trial:hover {
+    background: var(--accent-color);
+    color: #FFFFFF;
+}
+
+.game-modal__btn--confirm {
+    background: var(--accent-color);
+    color: #000;
+    min-width: 120px;
+}
+
+.game-modal__btn--confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+}
+
+.game-modal__btn--confirm:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.game-modal__btn--danger {
+    background: transparent;
+    border: 2px solid var(--error-color);
+    color: var(--error-color);
+}
+
+.game-modal__btn--danger:hover {
+    background: var(--error-color);
+    color: #fff;
+}
+
+/* ==================== 結果彈窗 ==================== */
+.game-result-modal {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+.game-result-modal .game-modal__card {
+    padding: 40px;
+}
+
+.game-result__trial-badge {
+    display: inline-block;
+    background: var(--info-color, #3182CE);
+    color: #FFFFFF;
+    padding: 4px 12px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.game-result__title {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+.game-result__prize-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    margin-bottom: 0.5rem;
+}
+
+.game-result__meta {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.game-result__shards {
+    color: var(--accent-color);
+    font-weight: 600;
+    margin-top: 0.75rem;
+}
+
+.game-result__action-hint {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.game-result__btn {
+    margin-top: 1.5rem;
+    padding: 14px 32px;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--accent-color);
+    color: #000;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.game-result__btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+}
+
+/* ==================== 獎品展示網格 ==================== */
+.game-result__prizes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.game-result__prize-card {
+    background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+    border-radius: 15px;
+    padding: 20px;
+    min-width: 140px;
+}
+
+.game-result__prize-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.game-result__prize-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.game-result__prize-rarity {
+    font-size: 0.85rem;
+    color: var(--accent-color);
+}
+
+/* ==================== 倒數計時環 ==================== */
+.game-countdown-circle {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 20px;
+    position: relative;
+}
+
+.game-countdown-circle svg {
+    width: 100%;
+    height: 100%;
+}
+
+.game-countdown-circle__bg {
+    fill: none;
+    stroke: #eee;
+    stroke-width: 8;
+}
+
+.game-countdown-circle__progress {
+    fill: none;
+    stroke: var(--accent-color);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 283;
+    stroke-dashoffset: 0;
+    transform: rotate(-90deg);
+    transform-origin: center;
+    transition: stroke-dashoffset 1s linear;
+}
+
+.game-countdown-circle__number {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent-color);
+}
+
+/* ==================== BINGO 特效 ==================== */
+.game-bingo-alert {
+    margin-top: 20px;
+    padding: 15px;
+    background: linear-gradient(145deg, var(--accent-color), #f39c12);
+    border-radius: 10px;
+    color: #fff;
+}
+
+.game-bingo-alert__title {
+    font-size: 1.5rem;
+    margin: 0 0 5px 0;
+}
+
+.game-bingo-alert__desc {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* ==================== 保底觸發 ==================== */
+.game-guarantee-badge {
+    display: inline-block;
+    background: linear-gradient(145deg, #ffd700, #f39c12);
+    color: #333;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    margin-top: 1rem;
+}
+
+/* ==================== 玩法說明彈窗 ==================== */
+.game-rules-modal .game-modal__card {
+    max-width: 500px;
+    text-align: left;
+}
+
+.game-rules-modal__close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.2s;
+}
+
+.game-rules-modal__close:hover {
+    color: #333;
+}
+
+.game-rules-modal__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.game-rules-modal__price-box {
+    background: linear-gradient(145deg, #667eea, #764ba2);
+    border-radius: 15px;
+    padding: 20px;
+    color: #fff;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.game-rules-modal__price-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.game-rules-modal__price {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.game-rules-modal__section {
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.game-rules-modal__section h4 {
+    margin: 0 0 10px 0;
+    color: #667eea;
+}
+
+.game-rules-modal__section ul {
+    margin: 0;
+    padding-left: 20px;
+    line-height: 1.8;
+    color: #555;
+}
+
+.game-rules-modal__section--warning {
+    background: #ffe4e1;
+}
+
+.game-rules-modal__section--warning h4 {
+    color: #c0392b;
+}
+
+.game-rules-modal__section--warning ul {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #666;
+}
+
+/* ==================== 錯誤提示 ==================== */
+.game-modal__error {
+    color: var(--error-color);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}

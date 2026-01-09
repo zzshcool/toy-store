@@ -5,91 +5,38 @@
     <div th:fragment="content">
         <link rel="stylesheet" th:href="@{/css/home-premium.css}">
 
-        <style>
-            /* Carousel Styles */
-            .carousel-container {
-                position: relative;
-                width: 85%;
-                height: 400px;
-                overflow: hidden;
-                margin: 20px auto 40px auto;
-                border-radius: 10px;
-                background: #fff;
-            }
+        <!-- 輪播圖資料 (隱藏，供 Alpine 讀取) -->
+        <template th:each="slide : ${carouselSlides}">
+            <div class="carousel-slide-data" th:data-image="${slide.imageUrl}" th:data-link="${slide.linkUrl}"></div>
+        </template>
 
-            .carousel-slide {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                opacity: 0;
-                transition: opacity 1s ease-in-out;
-                background-size: contain;
-                background-repeat: no-repeat;
-                background-position: center;
-            }
-
-            @media (max-width: 768px) {
-                .carousel-container {
-                    height: 250px;
-                }
-            }
-
-            .carousel-slide.active {
-                opacity: 1;
-            }
-
-            /* Indicators */
-            .carousel-indicators {
-                position: absolute;
-                bottom: 10px;
-                left: 50%;
-                transform: translateX(-50%);
-                display: flex;
-                gap: 10px;
-                z-index: 3;
-            }
-
-            .indicator {
-                width: 10px;
-                height: 10px;
-                background: rgba(255, 255, 255, 0.5);
-                border-radius: 50%;
-                cursor: pointer;
-            }
-
-            .indicator.active {
-                background: white;
-            }
-        </style>
-
-        <!-- Winner Reel (Commercial Highlight) -->
-        <div class="winner-reel-container" th:if="${!#lists.isEmpty(latestWinners)}">
+        <!-- 跑馬燈 -->
+        <div class="winner-reel-container" th:if="${!#lists.isEmpty(latestWinners)}" x-data="winnerReel">
             <div class="winner-reel">
                 <div th:each="win : ${latestWinners}" class="winner-item">
                     🎊 恭喜玩家 <span class="winner-name" th:text="${win.username}">j***n</span>
                     抽中 <span class="winner-prize" th:text="${win.prizeName}">實體抱枕</span>
                     <span th:if="${win.prizeRank != null}" th:text="'(' + ${win.prizeRank} + '賞)'"
-                        style="color: #ff8c00; font-weight: bold;"></span>
+                        class="winner-rank"></span>
                 </div>
             </div>
         </div>
 
         <div class="container">
-            <!-- Personal Dashboard (Login Status) -->
-            <div th:if="${currentMember != null}" class="personal-dashboard">
+            <!-- 用戶儀表板 -->
+            <div th:if="${currentMember != null}" class="personal-dashboard" x-data="homeDashboard"
+                x-init="balance = /*[[${currentMember.platformWalletBalance}]]*/ 0">
                 <div class="user-welcome">
                     歡迎回來，<span
                         th:text="${currentMember.nickname != null ? currentMember.nickname : currentMember.username}">玩家</span>！
-                    <span th:if="${currentMember.level != null}" class="badge"
-                        style="background: var(--premium-gold); color: #000; margin-left: 10px; font-weight: bold; border-radius: 4px; padding: 2px 8px;"
-                        th:text="${currentMember.level.name}">VIP1 青銅</span>
+                    <span th:if="${currentMember.level != null}" class="user-level-badge"
+                        th:text="${currentMember.level.name}">VIP1</span>
                 </div>
                 <div class="user-assets">
                     <div class="asset-item">
                         <span class="asset-label">錢包餘額</span>
-                        <span class="asset-value gold" th:text="'$' + ${currentMember.platformWalletBalance}">$0</span>
+                        <span class="asset-value gold">$<span x-text="balance"
+                                th:text="${currentMember.platformWalletBalance}">0</span></span>
                     </div>
                     <div class="asset-item">
                         <span class="asset-label">累積積分</span>
@@ -97,8 +44,7 @@
                     </div>
                     <div class="asset-item">
                         <span class="asset-label">成長值</span>
-                        <span class="asset-value" style="color: #ba68c8;"
-                            th:text="${currentMember.growthValue}">0</span>
+                        <span class="asset-value growth" th:text="${currentMember.growthValue}">0</span>
                     </div>
                     <div class="asset-item">
                         <span class="asset-label">幸運值</span>
@@ -106,13 +52,11 @@
                     </div>
                 </div>
                 <div class="user-actions">
-                    <a th:href="@{/transactions}" class="btn btn-sm"
-                        style="background: var(--premium-gold); color: #000; border-radius: 20px; font-weight: bold; padding: 5px 15px;">儲值點數</a>
+                    <a th:href="@{/transactions}" class="btn-deposit">儲值點數</a>
                 </div>
 
-                <!-- Loyalty System (Sign-in & Missions) -->
+                <!-- 簽到與任務 -->
                 <div class="loyalty-container">
-                    <!-- Sign-in Streak -->
                     <div class="sign-in-section" th:if="${signInInfo != null}">
                         <div class="loyalty-label">連續簽到：<span th:text="${signInInfo.consecutiveDays}">1</span> 天</div>
                         <div class="streak-grid">
@@ -124,7 +68,6 @@
                         </div>
                     </div>
 
-                    <!-- Daily Missions -->
                     <div class="mission-section" th:if="${!#lists.isEmpty(dailyMissions)}">
                         <div class="loyalty-label">今日任務</div>
                         <div class="mission-list">
@@ -151,191 +94,91 @@
             </div>
         </div>
 
-        <!-- Default Hero if no slides -->
+        <!-- Hero (無輪播圖時) -->
         <header class="hero" th:if="${#lists.isEmpty(carouselSlides)}">
             <div>
-                <h1>釋放你的 <span style="color: var(--accent-color)">童心靈魂</span></h1>
+                <h1>釋放你的 <span class="hero-accent">童心靈魂 <i class="fa-solid fa-ghost"></i></span></h1>
                 <p>探索稀有收藏品、限定公仔與神秘扭蛋。</p>
-                <div>
+                <div class="hero-actions">
                     <a th:if="${@systemSettingService.isShoppingEnabled()}" th:href="@{/products}"
                         class="btn btn-primary">立即選購</a>
-                    <a th:href="@{/gacha}" class="btn btn-outline"
-                        th:style="${@systemSettingService.isShoppingEnabled() ? 'margin-left: 10px;' : ''}">試試手氣</a>
+                    <a th:href="@{/gacha}" class="btn btn-outline">試試手氣</a>
                 </div>
             </div>
         </header>
 
-        <!-- Dynamic Carousel -->
-        <div class="carousel-container" th:if="${!#lists.isEmpty(carouselSlides)}">
-            <div th:each="slide, iterStat : ${carouselSlides}"
-                th:class="'carousel-slide ' + (${iterStat.index == 0} ? 'active' : '')"
-                th:style="'background-image: url(' + ${slide.imageUrl} + ');'">
-                <a th:if="${slide.linkUrl != null and slide.linkUrl != ''}" th:href="${slide.linkUrl}"
-                    style="display:block; width:100%; height:100%;"></a>
-            </div>
+        <!-- 輪播圖 -->
+        <div class="carousel-container" th:if="${!#lists.isEmpty(carouselSlides)}" x-data="homeCarousel">
+            <template x-for="(slide, i) in slides" :key="i">
+                <div class="carousel-slide" :class="{ 'active': currentSlide === i }"
+                    :style="'background-image: url(' + slide.imageUrl + ')'">
+                    <a x-show="slide.linkUrl" :href="slide.linkUrl" class="carousel-link"></a>
+                </div>
+            </template>
+            <button class="carousel-nav carousel-nav--prev" @click="prev()">❮</button>
+            <button class="carousel-nav carousel-nav--next" @click="next()">❯</button>
             <div class="carousel-indicators">
-                <div th:each="slide, iterStat : ${carouselSlides}"
-                    th:class="'indicator ' + (${iterStat.index == 0} ? 'active' : '')"
-                    th:onclick="'goToSlide(' + ${iterStat.index} + ')'"></div>
+                <template x-for="(slide, i) in slides" :key="'ind-' + i">
+                    <button class="carousel-indicator" :class="{ 'active': currentSlide === i }"
+                        @click="goTo(i)"></button>
+                </template>
             </div>
         </div>
 
         <div class="container">
-            <!-- Hot Ichiban Showcase -->
-            <div th:if="${@systemSettingService.isIchibanEnabled() && !#lists.isEmpty(hotIchiban)}"
-                style="margin-top: 40px; margin-bottom: 60px;">
-                <h2 class="premium-section-title">熱門一番賞 (Hot Ichiban)</h2>
-                <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;">
-                    <div th:each="box : ${hotIchiban}" class="game-card">
-                        <span class="game-tag">熱賣中</span>
-                        <img th:src="${box.imageUrl != null ? box.imageUrl : '/images/placeholder.jpg'}"
-                            alt="Game Image">
-                        <div class="game-card-content">
-                            <div class="game-card-title" th:text="${box.name}">一番賞名稱</div>
-                            <div class="game-card-stats">
-                                <span>單抽: <b style="color: var(--premium-gold);"
-                                        th:text="'$' + ${box.pricePerDraw}">$100</b></span>
-                                <span>剩餘: <b th:text="${box.totalSlots}">80</b>/<span
-                                        th:text="${box.maxSlots}">80</span></span>
-                            </div>
-                            <a th:href="@{/ichiban(boxId=${box.id})}" class="btn btn-premium">進入機台</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- IP Game Feed -->
+            <div class="section-block" x-data="gameFeed">
+                <h2 class="section-title">
+                    <i class="fa-solid fa-star" style="color: var(--accent-color); margin-right: 10px;"></i>
+                    熱門商品
+                </h2>
 
-            <!-- Hot Bingo Showcase -->
-            <div th:if="${@systemSettingService.isBingoEnabled() && !#lists.isEmpty(hotBingo)}"
-                style="margin-bottom: 60px;">
-                <h2 class="premium-section-title">連線九宮格 (Bingo Games)</h2>
-                <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;">
-                    <div th:each="game : ${hotBingo}" class="game-card">
-                        <span class="game-tag" style="background: #00d2ff;">熱門</span>
-                        <img th:src="${game.imageUrl != null ? game.imageUrl : '/images/placeholder.jpg'}"
-                            alt="Game Image">
-                        <div class="game-card-content">
-                            <div class="game-card-title" th:text="${game.name}">九宮格名稱</div>
-                            <div class="game-card-stats">
-                                <span>單挖: <b style="color: var(--premium-gold);"
-                                        th:text="'$' + ${game.pricePerDig}">$50</b></span>
-                                <span>格數: <span th:text="${game.gridSize + 'x' + game.gridSize}">3x3</span></span>
+                <div class="game-feed-grid">
+                    <template x-for="item in items" :key="item.type + '-' + item.id">
+                        <a :href="getLink(item)" class="feed-card">
+                            <div class="feed-card__image-wrapper">
+                                <img :src="item.imageUrl || '/images/placeholder.jpg'" class="feed-card__image"
+                                    loading="lazy">
+                                <!-- Stock Overlay for Ichiban -->
+                                <div class="feed-stock-badge" x-show="item.type === 'ICHIBAN' && item.totalStock > 0">
+                                    <span x-text="item.remainingStock + '/' + item.totalStock"></span>
+                                </div>
                             </div>
-                            <a th:href="@{/bingo(gameId=${game.id})}" class="btn btn-premium">開始挑戰</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- New Arrivals -->
-            <div th:if="${@systemSettingService.isShoppingEnabled() && !#lists.isEmpty(newArrivals)}"
-                style="margin-bottom: 40px;">
-                <h2 class="section-title">新品項目 (New Arrivals)</h2>
-                <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
-                    <div th:each="item : ${newArrivals}" class="card">
-                        <div
-                            style="height: 200px; padding: 10px; display: flex; align-items: center; justify-content: center; position: relative;">
-                            <img th:if="${item.product.imageUrl != null}" th:src="${item.product.imageUrl}"
-                                style="max-height: 100%; max-width: 100%; object-fit: contain;">
-                            <div th:if="${item.product.imageUrl == null}" class="img-placeholder"
-                                style="width: 100%; height: 100%;">
-                                <span>(無圖片)</span>
-                            </div>
-                            <span th:if="${item.product.stock == 0}"
-                                style="position: absolute; top: 10px; right: 10px; background: var(--error-color); color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">缺貨中</span>
-                        </div>
-                        <div style="padding: 15px;">
-                            <h3 th:text="${item.product.name}" style="font-size: 1.1rem; margin-bottom: 10px;">Product
-                            </h3>
-                            <div
-                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <span style="font-weight: bold; color: var(--accent-color); font-size: 1.2rem;"
-                                    th:text="'$' + ${item.product.price}">$100</span>
-                            </div>
-                            <a th:href="@{/products(keyword=${item.product.name})}" class="btn btn-primary btn-sm"
-                                style="width: 100%; text-align: center;">查看詳情</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                            <div class="feed-card__content">
+                                <div class="feed-card__header">
+                                    <span class="feed-tag" :class="getBadgeClass(item.type)"
+                                        x-text="item.typeDisplay"></span>
+                                    <h3 class="feed-card__title" x-text="item.name"></h3>
+                                </div>
 
-            <!-- Best Sellers -->
-            <div th:if="${@systemSettingService.isShoppingEnabled() && !#lists.isEmpty(bestSellers)}"
-                style="margin-bottom: 40px;">
-                <h2 class="section-title">熱銷排行榜 (Best Sellers)</h2>
-                <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
-                    <div th:each="item : ${bestSellers}" class="card">
-                        <div
-                            style="height: 200px; padding: 10px; display: flex; align-items: center; justify-content: center; position: relative;">
-                            <img th:if="${item.product.imageUrl != null}" th:src="${item.product.imageUrl}"
-                                style="max-height: 100%; max-width: 100%; object-fit: contain;">
-                            <div th:if="${item.product.imageUrl == null}" class="img-placeholder"
-                                style="width: 100%; height: 100%;">
-                                <span>(無圖片)</span>
+                                <div class="feed-card__footer">
+                                    <div class="feed-card__price">
+                                        <span class="currency">$</span>
+                                        <span class="amount" x-text="item.price"></span>
+                                    </div>
+                                    <span class="feed-action-icon">➔</span>
+                                </div>
                             </div>
-                            <span th:if="${item.product.stock == 0}"
-                                style="position: absolute; top: 10px; right: 10px; background: var(--error-color); color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">缺貨中</span>
-                        </div>
-                        <div style="padding: 15px;">
-                            <h3 th:text="${item.product.name}" style="font-size: 1.1rem; margin-bottom: 10px;">Product
-                            </h3>
-                            <div
-                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <span style="font-weight: bold; color: var(--accent-color); font-size: 1.2rem;"
-                                    th:text="'$' + ${item.product.price}">$100</span>
-                            </div>
-                            <a th:href="@{/products(keyword=${item.product.name})}" class="btn btn-primary btn-sm"
-                                style="width: 100%; text-align: center;">查看詳情</a>
-                        </div>
-                    </div>
+                        </a>
+                    </template>
                 </div>
-            </div>
 
-            <!-- 隱藏最新活動區塊 -->
-            <div th:if="${false}">
-                <h2 class="section-title">最新活動</h2>
-                <div class="grid">
-                    <div th:each="activity : ${activities}" class="card">
-                        <div class="img-placeholder">
-                            (活動圖片)
-                        </div>
-                        <div style="padding: 20px;">
-                            <span th:text="${activity.type}" class="btn btn-sm"
-                                style="background: #eee; color: #333;">TYPE</span>
-                            <h3 th:text="${activity.title}" style="margin: 10px 0;">標題</h3>
-                            <p th:text="${activity.description}">描述</p>
-                        </div>
-                    </div>
+                <!-- Sentinel & Loading State -->
+                <div id="feed-sentinel" class="feed-loader">
+                    <div x-show="loading" class="spinner"></div>
+                    <p x-show="!hasMore && items.length > 0" class="no-more-text">沒有更多商品了</p>
                 </div>
             </div>
         </div>
 
-        <script>
-            // Carousel Logic
-            let currentSlide = 0;
-            const slides = document.querySelectorAll('.carousel-slide');
-            const indicators = document.querySelectorAll('.indicator');
-            const totalSlides = slides.length;
+        <!-- Alpine 元件 -->
+        <script th:src="@{/js/alpine/home-component.js}"></script>
+        <script th:src="@{/js/alpine/home-feed.js}"></script>
+        <link rel="stylesheet" th:href="@{/css/home-feed.css}">
 
-            function goToSlide(n) {
-                if (totalSlides === 0) return;
-                slides[currentSlide].classList.remove('active');
-                indicators[currentSlide].classList.remove('active');
-
-                currentSlide = (n + totalSlides) % totalSlides;
-
-                slides[currentSlide].classList.add('active');
-                indicators[currentSlide].classList.add('active');
-            }
-
-            function nextSlide() {
-                goToSlide(currentSlide + 1);
-            }
-
-            if (totalSlides > 0) {
-                setInterval(nextSlide, 5000);
-            }
-        </script>
 
     </div>
+</body>
 
 </html>

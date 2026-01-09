@@ -84,7 +84,7 @@
 }
 
 .highlight-text {
-    color: #6c5ce7;
+    color: var(--accent-color);
     font-size: 1.2rem;
 }
 
@@ -136,7 +136,7 @@
 /* ==================== 價格資訊卡 ==================== */
 
 .price-info-card {
-    background: linear-gradient(145deg, #667eea, #764ba2);
+    background: linear-gradient(145deg, var(--accent-color), #FF9F43);
     border-radius: 15px;
     padding: 20px;
     color: white;
@@ -166,7 +166,7 @@
 
 .rules-section h4 {
     margin-bottom: 10px;
-    color: #667eea;
+    color: var(--accent-color);
 }
 
 .rules-section ul,
@@ -266,7 +266,7 @@
 }
 
 .result-value {
-    color: #6c5ce7;
+    color: var(--accent-color);
     font-weight: 600;
 }
 

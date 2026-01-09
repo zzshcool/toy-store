@@ -27,7 +27,7 @@
 
 /* ==================== 骨架屏 ==================== */
 .skeleton {
-    background: linear-gradient(90deg, #1a1a2e 25%, #2a2a4a 50%, #1a1a2e 75%);
+    background: linear-gradient(90deg, #F1F3F5 25%, #E2E8F0 50%, #F1F3F5 75%);
     background-size: 200% 100%;
     animation: skeletonShimmer 1.5s infinite;
     border-radius: 8px;
@@ -44,8 +44,9 @@
 }
 
 .skeleton-card {
-    background: rgba(30, 30, 50, 0.6);
-    border-radius: 16px;
+    background: #FFFFFF;
+    border: 1px solid var(--border-color, #E2E8F0);
+    border-radius: 12px;
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -92,7 +93,8 @@
     align-items: center;
     gap: 16px;
     padding: 16px;
-    background: rgba(30, 30, 50, 0.4);
+    background: #FFFFFF;
+    border: 1px solid var(--border-color, #E2E8F0);
     border-radius: 12px;
 }
 
@@ -110,23 +112,22 @@
     gap: 8px;
 }
 
-/* ==================== 流程防護遮罩 ==================== */
 #process-mask {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(255, 255, 255, 0.8);
     z-index: 9990;
     display: none;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(2px);
+    backdrop-filter: blur(4px);
 }
 
 #process-mask .spinner {
     width: 48px;
     height: 48px;
-    border: 4px solid rgba(255, 255, 255, 0.2);
-    border-top-color: #6c5ce7;
+    border: 4px solid var(--border-color, #E2E8F0);
+    border-top-color: var(--accent-color, #FF7E00);
     border-radius: 50%;
     animation: processSpin 0.8s linear infinite;
 }
@@ -259,18 +260,18 @@
 .login-modal-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
 }
 
 .login-modal-content {
     position: relative;
-    background: linear-gradient(145deg, #1a1a2e, #16213e);
-    border-radius: 20px;
-    padding: 40px 35px;
+    background: #FFFFFF;
+    border-radius: 16px;
+    padding: 35px 30px;
     max-width: 400px;
     width: 90%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
     animation: modalSlideIn 0.3s ease;
 }
 
@@ -288,64 +289,66 @@
 
 .login-modal-close {
     position: absolute;
-    top: 15px;
-    right: 18px;
+    top: 12px;
+    right: 16px;
     background: none;
     border: none;
-    color: #888;
+    color: var(--text-muted, #A0AEC0);
     font-size: 24px;
     cursor: pointer;
     transition: color 0.2s;
 }
 
 .login-modal-close:hover {
-    color: #fff;
+    color: var(--text-primary, #2D3748);
 }
 
 .login-modal-content h2 {
     margin: 0 0 8px;
-    color: #fff;
-    font-size: 1.6rem;
+    color: var(--text-primary, #2D3748);
+    font-size: 1.5rem;
     text-align: center;
 }
 
 .login-modal-subtitle {
     text-align: center;
-    color: #888;
-    margin-bottom: 25px;
+    color: var(--text-secondary, #718096);
+    margin-bottom: 24px;
     font-size: 0.9rem;
 }
 
 .login-input-group {
-    margin-bottom: 18px;
+    margin-bottom: 16px;
 }
 
 .login-input-group label {
     display: block;
-    color: #aaa;
+    color: var(--text-secondary, #718096);
     font-size: 0.85rem;
     margin-bottom: 6px;
+    font-weight: 500;
 }
 
 .login-input-group input {
     width: 100%;
     padding: 12px 14px;
-    border: 1px solid #333;
-    border-radius: 10px;
-    background: #0f0f23;
-    color: #fff;
+    border: 1px solid var(--border-color, #E2E8F0);
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: var(--text-primary, #2D3748);
     font-size: 1rem;
-    transition: border-color 0.3s;
+    transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .login-input-group input:focus {
     outline: none;
-    border-color: #6c5ce7;
+    border-color: var(--accent-color, #FF7E00);
+    box-shadow: 0 0 0 3px rgba(255, 126, 0, 0.1);
 }
 
 .login-error {
-    background: rgba(231, 76, 60, 0.2);
-    color: #e74c3c;
+    background: rgba(229, 62, 62, 0.1);
+    color: var(--error-color, #E53E3E);
     padding: 10px;
     border-radius: 8px;
     margin-bottom: 15px;
@@ -356,19 +359,20 @@
 .login-submit-btn {
     width: 100%;
     padding: 14px;
-    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    background: linear-gradient(135deg, var(--accent-color, #FF7E00), #FF9F43);
     border: none;
-    border-radius: 10px;
-    color: #fff;
+    border-radius: 50px;
+    color: #FFFFFF;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 14px rgba(255, 126, 0, 0.2);
 }
 
 .login-submit-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(108, 92, 231, 0.4);
+    box-shadow: 0 6px 20px rgba(255, 126, 0, 0.35);
 }
 
 .login-submit-btn:disabled {
@@ -378,14 +382,15 @@
 
 .login-register-link {
     text-align: center;
-    color: #888;
+    color: var(--text-secondary, #718096);
     margin-top: 20px;
     font-size: 0.9rem;
 }
 
 .login-register-link a {
-    color: #a29bfe;
+    color: var(--accent-color, #FF7E00);
     text-decoration: none;
+    font-weight: 600;
 }
 
 /* ==================== 規則彈窗 ==================== */

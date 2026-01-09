@@ -1,0 +1,188 @@
+/* Game Feed Grid */
+.game-feed-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    padding-bottom: 20px;
+}
+
+@media (max-width: 600px) {
+    .game-feed-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+}
+
+/* Feed Card */
+.feed-card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s, box-shadow 0.3s;
+    border: 1px solid #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+    cursor: pointer;
+}
+
+.feed-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Image Wrapper */
+.feed-card__image-wrapper {
+    position: relative;
+    padding-top: 100%;
+    /* 1:1 Aspect Ratio */
+    background: #f9f9f9;
+}
+
+.feed-card__image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Stock Badge (Top Right) */
+.feed-stock-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    backdrop-filter: blur(2px);
+}
+
+/* Content */
+.feed-card__content {
+    padding: 12px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.feed-card__header {
+    margin-bottom: 8px;
+}
+
+/* Tags */
+.feed-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-right: 6px;
+    color: #fff;
+    vertical-align: middle;
+}
+
+.badge-ichiban {
+    background: #FF6B6B;
+}
+
+/* Red/Pink */
+.badge-blindbox {
+    background: #4ECDC4;
+}
+
+/* Teal */
+.badge-gacha {
+    background: #FFD93D;
+    color: #333;
+}
+
+/* Yellow */
+.badge-bingo {
+    background: #9B59B6;
+}
+
+/* Purple */
+.badge-roulette {
+    background: #E74C3C;
+}
+
+/* Red */
+.badge-default {
+    background: #95a5a6;
+}
+
+.feed-card__title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.4;
+    display: inline;
+    vertical-align: middle;
+}
+
+/* Footer & Price */
+.feed-card__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.feed-card__price {
+    color: #FF7E00;
+    /* Accent Color */
+    font-weight: 800;
+    font-size: 1.1rem;
+}
+
+.feed-card__price .currency {
+    font-size: 0.8rem;
+    margin-right: 2px;
+}
+
+.feed-action-icon {
+    font-size: 1.2rem;
+    color: #ddd;
+    transition: color 0.3s;
+}
+
+.feed-card:hover .feed-action-icon {
+    color: #FF7E00;
+}
+
+/* Loading Spinner */
+.feed-loader {
+    text-align: center;
+    padding: 30px 0;
+    color: #999;
+}
+
+.spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid #eee;
+    border-top-color: #FF7E00;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 10px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.no-more-text {
+    font-size: 0.9rem;
+    color: #aaa;
+}

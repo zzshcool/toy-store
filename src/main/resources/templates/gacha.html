@@ -3,351 +3,177 @@
 
 <body>
     <div th:fragment="content">
-        <link rel="stylesheet" th:href="@{/css/gacha-animations.css}">
-        <script th:src="@{/js/game-utils.js}"></script>
+        <!-- 頁面專屬樣式 -->
+        <link rel="stylesheet" th:href="@{/css/gacha-page.css}">
+        <link rel="stylesheet" th:href="@{/css/home-feed.css}">
 
-        <div class="container section">
-            <h2 class="section-title">🎰 神秘扭蛋機</h2>
-            <p class="text-center" style="color: var(--text-secondary); margin-bottom: 30px;">
-                轉動扭蛋，獲得驚喜好禮！
-            </p>
+        <!-- Alpine.js 主容器 -->
+        <div class="gacha-page" x-data="gachaComponent">
 
-            <!-- 扭蛋主題選擇 -->
-            <div class="grid" style="margin-bottom: 40px;">
-                <div th:each="theme : ${themes}" class="card text-center" style="cursor: pointer; transition: all 0.3s;"
-                    onclick="selectTheme(this)" th:data-id="${theme.id}" th:data-price="${theme.price}"
-                    th:data-name="${theme.name}">
-                    <div class="img-placeholder"
-                        style="background: linear-gradient(145deg, #ff6b6b, #ee5a5a); margin-bottom: 15px;">
-                        <span style="font-size: 3rem;">🎁</span>
-                    </div>
-                    <div style="display: flex; justify-content: center; gap: 5px; margin-bottom: 8px;">
-                        <span th:if="${theme.ipName != ''}" th:text="${theme.ipName}"
-                            style="background: var(--gacha-gold); color: #333; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold;">
-                        </span>
-                    </div>
-                    <h3 th:text="${theme.name}">主題名稱</h3>
-                    <p th:text="${theme.description}"
-                        style="color: var(--text-secondary); font-size: 0.9rem; margin: 10px 0;"></p>
-                    <p style="font-size: 1.3rem; font-weight: bold; color: var(--accent-color);">
-                        $<span th:text="${theme.price}">100</span> / 抽
-                    </p>
+            <!-- 主題選擇區 -->
+            <div class="container section gacha-theme-section" x-show="!selectedTheme">
+                <h2 class="section-title">🎰 神秘扭蛋機</h2>
+                <p class="section-subtitle">轉動扭蛋，獲得驚喜好禮！</p>
+
+                <!-- 載入中 -->
+                <div x-show="themes.length === 0" class="gacha-loading">
+                    <div class="gacha-loading__spinner"></div>
+                    <p>載入中...</p>
+                </div>
+
+                <!-- 主題網格 - 卡片式 Feed -->
+                <div class="game-feed-grid" x-show="themes.length > 0">
+                    <template x-for="theme in themes" :key="theme.id">
+                        <div class="feed-card" @click="selectTheme(theme)">
+                            <div class="feed-card__image-wrapper">
+                                <img :src="theme.imageUrl || '/images/placeholder.jpg'" class="feed-card__image"
+                                    loading="lazy">
+                            </div>
+
+                            <div class="feed-card__content">
+                                <div class="feed-card__header">
+                                    <span class="feed-tag badge-gacha">轉蛋</span>
+                                    <h3 class="feed-card__title" x-text="theme.name"></h3>
+                                </div>
+
+                                <div class="feed-card__footer">
+                                    <div class="feed-card__price">
+                                        <span class="currency">$</span>
+                                        <span class="amount" x-text="theme.price"></span>
+                                    </div>
+                                    <span class="feed-action-icon">➔</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
-        </div>
 
-        <!-- 扭蛋操作區 -->
-        <div id="gachaSection"
-            style="display: none; padding: 60px 0; background: linear-gradient(180deg, #1a1a2e, #16213e); text-align: center;">
-            <h3 id="selectedThemeName" style="color: white; margin-bottom: 30px;">主題名稱</h3>
+            <!-- 扭蛋機操作區 -->
+            <div class="gacha-machine-section" x-show="selectedTheme" x-cloak>
+                <div class="container">
+                    <h3 class="gacha-machine-section__title" x-text="selectedTheme?.name || '主題名稱'"></h3>
 
-            <!-- 專業擬真扭蛋機 -->
-            <div class="gacha-machine-wrap">
-                <!-- 透明球艙 -->
-                <div class="gacha-head">
-                    <div class="gacha-dome"></div>
-                    <div class="gacha-balls-pool">
-                        <!-- 裝飾用小球 -->
-                        <div class="ball-mini" style="--bg: #ff6b6b"></div>
-                        <div class="ball-mini" style="--bg: #4ecdc4"></div>
-                        <div class="ball-mini" style="--bg: #ffd93d"></div>
-                        <div class="ball-mini" style="--bg: #6c5ce7"></div>
-                        <div class="ball-mini" style="--bg: #ff6b6b"></div>
-                        <div class="ball-mini" style="--bg: #4ecdc4"></div>
-                        <div class="ball-mini" style="--bg: #ffd93d"></div>
-                        <div class="ball-mini" style="--bg: #6c5ce7"></div>
-                        <div class="ball-mini" style="--bg: #ff6b6b"></div>
-                        <div class="ball-mini" style="--bg: #4ecdc4"></div>
-                    </div>
-                </div>
+                    <!-- 簡化扭蛋機 -->
+                    <div class="gacha-machine">
+                        <!-- 球艙 -->
+                        <div class="gacha-machine__dome">
+                            <div class="gacha-ball gacha-ball--red"></div>
+                            <div class="gacha-ball gacha-ball--blue"></div>
+                            <div class="gacha-ball gacha-ball--yellow"></div>
+                            <div class="gacha-ball gacha-ball--purple"></div>
+                            <div class="gacha-ball gacha-ball--red"></div>
+                            <div class="gacha-ball gacha-ball--green"></div>
+                            <div class="gacha-ball gacha-ball--yellow"></div>
+                            <div class="gacha-ball gacha-ball--blue"></div>
+                            <div class="gacha-ball gacha-ball--purple"></div>
+                            <div class="gacha-ball gacha-ball--green"></div>
+                        </div>
 
-                <!-- 控制區與手把 -->
-                <div class="gacha-control">
-                    <div class="gacha-handle-outer" onclick="startDraw()">
-                        <div id="gachaHandle" class="gacha-handle"></div>
-                    </div>
-                    <p style="color: white; font-weight: bold; margin-top: 10px; font-size: 0.9rem;">轉動手把開始</p>
+                        <!-- 控制區 -->
+                        <div class="gacha-machine__control">
+                            <div class="gacha-handle-wrapper">
+                                <div id="gachaHandle" class="gacha-handle"></div>
+                            </div>
+                            <p class="gacha-handle-label">轉動手把開始</p>
+                            <div class="gacha-machine__exit"></div>
+                        </div>
 
-                    <div class="gacha-exit">
-                        <div id="capsuleExit" style="position: relative; top: -40px; display: none;">
-                            <div class="gacha-capsule" id="capsule">
-                                <div class="top">
-                                    <div class="shine"></div>
+                        <!-- 膠囊 (動畫用) -->
+                        <div id="capsuleContainer" class="gacha-capsule-container" style="display: none;">
+                            <div class="gacha-capsule">
+                                <div class="gacha-capsule__top">
+                                    <div class="gacha-capsule__shine"></div>
                                 </div>
-                                <div class="bottom"></div>
+                                <div class="gacha-capsule__bottom"></div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- 操作按鈕 -->
+                    <div class="gacha-actions">
+                        <button class="gacha-btn-draw" @click="openConfirmModal()" :disabled="isSpinning">
+                            <span x-show="!isSpinning">🎲 投幣轉蛋！</span>
+                            <span x-show="isSpinning">轉動中...</span>
+                        </button>
+                        <button class="gacha-btn-trial" @click="spin(true)" :disabled="isSpinning">🧪 免費試抽</button>
+                        <p class="gacha-price-display">消費 $<span x-text="displayPrice">100</span></p>
+                        <button class="gacha-btn-back" @click="clearSelection()">← 返回選擇</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- 下方按鈕 (輔助) -->
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 30px;">
-                <button id="drawBtn" class="btn-gacha" onclick="startDraw()" style="width: 220px; font-size: 1.3rem;">
-                    🎲 投幣轉蛋！
-                </button>
-                <button id="trialBtn" class="btn btn-outline" onclick="startTrial()"
-                    style="width: 150px; color: #fff; border-color: rgba(255,255,255,0.3); font-size: 0.9rem;">
-                    🧪 免費試抽
-                </button>
-                <p id="drawPrice" style="color: #aaa; margin-top: 5px;">消費 $<span>100</span></p>
-                <button class="btn btn-outline" onclick="closeGacha()"
-                    style="color: white; border-color: white; margin-top: 10px;">
-                    ← 返回選擇
-                </button>
-            </div>
-        </div>
-
-        <!-- 結果彈窗 -->
-        <div id="resultModal" class="prize-reveal-overlay" style="display: none;">
-            <div class="prize-card" style="max-width: 400px;">
-                <div id="trialBadge"
-                    style="display: none; background: #666; color: white; padding: 2px 10px; border-radius: 10px; font-size: 0.8rem; margin-bottom: 10px;">
-                    試抽體驗</div>
-                <h2 style="margin-bottom: 20px;">🎉 恭喜獲得！</h2>
-                <div id="resultContent">
-                    <h3 id="prizeNameResult"
-                        style="color: var(--accent-color); font-size: 1.5rem; margin-bottom: 10px;">獎品名稱</h3>
-                    <p id="prizeWeightResult" style="color: #666;">稀有度：<span>10</span></p>
-                    <p id="prizeValueResult" style="color: #666;">價值：<span>$100</span></p>
+            <!-- 確認扣款彈窗 -->
+            <div class="gacha-confirm-modal" x-show="showConfirmModal" x-cloak @click.self="closeConfirmModal()">
+                <div class="gacha-confirm-card">
+                    <div class="gacha-confirm-card__icon">🎰</div>
+                    <h3 class="gacha-confirm-card__title">確認投幣</h3>
+                    <p class="gacha-confirm-card__desc">即將扣除餘額進行抽獎</p>
+                    <div class="gacha-confirm-card__price-box">
+                        <p class="gacha-confirm-card__price">$<span x-text="displayPrice">0</span></p>
+                    </div>
+                    <div class="gacha-confirm-card__actions">
+                        <button class="gacha-confirm-card__btn gacha-confirm-card__btn--cancel"
+                            @click="closeConfirmModal()">取消</button>
+                        <button class="gacha-confirm-card__btn gacha-confirm-card__btn--trial"
+                            @click="spin(true)">免費試抽</button>
+                        <button class="gacha-confirm-card__btn gacha-confirm-card__btn--confirm" @click="spin(false)"
+                            x-show="$store.user.isLoggedIn">確認投幣</button>
+                    </div>
                 </div>
-                <div id="trialAction" style="display: none; margin-top: 15px; font-size: 0.9rem; color: #666;">
-                    喜歡這個獎品嗎？登入後即可正式抽取！
-                </div>
-                <button class="btn-gacha" onclick="closeResultModal()" style="margin-top: 20px;">太棒了！再抽一次</button>
             </div>
-        </div>
 
-        <!-- 錯誤提示 -->
-        <div th:if="${error}" class="container" style="margin-top: 20px;">
-            <div class="alert alert-error text-center" th:text="${error}">錯誤</div>
-        </div>
-
-        <!-- 確認扣款模態框 -->
-        <div id="confirmModal" class="prize-reveal-overlay" style="display: none;">
-            <div class="prize-card" style="max-width: 400px;">
-                <div style="font-size: 2rem; margin-bottom: 15px;">🎰</div>
-                <h3 style="margin: 0 0 15px 0;">確認投幣</h3>
-                <p style="margin-bottom: 10px;">即將扣除餘額進行抓抽</p>
-                <div style="background: rgba(102,126,234,0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <p style="margin: 0; font-size: 1.5rem; color: var(--accent-color); font-weight: bold;">
-                        $<span id="confirmPrice">0</span>
+            <!-- 結果彈窗 -->
+            <div class="gacha-result-modal" x-show="showResultModal" x-cloak @click.self="closeResultModal()">
+                <div class="gacha-result-card">
+                    <span class="gacha-result-card__trial-badge" x-show="isTrial">試抽體驗</span>
+                    <h2 class="gacha-result-card__title">🎉 恭喜獲得！</h2>
+                    <p class="gacha-result-card__prize-name" x-text="result?.prize?.name || '神秘獎品'"></p>
+                    <p class="gacha-result-card__meta gacha-result-card__meta--weight">
+                        稀有度：<span x-text="result?.prize?.weight || '-'"></span>
                     </p>
-                </div>
-                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                    <button class="btn btn-outline" onclick="cancelConfirm()">取消</button>
-                    <button class="btn btn-outline" onclick="confirmDraw(true)"
-                        style="border-color: #667eea; color: #667eea;">免費試抽體驗</button>
-                    <button class="btn-gacha" onclick="confirmDraw(false)">確認投幣</button>
+                    <p class="gacha-result-card__meta gacha-result-card__meta--value">
+                        價值：$<span x-text="result?.prize?.value || '-'"></span>
+                    </p>
+                    <p class="gacha-result-card__action-hint" x-show="isTrial && !$store.user.isLoggedIn">
+                        喜歡這個獎品嗎？登入後即可正式抽取！
+                    </p>
+                    <button class="gacha-result-card__btn" @click="closeResultModal()">太棒了！再抽一次</button>
                 </div>
             </div>
         </div>
 
-        <script th:inline="javascript">
-            let selectedTheme = null;
+        <!-- Alpine.js 元件 -->
+        <script th:src="@{/js/alpine/gacha-component.js}"></script>
 
-            function selectTheme(card) {
-                selectedTheme = {
-                    id: card.dataset.id,
-                    price: card.dataset.price,
-                    name: card.dataset.name
-                };
-
-                document.getElementById('selectedThemeName').textContent = selectedTheme.name;
-                document.getElementById('drawPrice').querySelector('span').textContent = selectedTheme.price;
-                document.querySelector('.container.section').style.display = 'none';
-                document.getElementById('gachaSection').style.display = 'block';
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+        <style>
+            /* 載入狀態 */
+            .gacha-loading {
+                text-align: center;
+                padding: 60px 20px;
             }
 
-            function closeGacha() {
-                document.querySelector('.container.section').style.display = 'block';
-                document.getElementById('gachaSection').style.display = 'none';
-                selectedTheme = null;
+            .gacha-loading__spinner {
+                width: 40px;
+                height: 40px;
+                border: 3px solid var(--bg-secondary);
+                border-top-color: var(--accent-color);
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+                margin: 0 auto 1rem;
             }
 
-            function startDraw() {
-                if (!selectedTheme) {
-                    alert('請先選擇主題');
-                    return;
-                }
-
-                // 無論是否登入，都顯示確認框
-                document.getElementById('confirmPrice').textContent = selectedTheme.price;
-                document.getElementById('confirmModal').style.display = 'flex';
-            }
-
-            function startTrial() {
-                if (!selectedTheme) {
-                    alert('請先選擇主題');
-                    return;
-                }
-                confirmDraw(true);
-            }
-
-            function cancelConfirm() {
-                document.getElementById('confirmModal').style.display = 'none';
-            }
-
-            function confirmDraw(isTrial = false) {
-                document.getElementById('confirmModal').style.display = 'none';
-                GameUtils.showMask();
-
-                const btn = document.getElementById('drawBtn');
-                const trialBtn = document.getElementById('trialBtn');
-                const handle = document.getElementById('gachaHandle');
-                const capsuleExit = document.getElementById('capsuleExit');
-                const capsule = document.getElementById('capsule');
-                const balls = document.querySelectorAll('.ball-mini');
-
-                if (btn) btn.disabled = true;
-                if (trialBtn) trialBtn.disabled = true;
-
-                // 1. GSAP 總體 TimeLine
-                const masterTl = gsap.timeline();
-
-                // 2. 轉動手把動畫
-                masterTl.to(handle, {
-                    rotation: 360,
-                    duration: 0.8,
-                    ease: "back.inOut(1.7)",
-                    onStart: () => playHandleSound()
-                });
-
-                // 3. 球艙抖動動畫
-                masterTl.to(balls, {
-                    x: "random(-10, 10)",
-                    y: "random(-10, 10)",
-                    rotation: "random(-45, 45)",
-                    duration: 0.1,
-                    repeat: 6,
-                    yoyo: true,
-                    ease: "none"
-                }, 0.2);
-
-                // 4. 發送回後台 API 請求
-                const params = new URLSearchParams();
-                params.append('themeId', selectedTheme.id);
-                if (isTrial) {
-                    params.append('isTrial', 'true');
-                }
-
-                // 5. 等待手把轉完後掉落
-                masterTl.add(() => {
-                    fetch('/gacha/draw', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: params.toString()
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (!data.success) {
-                                alert(data.message || '抽獎失敗');
-                                GameUtils.hideMask();
-                                location.reload();
-                                return;
-                            }
-
-                            // 6. 掉落動畫
-                            capsuleExit.style.display = 'block';
-
-                            gsap.fromTo(capsule,
-                                { y: -400, rotation: 0, scale: 0.5, opacity: 0 },
-                                {
-                                    y: 0,
-                                    rotation: 720,
-                                    scale: 1,
-                                    opacity: 1,
-                                    duration: 1.2,
-                                    ease: "bounce.out",
-                                    onComplete: () => {
-                                        setTimeout(() => {
-                                            GameUtils.playWinSound();
-                                            GameUtils.spawnConfetti();
-                                            showAjaxResult(data.wonItem.name, data.wonItem.weight, data.wonItem.estimatedValue, isTrial);
-
-                                            // 重置
-                                            if (btn) btn.disabled = false;
-                                            if (trialBtn) trialBtn.disabled = false;
-                                            capsuleExit.style.display = 'none';
-                                        }, 500);
-                                    }
-                                }
-                            );
-                        })
-                        .catch(err => {
-                            console.error('Error:', err);
-                            alert('網路異常或系統錯誤，請重試');
-                            GameUtils.hideMask();
-                        });
-                }, 0.8);
-            }
-
-            function playHandleSound() {
-                try {
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const osc = ctx.createOscillator();
-                    const g = ctx.createGain();
-                    osc.connect(g); g.connect(ctx.destination);
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(150, ctx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.2);
-                    g.gain.setValueAtTime(0.1, ctx.currentTime);
-                    g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-                    osc.start(); osc.stop(ctx.currentTime + 0.2);
-                } catch (e) { }
-            }
-
-
-            function showAjaxResult(name, weight, value, isTrial) {
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                document.getElementById('prizeNameResult').textContent = name;
-                document.getElementById('prizeWeightResult').querySelector('span').textContent = weight;
-                document.getElementById('prizeValueResult').querySelector('span').textContent = value;
-                document.getElementById('trialBadge').style.display = isTrial ? 'inline-block' : 'none';
-
-                const trialAction = document.getElementById('trialAction');
-                if (isTrial) {
-                    trialAction.style.display = 'block';
-                    trialAction.innerHTML = isLoggedIn ?
-                        '✨ 試抽完成！隨時可以正式投幣抽取真品。' :
-                        '喜歡這個獎品嗎？登入後即可正式抽取！';
-                } else {
-                    trialAction.style.display = 'none';
-                }
-
-                const resultBtn = document.querySelector('#resultModal .btn-gacha');
-                if (isTrial) {
-                    resultBtn.innerHTML = isLoggedIn ? '✨ 返回選購' : '太棒了！再抽一次';
-                    resultBtn.onclick = closeResultModal;
-                } else {
-                    resultBtn.innerHTML = '📦 查看我的獎品紀錄';
-                    resultBtn.onclick = () => GameUtils.redirectToHistory();
-                }
-
-                document.getElementById('resultModal').style.display = 'flex';
-            }
-
-            function closeResultModal() {
-                document.getElementById('resultModal').style.display = 'none';
-                GameUtils.hideMask();
-                // 如果是正式抽獎，關閉後跳轉至紀錄頁面
-                const isTrial = document.getElementById('trialBadge').style.display !== 'none';
-                if (!isTrial) {
-                    GameUtils.redirectToHistory();
-                } else {
-                    location.reload();
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
                 }
             }
 
-            // 初始數據檢查
-            document.addEventListener('DOMContentLoaded', function () {
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.has('error')) {
-                    console.log('Error found in URL');
-                }
-            });
-        </script>
+            /* 隱藏未初始化的 Alpine 元素 */
+            [x-cloak] {
+                display: none !important;
+            }
+        </style>
     </div>
 </body>
 

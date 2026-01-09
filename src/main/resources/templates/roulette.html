@@ -3,518 +3,304 @@
 
 <body>
     <div th:fragment="content">
-        <link rel="stylesheet" th:href="@{/css/gacha-animations.css}">
-        <link rel="stylesheet" th:href="@{/css/game-components.css}">
-        <script th:src="@{/js/game-utils.js}"></script>
+        <!-- 頁面專屬樣式 -->
+        <link rel="stylesheet" th:href="@{/css/game-listing.css}">
+        <link rel="stylesheet" th:href="@{/css/game-modals.css}">
+        <link rel="stylesheet" th:href="@{/css/home-feed.css}">
 
-        <div class="container section">
-            <h2 class="section-title">🎡 幸運轉盤</h2>
+        <!-- Alpine.js 主容器 -->
+        <div class="game-page" x-data="rouletteComponent">
+            <div class="container section">
+                <h2 class="section-title">🎡 幸運轉盤</h2>
+                <p class="section-subtitle">轉動命運之輪，贏取豐厚獎品！</p>
 
-            <!-- 幸運值顯示 -->
-            <div style="max-width: 500px; margin: 0 auto 30px auto; text-align: center;">
-                <p style="margin-bottom: 10px;">幸運值累積</p>
-                <div class="lucky-bar-container">
-                    <div id="luckyBar" class="lucky-bar" style="width: 0%;">
-                        <span id="luckyText">0/---</span>
+                <!-- 幸運值進度 -->
+                <div class="lucky-section" x-show="$store.user.isLoggedIn">
+                    <div class="lucky-bar-wrapper">
+                        <div class="lucky-bar">
+                            <div class="lucky-bar__fill" :class="{ 'guarantee': isGuaranteeReady }"
+                                :style="{ width: luckyProgress + '%' }"></div>
+                        </div>
+                        <span class="lucky-text" x-text="luckyValue + '/' + luckyThreshold"></span>
                     </div>
-                </div>
-                <p id="luckyHint" style="color: var(--text-secondary); font-size: 0.9rem;">
-                    累積滿幸運值必中大獎！
-                </p>
-            </div>
-
-            <!-- 轉盤列表 -->
-            <div id="gameList" class="grid" style="margin-bottom: 40px;">
-                <div class="text-center" style="grid-column: 1/-1; padding: 40px;">
-                    <p>載入中...</p>
-                </div>
-            </div>
-
-            <!-- 轉盤遊戲區域 -->
-            <div id="rouletteGame" style="display: none;">
-                <!-- 試抽提示橫幅 -->
-                <div id="trialModeBanner"
-                    style="display: none; background: #667eea; color: white; padding: 10px; text-align: center; border-radius: 10px; margin-bottom: 20px; font-weight: bold; animation: pulse 2s infinite;">
-                    ✨ 目前為試抽模式，結果不列入紀錄。立即登入贏取真品！
-                </div>
-
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h3 id="gameName" style="margin-bottom: 5px;">轉盤名稱</h3>
-                    <p style="color: var(--text-secondary);">
-                        <span style="color: var(--gacha-gold); font-weight: bold; font-size: 1.3rem;">
-                            $<span id="spinPrice">0</span>
-                        </span> / 次
+                    <p class="lucky-hint" :class="{ 'ready': isGuaranteeReady }">
+                        <span
+                            x-text="isGuaranteeReady ? '🎉 保底已觸發！下次必中大獎！' : '累積滿 ' + luckyThreshold + ' 幸運值必中大獎！'"></span>
                     </p>
                 </div>
 
-                <div class="roulette-container"
-                    style="max-width: 400px; width: 90%; aspect-ratio: 1/1; margin: 30px auto; position: relative;">
-                    <div class="roulette-pointer"></div>
-                    <canvas id="wheelCanvas" class="roulette-wheel"
-                        style="width: 100%; height: 100%; display: block;"></canvas>
-                    <div class="roulette-center" onclick="spin()">
-                        <span>🎰</span>
+                <!-- 遊戲列表 - 卡片式 Feed -->
+                <div class="game-feed-grid" x-show="!currentGame">
+                    <div x-show="games.length === 0" class="feed-loader">
+                        <div class="spinner"></div>
+                        <p>載入中...</p>
                     </div>
+
+                    <template x-for="game in games" :key="game.id">
+                        <div class="feed-card" @click="selectGame(game)">
+                            <div class="feed-card__image-wrapper">
+                                <img :src="game.imageUrl || '/images/placeholder.jpg'" class="feed-card__image"
+                                    loading="lazy">
+                            </div>
+
+                            <div class="feed-card__content">
+                                <div class="feed-card__header">
+                                    <span class="feed-tag badge-roulette">轉盤</span>
+                                    <h3 class="feed-card__title" x-text="game.name"></h3>
+                                </div>
+
+                                <div class="feed-card__footer">
+                                    <div class="feed-card__price">
+                                        <span class="currency">$</span>
+                                        <span class="amount" x-text="game.pricePerSpin"></span>
+                                    </div>
+                                    <span class="feed-action-icon">➔</span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
 
-                <div style="text-align: center; margin-top: 30px;">
-                    <button id="spinBtn" class="btn-gacha" onclick="spin()">開始旋轉</button>
-                    <button class="btn btn-outline" onclick="backToList()" style="margin-left: 15px;">返回</button>
-                </div>
-
-                <!-- 獎項清單 -->
-                <div style="background: white; border-radius: 20px; padding: 30px; margin-top: 40px;">
-                    <h4 style="margin-bottom: 20px;">🎁 轉盤獎項一覽</h4>
-                    <div id="prizeList" class="grid"
-                        style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">
-                        <!-- 由 JS 動態生成 -->
+                <!-- 轉盤遊戲區 -->
+                <div class="roulette-game-section" x-show="currentGame" x-cloak>
+                    <div class="game-detail-header">
+                        <div class="game-detail-header__top">
+                            <div>
+                                <h3 class="game-detail-header__name" x-text="currentGame?.name"></h3>
+                                <p class="game-detail-header__desc" x-text="currentGame?.description || ''"></p>
+                            </div>
+                            <div class="game-detail-header__price">
+                                $<span x-text="displayPrice"></span> / 次
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- 轉盤容器 -->
+                    <div class="roulette-container">
+                        <div class="roulette-wheel">
+                            <canvas id="wheelCanvas" width="300" height="300"></canvas>
+                            <div class="roulette-center" @click="openConfirmModal()">
+                                <span x-text="isSpinning ? '轉動中' : 'START'"></span>
+                            </div>
+                        </div>
+                        <div class="roulette-pointer">▼</div>
+                    </div>
+
+                    <!-- 操作按鈕 -->
+                    <div class="roulette-actions">
+                        <button class="game-modal__btn game-modal__btn--confirm" @click="openConfirmModal()"
+                            :disabled="isSpinning">
+                            <span x-text="isSpinning ? '轉動中...' : '🎡 開始轉動'"></span>
+                        </button>
+                        <button class="game-modal__btn game-modal__btn--trial" @click="spin(true)"
+                            :disabled="isSpinning">🧪 免費試抽</button>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button class="game-back-btn" @click="backToList()">← 返回列表</button>
+                    </div>
+
+                    <!-- 獎品列表 -->
+                    <div class="game-prize-section">
+                        <h4 class="game-prize-section__title">🎁 獎品一覽</h4>
+                        <div class="game-prize-grid">
+                            <template x-for="slot in wheelSlots" :key="slot.id">
+                                <div class="game-prize-item">
+                                    <span class="prize-badge" :class="{
+                                        'badge-jackpot': slot.slotType === 'JACKPOT',
+                                        'badge-rare': slot.slotType === 'RARE'
+                                    }" x-text="slot.slotType"></span>
+                                    <div class="game-prize-item__name" x-text="slot.prizeName"></div>
+                                    <div style="font-size: 0.85rem; color: #666;" x-text="slot.prizeDescription || ''">
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 確認彈窗 -->
+            <div class="game-modal" x-show="showConfirmModal" x-cloak @click.self="closeConfirmModal()">
+                <div class="game-modal__card">
+                    <div class="game-modal__icon">🎡</div>
+                    <h3 class="game-modal__title">確認轉動</h3>
+                    <p class="game-modal__desc">即將扣除餘額進行轉盤</p>
+                    <div class="game-modal__details">
+                        <p class="game-modal__details-total">消費：$<span x-text="displayPrice"></span></p>
+                    </div>
+                    <div class="game-modal__actions">
+                        <button class="game-modal__btn game-modal__btn--cancel" @click="closeConfirmModal()">取消</button>
+                        <button class="game-modal__btn game-modal__btn--trial" @click="spin(true)">免費試抽</button>
+                        <button class="game-modal__btn game-modal__btn--confirm" @click="spin(false)"
+                            x-show="$store.user.isLoggedIn">確認轉動</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 結果彈窗 -->
+            <div class="game-modal game-result-modal" x-show="showResultModal" x-cloak @click.self="closeResultModal()">
+                <div class="game-modal__card">
+                    <div class="game-modal__icon" x-text="result?.slot?.isJackpot ? '🏆' : '🎊'"></div>
+                    <h2 class="game-result__title">恭喜獲得！</h2>
+                    <p class="game-result__prize-name" x-text="result?.slot?.prizeName || '神秘獎品'"></p>
+                    <p class="game-result__shards" x-show="result?.shardsEarned > 0"
+                        x-text="'+' + result?.shardsEarned + ' 碎片'"></p>
+                    <p class="game-result__trial-badge" x-show="isTrial">試抽體驗</p>
+                    <div x-show="result?.isGuarantee"
+                        style="background: #ffd700; color: #333; padding: 8px 15px; border-radius: 10px; margin: 10px 0;">
+                        🎯 保底觸發！
+                    </div>
+                    <button class="game-result__btn" @click="closeResultModal()">
+                        <span x-text="isTrial ? '再試一次' : '📦 查看獎品紀錄'"></span>
+                    </button>
                 </div>
             </div>
         </div>
 
+        <!-- Alpine.js 元件 -->
+        <script th:src="@{/js/game-utils.js}"></script>
+        <script th:src="@{/js/alpine/roulette-component.js}"></script>
+
+        <!-- 頁面專屬樣式 -->
         <style>
-            .not-logged-in {
-                filter: grayscale(0.7);
-                opacity: 0.8;
+            .lucky-section {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+
+            .lucky-bar-wrapper {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                justify-content: center;
+            }
+
+            .lucky-bar {
+                width: 300px;
+                height: 12px;
+                background: #eee;
+                border-radius: 10px;
+                overflow: hidden;
+            }
+
+            .lucky-bar__fill {
+                height: 100%;
+                background: linear-gradient(90deg, #667eea, #764ba2);
+                transition: width 0.5s;
+            }
+
+            .lucky-bar__fill.guarantee {
+                background: linear-gradient(90deg, #ffd700, #ff6b6b);
+                animation: pulse 1s infinite;
+            }
+
+            .lucky-text {
+                font-weight: 700;
+                color: #667eea;
+            }
+
+            .lucky-hint {
+                color: #999;
+                font-size: 0.9rem;
+                margin-top: 8px;
+            }
+
+            .lucky-hint.ready {
+                color: #ffd700;
+                font-weight: 700;
+            }
+
+            .roulette-container {
+                position: relative;
+                width: 320px;
+                margin: 30px auto;
+            }
+
+            .roulette-wheel {
                 position: relative;
             }
 
-            .not-logged-in::after {
-                content: '🔒 登入後可抽獎';
+            #wheelCanvas {
+                width: 300px;
+                height: 300px;
+                border-radius: 50%;
+                box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+            }
+
+            .roulette-center {
                 position: absolute;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                background: rgba(0, 0, 0, 0.7);
-                color: white;
-                padding: 5px 15px;
-                border-radius: 20px;
-                z-index: 10;
+                width: 60px;
+                height: 60px;
+                background: linear-gradient(145deg, #667eea, #764ba2);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #fff;
+                font-weight: 700;
+                font-size: 0.8rem;
+                cursor: pointer;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             }
 
-            .prize-item {
-                text-align: center;
-                border: 1px solid #eee;
-                padding: 15px;
-                border-radius: 12px;
+            .roulette-pointer {
+                position: absolute;
+                top: -10px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 2rem;
+                color: #e74c3c;
+            }
+
+            .roulette-actions {
+                display: flex;
+                gap: 15px;
+                justify-content: center;
+                margin-top: 20px;
             }
 
             .prize-badge {
-                font-size: 0.75rem;
-                padding: 2px 8px;
+                padding: 3px 10px;
                 border-radius: 10px;
-                margin-bottom: 8px;
-                display: inline-block;
+                font-size: 0.75rem;
+                font-weight: 700;
             }
 
             .badge-jackpot {
-                background: #fee2e2;
-                color: #ef4444;
+                background: #ffd700;
+                color: #333;
             }
 
             .badge-rare {
-                background: #fef3c7;
-                color: #d97706;
+                background: #6c5ce7;
+                color: #fff;
             }
 
             .badge-normal {
-                background: #f1f5f9;
-                color: #64748b;
+                background: #eee;
+                color: #666;
+            }
+
+            @keyframes pulse {
+
+                0%,
+                100% {
+                    opacity: 1;
+                }
+
+                50% {
+                    opacity: 0.7;
+                }
+            }
+
+            [x-cloak] {
+                display: none !important;
             }
         </style>
-
-        <!-- 結果彈窗 -->
-        <div id="resultModal" class="prize-reveal-overlay" style="display: none;">
-            <div class="prize-card">
-                <div id="resultType" style="font-size: 1.5rem; margin-bottom: 10px;">🎊</div>
-                <h2 id="resultPrize" style="margin: 0 0 20px 0;">獎品名稱</h2>
-                <p id="resultShards" style="color: #6c5ce7; margin-bottom: 5px;"></p>
-                <p id="resultGuarantee" style="color: var(--gacha-gold); font-weight: bold; display: none;">🎉 保底觸發！</p>
-                <p id="resultFreeSpin" style="color: #27ae60; font-weight: bold; display: none;">🎁 獲得免費再轉一次！</p>
-                <button class="btn-gacha" onclick="closeResult()" style="margin-top: 20px;">確定</button>
-            </div>
-        </div>
-
-        <!-- 確認扣款模態框 -->
-        <div id="confirmModal" class="prize-reveal-overlay" style="display: none;">
-            <div class="prize-card" style="max-width: 400px;">
-                <div style="font-size: 2rem; margin-bottom: 15px;">🎡</div>
-                <h3 style="margin: 0 0 15px 0;">確認旋轉</h3>
-                <p style="margin-bottom: 10px;">即將扣除餘額進行抽獎</p>
-                <div style="background: rgba(102,126,234,0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <p style="margin: 0; font-size: 1.5rem; color: var(--accent-color); font-weight: bold;">
-                        $<span id="confirmPrice">0</span>
-                    </p>
-                </div>
-                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                    <button class="btn btn-outline" onclick="cancelConfirm()">取消</button>
-                    <button class="btn btn-outline" onclick="simulateTrialSpin()"
-                        style="border-color: #667eea; color: #667eea;">免費試抽體驗</button>
-                    <button id="realSpinBtn" class="btn-gacha" onclick="confirmSpin()">確認扣款</button>
-                </div>
-            </div>
-        </div>
-
-        <script th:inline="javascript">
-            let currentGameId = null;
-            let isSpinning = false;
-            let wheelSlots = [];
-            let luckyThreshold = 1000; // 從 API 動態讀取
-
-            document.addEventListener('DOMContentLoaded', function () {
-                loadSystemSettings();
-                loadLuckyValue();
-                loadGameList();
-            });
-
-            function loadSystemSettings() {
-                fetch('/api/system/settings')
-                    .then(r => r.json())
-                    .then(response => {
-                        if (response.success) {
-                            luckyThreshold = response.data.luckyThreshold || 1000;
-                            document.getElementById('luckyHint').textContent = `累積滿 ${luckyThreshold} 幸運值必中大獎！`;
-                        }
-                    });
-            }
-
-            function loadLuckyValue() {
-                fetch('/api/roulette/lucky-value')
-                    .then(r => r.json())
-                    .then(response => {
-                        if (response.success) {
-                            updateLuckyBar(response.data.luckyValue, response.data.threshold || luckyThreshold);
-                        }
-                    });
-            }
-
-            function updateLuckyBar(current, threshold) {
-                const percentage = Math.min((current / threshold) * 100, 100);
-                const bar = document.getElementById('luckyBar');
-                bar.style.width = percentage + '%';
-                document.getElementById('luckyText').textContent = `${current}/${threshold}`;
-
-                if (current >= threshold) {
-                    bar.classList.add('guarantee');
-                    document.getElementById('luckyHint').textContent = '🎉 保底已觸發！下次必中大獎！';
-                    document.getElementById('luckyHint').style.color = 'var(--gacha-gold)';
-                }
-            }
-
-            function loadGameList() {
-                // 顯示骨架屏
-                Skeleton.show('#gameList', 4);
-
-                fetch('/api/roulette')
-                    .then(r => r.json())
-                    .then(response => {
-                        if (response.success && response.data.length > 0) {
-                            renderGameList(response.data);
-                        } else {
-                            document.getElementById('gameList').innerHTML = `
-                                <div class="text-center" style="grid-column: 1/-1; padding: 40px;">
-                                    <p>目前沒有進行中的轉盤遊戲</p>
-                                </div>
-                            `;
-                        }
-                    });
-            }
-
-            function renderGameList(games) {
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                const html = games.map(game => `
-                    <div class="card" style="cursor: pointer;" onclick="selectGame(${game.id})">
-                        <div class="img-placeholder" style="background: linear-gradient(145deg, #FF6B6B, #FFD93D); border-radius: 50%; margin: 20px auto; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 15px rgba(255,107,107,0.3);">
-                            <span style="color: white; font-size: 3.5rem;">🎡</span>
-                        </div>
-                        <div style="padding: 15px; text-align: center;">
-                            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                <span style="background: var(--gacha-gold); color: #333; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;">
-                                    ${game.ipName}
-                                </span>
-                            </div>
-                            <h3 style="margin: 10px 0; font-size: 1.1rem; color: var(--text-primary);">${game.name}</h3>
-                            <div style="display: flex; justify-content: center; gap: 5px; margin-bottom: 8px;">
-                                <span style="background: rgba(102,126,234,0.1); color: #667eea; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;">✨ 支援試抽</span>
-                            </div>
-                            <p style="color: var(--accent-color); font-weight: bold; font-size: 1.2rem; margin-bottom: 5px;">$${game.pricePerSpin} / 次</p>
-                            <p style="color: #666; font-size: 0.8rem;">${game.totalSlots} 個獎格</p>
-                        </div>
-                    </div>
-                `).join('');
-                document.getElementById('gameList').innerHTML = html;
-            }
-
-            function promptLogin() {
-                Toast.warning('請先登入會員以進行抽獎！');
-                LoginModal.show();
-            }
-
-            function selectGame(gameId) {
-                currentGameId = gameId;
-                document.getElementById('gameList').style.display = 'none';
-                document.getElementById('rouletteGame').style.display = 'block';
-                loadGameDetails(gameId);
-            }
-
-            function backToList() {
-                currentGameId = null;
-                document.getElementById('gameList').style.display = 'grid';
-                document.getElementById('rouletteGame').style.display = 'none';
-            }
-
-            function loadGameDetails(gameId) {
-                fetch(`/api/roulette/${gameId}`)
-                    .then(r => r.json())
-                    .then(response => {
-                        if (response.success) {
-                            const game = response.data;
-                            document.getElementById('gameName').textContent = game.name;
-                            document.getElementById('spinPrice').textContent = game.pricePerSpin;
-                            wheelSlots = game.slots || [];
-                            drawWheel(wheelSlots);
-                            renderPrizeList(wheelSlots);
-                        }
-                    });
-            }
-
-            function renderPrizeList(slots) {
-                const html = slots.map(slot => {
-                    let badgeClass = 'badge-normal';
-                    if (slot.slotType === 'JACKPOT') badgeClass = 'badge-jackpot';
-                    if (slot.slotType === 'RARE') badgeClass = 'badge-rare';
-
-                    return `
-                        <div class="prize-item">
-                            <div class="prize-badge ${badgeClass}">${slot.slotType}</div>
-                            <div style="font-weight: bold; margin-bottom: 5px;">${slot.prizeName}</div>
-                            <div style="font-size: 0.85rem; color: #666;">${slot.prizeDescription || ''}</div>
-                        </div>
-                    `;
-                }).join('');
-                document.getElementById('prizeList').innerHTML = html;
-            }
-
-            function drawWheel(slots) {
-                const canvas = document.getElementById('wheelCanvas');
-                const ctx = canvas.getContext('2d');
-
-                // 根據容器實際大小設定 Canvas 解析度 (解決模糊與比例問題)
-                const rect = canvas.getBoundingClientRect();
-                canvas.width = rect.width * window.devicePixelRatio;
-                canvas.height = rect.height * window.devicePixelRatio;
-
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
-                const radius = Math.min(centerX, centerY) - 10;
-
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                if (slots.length === 0) return;
-
-                const sliceAngle = (2 * Math.PI) / slots.length;
-                const colors = ['#FF6B6B', '#4ECDC4', '#FFD93D', '#6C5CE7', '#A8E6CF', '#FF8B94', '#FFEAA7', '#DFE6E9'];
-
-                slots.forEach((slot, index) => {
-                    const startAngle = index * sliceAngle - Math.PI / 2;
-                    const endAngle = startAngle + sliceAngle;
-
-                    // 繪製扇形
-                    ctx.beginPath();
-                    ctx.moveTo(centerX, centerY);
-                    ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-                    ctx.closePath();
-                    ctx.fillStyle = slot.color || colors[index % colors.length];
-                    ctx.fill();
-                    ctx.strokeStyle = 'white';
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-
-                    // 繪製文字
-                    ctx.save();
-                    ctx.translate(centerX, centerY);
-                    ctx.rotate(startAngle + sliceAngle / 2);
-                    ctx.textAlign = 'right';
-                    ctx.fillStyle = 'white';
-                    ctx.font = 'bold 12px sans-serif';
-                    ctx.fillText(slot.prizeName.substring(0, 6), radius - 15, 5);
-                    ctx.restore();
-                });
-            }
-
-            let currentSpinPrice = 0;
-
-            function spin() {
-                if (isSpinning || !currentGameId) return;
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-
-                // 顯示確認模態框
-                currentSpinPrice = document.getElementById('spinPrice').textContent;
-                document.getElementById('confirmPrice').textContent = currentSpinPrice;
-
-                const modalTitle = document.querySelector('#confirmModal h3');
-                modalTitle.textContent = '確認旋轉 / 試抽';
-
-                document.getElementById('confirmModal').style.display = 'flex';
-            }
-
-            function cancelConfirm() {
-                document.getElementById('confirmModal').style.display = 'none';
-            }
-
-            function confirmSpin() {
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                if (!isLoggedIn) {
-                    simulateTrialSpin();
-                    return;
-                }
-
-                document.getElementById('confirmModal').style.display = 'none';
-                GameUtils.showMask(); // Call showMask at the start
-                isSpinning = true;
-                document.getElementById('spinBtn').disabled = true;
-
-                fetch(`/api/roulette/${currentGameId}/spin`, { method: 'POST' })
-                    .then(r => r.json())
-                    .then(response => {
-                        if (response.success) {
-                            const result = response.data;
-                            const slotIndex = wheelSlots.findIndex(s => s.id === result.slot.id);
-                            animateWheel(slotIndex, () => {
-                                showResult(result, response.message);
-                                loadLuckyValue();
-                                // 刷新餘額
-                                if (window.refreshBalance) window.refreshBalance();
-                                GameUtils.hideMask(); // Call hideMask after result is shown
-                            });
-                        } else {
-                            Toast.error(response.message || '旋轉失敗');
-                            isSpinning = false;
-                            document.getElementById('spinBtn').disabled = false;
-                            GameUtils.hideMask(); // Call hideMask on error
-                        }
-                    })
-                    .catch(err => {
-                        console.error('Error:', err);
-                        Toast.error('操作失敗');
-                        isSpinning = false;
-                        document.getElementById('spinBtn').disabled = false;
-                        GameUtils.hideMask(); // Call hideMask on error
-                    });
-            }
-
-            function simulateTrialSpin() {
-                document.getElementById('confirmModal').style.display = 'none';
-                GameUtils.showMask();
-                isSpinning = true;
-                document.getElementById('spinBtn').disabled = true;
-
-                // 隨機選一個索引
-                const slotIndex = Math.floor(Math.random() * wheelSlots.length);
-                const resultSlot = wheelSlots[slotIndex];
-
-                animateWheel(slotIndex, () => {
-                    const trialResult = {
-                        isTrial: true,
-                        slot: resultSlot,
-                        shardsEarned: Math.floor(Math.random() * 100),
-                        isGuarantee: false,
-                        isFreeSpin: false
-                    };
-                    showResult(trialResult, "試抽成功");
-                    GameUtils.hideMask();
-                });
-            }
-
-            function animateWheel(targetIndex, callback) {
-                const canvas = document.getElementById('wheelCanvas');
-                const container = canvas.closest('.roulette-container');
-                const totalSlots = wheelSlots.length;
-                const sliceAngle = 360 / totalSlots;
-
-                // 1. 計算目標旋轉角度 (多轉幾圈 + 偏移到目標格子)
-                // 讓目標格子正對指針 (指針在上方，即 -90度或 270度方向)
-                const currentAngle = gsap.getProperty(canvas, "rotation") || 0;
-                const extraSpins = 5;
-                const targetRotation = currentAngle + (360 * extraSpins) + (360 - (targetIndex * sliceAngle + sliceAngle / 2));
-
-                // 2. GSAP 動態補間
-                const tl = gsap.timeline({
-                    onComplete: () => {
-                        isSpinning = false;
-                        document.getElementById('spinBtn').disabled = false;
-                        // 移除 3D 傾斜與發光
-                        gsap.to(container, { rotationX: 0, rotationY: 0, duration: 0.5 });
-                        gsap.to(canvas, { boxShadow: "0 0 30px rgba(0,0,0,0.3)", duration: 0.5 });
-                        if (callback) callback();
-                    }
-                });
-
-                // 3D 傾斜效果
-                tl.to(container, {
-                    rotationX: 15,
-                    rotationY: 5,
-                    duration: 1,
-                    ease: "power2.out"
-                }, 0);
-
-                // 發光效果
-                tl.to(canvas, {
-                    boxShadow: "0 0 60px rgba(108, 92, 231, 0.6)",
-                    duration: 1
-                }, 0);
-
-                // 旋轉
-                tl.to(canvas, {
-                    rotation: targetRotation,
-                    duration: 5,
-                    ease: "expo.inOut"
-                }, 0);
-            }
-
-            function showResult(result, message) {
-                const isLoggedIn = /*[[${currentUser != null}]]*/ false;
-                const isTrial = !!result.isTrial;
-                const slot = result.slot;
-
-                document.getElementById('resultType').textContent = slot.isJackpot ? '🏆' : '🎊';
-                document.getElementById('resultPrize').textContent = slot.prizeName;
-                document.getElementById('resultShards').textContent = result.shardsEarned > 0 ? `+${result.shardsEarned} 碎片` : '';
-                document.getElementById('resultGuarantee').style.display = result.isGuarantee ? 'block' : 'none';
-                document.getElementById('resultFreeSpin').style.display = result.isFreeSpin ? 'block' : 'none';
-
-                const resultBtn = document.querySelector('#resultModal .btn-gacha');
-                if (isTrial) {
-                    resultBtn.innerHTML = isLoggedIn ? '✨ 返回選購' : '確定';
-                    resultBtn.onclick = closeResult;
-                } else {
-                    resultBtn.innerHTML = '📦 查看我的獎品紀錄';
-                    resultBtn.onclick = () => GameUtils.redirectToHistory();
-                }
-
-                document.getElementById('resultModal').style.display = 'flex';
-                // 儲存當前是否為正式抽獎，供關閉時參考
-                document.getElementById('resultModal').dataset.isTrial = isTrial;
-
-                if (!isTrial) {
-                    GameUtils.playWinSound();
-                    GameUtils.spawnConfetti();
-                }
-            }
-
-            function closeResult() {
-                const isTrial = document.getElementById('resultModal').dataset.isTrial === 'true';
-                document.getElementById('resultModal').style.display = 'none';
-                GameUtils.hideMask();
-
-                if (!isTrial) {
-                    GameUtils.redirectToHistory();
-                } else {
-                    location.reload();
-                }
-            }
-        </script>
     </div>
 </body>
 

@@ -1,8 +1,5 @@
 package com.toy.store.controller;
 
-import com.toy.store.model.BingoGame;
-import com.toy.store.mapper.BingoGameMapper;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,14 +10,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
  */
 @Controller
 @RequestMapping("/bingo")
-@RequiredArgsConstructor
 public class BingoController {
-
-    private final BingoGameMapper gameMapper;
 
     @GetMapping
     public String index(Model model) {
-        model.addAttribute("games", gameMapper.findByStatus(BingoGame.Status.ACTIVE.name()));
+        // 前端使用 Alpine.js 的 fetchGames() 載入遊戲列表，此處無需 SSR 查詢
         return "bingo";
     }
 }

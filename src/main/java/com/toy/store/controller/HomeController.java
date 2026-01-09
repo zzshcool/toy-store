@@ -76,10 +76,10 @@ public class HomeController {
 
                 // Platform Data
                 model.addAttribute("carouselSlides", carouselSlideMapper.findAllByOrderBySortOrderAsc());
-                model.addAttribute("newArrivals", featuredItemMapper
-                                .findByItemTypeOrderBySortOrderAsc(FeaturedItem.Type.NEW_ARRIVAL.name()));
-                model.addAttribute("bestSellers", featuredItemMapper
-                                .findByItemTypeOrderBySortOrderAsc(FeaturedItem.Type.BEST_SELLER.name()));
+                // model.addAttribute("newArrivals", featuredItemMapper
+                // .findByItemTypeOrderBySortOrderAsc(FeaturedItem.Type.NEW_ARRIVAL.name()));
+                // model.addAttribute("bestSellers", featuredItemMapper
+                // .findByItemTypeOrderBySortOrderAsc(FeaturedItem.Type.BEST_SELLER.name()));
 
                 // Commercial Optimization Data
                 List<GachaRecord> records = gachaRecordMapper.findTop20ByOrderByCreatedAtDesc();
@@ -106,16 +106,16 @@ public class HomeController {
                 model.addAttribute("latestWinners", latestWinners);
 
                 // Fetch top 4 active Ichiban boxes
-                model.addAttribute("hotIchiban", ichibanBoxMapper.findAll().stream()
-                                .filter(b -> b.getStatus() == IchibanBox.Status.ACTIVE)
-                                .limit(4)
-                                .collect(Collectors.toList()));
+                // model.addAttribute("hotIchiban", ichibanBoxMapper.findAll().stream()
+                // .filter(b -> b.getStatus() == IchibanBox.Status.ACTIVE)
+                // .limit(4)
+                // .collect(Collectors.toList()));
 
                 // Fetch top 4 active Bingo games
-                model.addAttribute("hotBingo", bingoGameMapper.findAll().stream()
-                                .filter(b -> b.getStatus() == BingoGame.Status.ACTIVE)
-                                .limit(4)
-                                .collect(Collectors.toList()));
+                // model.addAttribute("hotBingo", bingoGameMapper.findAll().stream()
+                // .filter(b -> b.getStatus() == BingoGame.Status.ACTIVE)
+                // .limit(4)
+                // .collect(Collectors.toList()));
 
                 return "index";
         }
